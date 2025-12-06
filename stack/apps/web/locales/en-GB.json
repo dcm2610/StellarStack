@@ -1,0 +1,202 @@
+{
+  "common": {
+    "offline": "Offline",
+    "online": "Online",
+    "starting": "Starting",
+    "stopping": "Stopping",
+    "stopped": "Stopped",
+    "loading": "Loading",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "submit": "Submit",
+    "reset": "Reset",
+    "clear": "Clear",
+    "add": "Add",
+    "remove": "Remove",
+    "update": "Update",
+    "create": "Create",
+    "view": "View",
+    "download": "Download",
+    "upload": "Upload",
+    "copy": "Copy",
+    "paste": "Paste",
+    "cut": "Cut",
+    "undo": "Undo",
+    "redo": "Redo",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "apply": "Apply",
+    "done": "Done"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "editLayout": "Edit Layout",
+    "doneEditing": "Done Editing",
+    "resetLayout": "Reset Layout",
+    "manageCards": "Manage Cards",
+    "availableCards": "Available Cards",
+    "availableCardsDescription": "Click a card to add it to your dashboard.",
+    "allCardsOnDashboard": "All cards are on your dashboard.",
+    "removeCardsHint": "Remove cards using the X button to add them here.",
+    "copyright": "StellarStack"
+  },
+  "cards": {
+    "cpu": {
+      "title": "CPU",
+      "cores": "Cores",
+      "coreUsage": "Core Usage",
+      "model": "Model",
+      "architecture": "Architecture",
+      "baseClock": "Base Clock",
+      "boostClock": "Boost Clock",
+      "tdp": "TDP",
+      "cache": "Cache"
+    },
+    "ram": {
+      "title": "RAM",
+      "type": "Type",
+      "speed": "Speed",
+      "channels": "Channels",
+      "slotsUsed": "Slots Used",
+      "timings": "Timings"
+    },
+    "disk": {
+      "title": "DISK",
+      "model": "Model",
+      "interface": "Interface",
+      "readSpeed": "Read Speed",
+      "writeSpeed": "Write Speed",
+      "health": "Health"
+    },
+    "network": {
+      "title": "NETWORK",
+      "download": "Download",
+      "upload": "Upload",
+      "interface": "Interface",
+      "adapter": "Adapter",
+      "speed": "Speed",
+      "ipv4": "IPv4",
+      "gateway": "Gateway",
+      "dns": "DNS"
+    },
+    "networkInfo": {
+      "title": "NETWORK INFO",
+      "titleShort": "NETWORK",
+      "publicIp": "PUBLIC IP",
+      "publicIpShort": "IP",
+      "privateIp": "PRIVATE IP",
+      "openPorts": "OPEN PORTS",
+      "portsShort": "PORTS",
+      "macAddress": "MAC ADDRESS"
+    },
+    "systemInfo": {
+      "title": "SYSTEM INFORMATION",
+      "titleShort": "NODE",
+      "name": "NAME",
+      "nodeId": "NODE ID",
+      "nodeIdShort": "ID",
+      "location": "LOCATION",
+      "regionZone": "REGION / ZONE",
+      "provider": "PROVIDER"
+    },
+    "containerControls": {
+      "title": "Container Controls",
+      "start": "Start",
+      "stop": "Stop",
+      "kill": "Kill",
+      "restart": "Restart"
+    },
+    "containerUptime": {
+      "title": "Container Uptime",
+      "titleShort": "Uptime",
+      "containerStopped": "Container stopped"
+    },
+    "playersOnline": {
+      "title": "Players Online",
+      "titleShort": "Players",
+      "online": "Online",
+      "more": "+{count} more"
+    },
+    "recentLogs": {
+      "title": "Recent Logs"
+    },
+    "instanceName": {
+      "title": "Instance Name"
+    }
+  },
+  "console": {
+    "title": "Console",
+    "placeholder": "Enter command...",
+    "autoScroll": "Auto-scroll",
+    "clear": "Clear",
+    "commandExecuted": "Command \"{command}\" executed"
+  },
+  "toast": {
+    "connectionLost": "Connection Lost - Reconnecting...",
+    "connectionRestored": "Connection Restored",
+    "serverStarting": "Starting server...",
+    "serverStarted": "Server started successfully",
+    "serverStopping": "Stopping server...",
+    "serverStopped": "Server stopped",
+    "serverRestarting": "Restarting server...",
+    "serverRestarted": "Server restarted successfully",
+    "serverKilled": "Server force killed",
+    "cannotStartOffline": "Cannot start server while offline",
+    "cannotStopOffline": "Cannot stop server while offline",
+    "cannotKillOffline": "Cannot kill server while offline",
+    "cannotRestartOffline": "Cannot restart server while offline"
+  },
+  "units": {
+    "percentage": "{value}%",
+    "ghz": "{value} GHz",
+    "watts": "{value}W",
+    "mbps": "{value} MB/s",
+    "mts": "{value} MT/s",
+    "gb": "{value} GB",
+    "gbUsed": "{used} / {total} GB"
+  },
+  "time": {
+    "seconds": "Seconds",
+    "minutes": "Minutes",
+    "hours": "Hours",
+    "days": "Days",
+    "weeks": "Weeks",
+    "months": "Months",
+    "years": "Years",
+    "second": "Second",
+    "minute": "Minute",
+    "hour": "Hour",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "starting": "Starting",
+    "stopping": "Stopping",
+    "offline": "Offline",
+    "online": "Online",
+    "unknown": "Unknown"
+  }
+}

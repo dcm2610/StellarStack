@@ -8,16 +8,16 @@ import { Sparkline } from "../Sparkline";
 import { AnimatedNumber } from "../Animations";
 import { useDragDropGrid } from "../DragDropGrid";
 import { getUsageColor } from "./utils";
-import type { UsageMetricCardProps } from "./types";
+import type { UsageMetricCardProps, UsageMetricCardLabels } from "./types";
 
 interface UsageMetricCardComponentProps extends UsageMetricCardProps {
   isDark: boolean;
   isOffline: boolean;
+  labels: UsageMetricCardLabels;
 }
 
 export const UsageMetricCard = ({
   itemId,
-  title,
   percentage,
   details,
   tooltipContent,
@@ -25,6 +25,7 @@ export const UsageMetricCard = ({
   color,
   isDark,
   isOffline,
+  labels,
 }: UsageMetricCardComponentProps): JSX.Element => {
   const { getItemSize, isEditing } = useDragDropGrid();
   const size = getItemSize(itemId);
@@ -39,7 +40,7 @@ export const UsageMetricCard = ({
   if (isXxs) {
     return (
       <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
-        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{title}</span>
+        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.title}</span>
         <span className={cn("text-xl font-mono", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"))}>
           {isOffline ? "--" : <AnimatedNumber value={percentage} suffix="%" />}
         </span>
@@ -56,7 +57,7 @@ export const UsageMetricCard = ({
         "opacity-80",
         isXs ? "text-xs mb-2" : isCompact ? "text-xs mb-4" : "text-md"
       )}>
-        {title}
+        {labels.title}
       </UsageCardTitle>
       <UsageCardContent className={isXs ? "space-y-1" : undefined}>
         <span className={cn(

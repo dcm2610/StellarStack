@@ -7,12 +7,13 @@ import { InfoTooltip, InfoRow } from "../InfoTooltip";
 import { DualSparkline } from "../Sparkline";
 import { AnimatedNumber } from "../Animations";
 import { useDragDropGrid } from "../DragDropGrid";
-import type { NetworkUsageCardProps, NetworkTooltipData } from "./types";
+import type { NetworkUsageCardProps, NetworkTooltipData, NetworkUsageCardLabels } from "./types";
 
 interface NetworkUsageCardComponentProps extends NetworkUsageCardProps {
   isDark: boolean;
   isOffline: boolean;
   tooltipData?: NetworkTooltipData;
+  labels: NetworkUsageCardLabels;
 }
 
 export const NetworkUsageCard = ({
@@ -24,6 +25,7 @@ export const NetworkUsageCard = ({
   isDark,
   isOffline,
   tooltipData,
+  labels,
 }: NetworkUsageCardComponentProps): JSX.Element => {
   const { getItemSize, isEditing } = useDragDropGrid();
   const size = getItemSize(itemId);
@@ -56,12 +58,12 @@ export const NetworkUsageCard = ({
           isDark={isDark}
           content={
             <>
-              <InfoRow label="Interface" value={tooltipData.interface} isDark={isDark} />
-              <InfoRow label="Adapter" value={tooltipData.adapter} isDark={isDark} />
-              <InfoRow label="Speed" value={tooltipData.speed} isDark={isDark} />
-              <InfoRow label="IPv4" value={tooltipData.ipv4} isDark={isDark} />
-              <InfoRow label="Gateway" value={tooltipData.gateway} isDark={isDark} />
-              <InfoRow label="DNS" value={tooltipData.dns} isDark={isDark} />
+              <InfoRow label={labels.interface || "Interface"} value={tooltipData.interface} isDark={isDark} />
+              <InfoRow label={labels.adapter || "Adapter"} value={tooltipData.adapter} isDark={isDark} />
+              <InfoRow label={labels.speed || "Speed"} value={tooltipData.speed} isDark={isDark} />
+              <InfoRow label={labels.ipv4 || "IPv4"} value={tooltipData.ipv4} isDark={isDark} />
+              <InfoRow label={labels.gateway || "Gateway"} value={tooltipData.gateway} isDark={isDark} />
+              <InfoRow label={labels.dns || "DNS"} value={tooltipData.dns} isDark={isDark} />
             </>
           }
         />
@@ -70,7 +72,7 @@ export const NetworkUsageCard = ({
         "opacity-80",
         isXs ? "text-xs mb-2" : isCompact ? "text-xs mb-4" : "text-md"
       )}>
-        NETWORK
+        {labels.title}
       </UsageCardTitle>
       <UsageCardContent className={isXs ? "space-y-1" : undefined}>
         <div className={cn(
@@ -79,11 +81,11 @@ export const NetworkUsageCard = ({
           isXs ? "text-[10px]" : isCompact ? "text-xs" : "text-sm"
         )}>
           <div className="flex justify-between items-center">
-            <span className={isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-blue-400"}>{isXs ? "↓" : "↓ Download"}</span>
+            <span className={isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-blue-400"}>{isXs ? "↓" : `↓ ${labels.download}`}</span>
             <span className={cn(valueColor, "font-mono")}>{isOffline ? "--" : <AnimatedNumber value={download} decimals={1} />} MB/s</span>
           </div>
           <div className="flex justify-between items-center mt-0.5">
-            <span className={isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-purple-400"}>{isXs ? "↑" : "↑ Upload"}</span>
+            <span className={isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-purple-400"}>{isXs ? "↑" : `↑ ${labels.upload}`}</span>
             <span className={cn(valueColor, "font-mono")}>{isOffline ? "--" : <AnimatedNumber value={upload} decimals={1} />} MB/s</span>
           </div>
         </div>

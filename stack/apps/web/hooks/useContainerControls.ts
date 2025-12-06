@@ -2,6 +2,7 @@
 
 import { toast } from "sonner";
 import { useServerStore } from "../stores/connectionStore";
+import { t } from "../lib/i18n";
 import type { ContainerStatus } from "../types/server";
 
 interface UseContainerControlsReturn {
@@ -20,54 +21,54 @@ export const useContainerControls = (): UseContainerControlsReturn => {
 
   const handleStart = (): void => {
     if (isOffline) {
-      toast.error("Cannot start server while offline");
+      toast.error(t("toast.cannotStartOffline"));
       return;
     }
     setContainerStatus("starting");
-    const toastId = toast.loading("Starting server...");
+    const toastId = toast.loading(t("toast.serverStarting"));
     setTimeout(() => {
       setContainerStatus("running");
       toast.dismiss(toastId);
-      toast.success("Server started successfully");
+      toast.success(t("toast.serverStarted"));
     }, 1500);
   };
 
   const handleStop = (): void => {
     if (isOffline) {
-      toast.error("Cannot stop server while offline");
+      toast.error(t("toast.cannotStopOffline"));
       return;
     }
     setContainerStatus("stopping");
-    const toastId = toast.loading("Stopping server...");
+    const toastId = toast.loading(t("toast.serverStopping"));
     setTimeout(() => {
       setContainerStatus("stopped");
       toast.dismiss(toastId);
-      toast.info("Server stopped");
+      toast.info(t("toast.serverStopped"));
     }, 1500);
   };
 
   const handleKill = (): void => {
     if (isOffline) {
-      toast.error("Cannot kill server while offline");
+      toast.error(t("toast.cannotKillOffline"));
       return;
     }
     setContainerStatus("stopped");
-    toast.warning("Server force killed");
+    toast.warning(t("toast.serverKilled"));
   };
 
   const handleRestart = (): void => {
     if (isOffline) {
-      toast.error("Cannot restart server while offline");
+      toast.error(t("toast.cannotRestartOffline"));
       return;
     }
     setContainerStatus("stopping");
-    const toastId = toast.loading("Restarting server...");
+    const toastId = toast.loading(t("toast.serverRestarting"));
     setTimeout(() => {
       setContainerStatus("starting");
       setTimeout(() => {
         setContainerStatus("running");
         toast.dismiss(toastId);
-        toast.success("Server restarted successfully");
+        toast.success(t("toast.serverRestarted"));
       }, 1000);
     }, 1000);
   };

@@ -3,7 +3,7 @@
 import type { JSX } from "react";
 import { cn } from "../../../lib/utils";
 import { UsageCard } from "../UsageCard/UsageCard";
-import type { CardProps, ContainerStatus } from "./types";
+import type { CardProps, ContainerStatus, ContainerControlsCardLabels } from "./types";
 
 interface ContainerControlsCardProps extends CardProps {
   isDark: boolean;
@@ -13,6 +13,7 @@ interface ContainerControlsCardProps extends CardProps {
   onStop: () => void;
   onKill: () => void;
   onRestart: () => void;
+  labels: ContainerControlsCardLabels;
 }
 
 export const ContainerControlsCard = ({
@@ -23,6 +24,7 @@ export const ContainerControlsCard = ({
   onStop,
   onKill,
   onRestart,
+  labels,
 }: ContainerControlsCardProps): JSX.Element => {
   const isRunning = status === "running";
   const isStopped = status === "stopped";
@@ -48,7 +50,7 @@ export const ContainerControlsCard = ({
             (isRunning || isTransitioning || isOffline) && "cursor-not-allowed"
           )}
         >
-          Start
+          {labels.start}
         </button>
         <button
           onClick={onStop}
@@ -59,7 +61,7 @@ export const ContainerControlsCard = ({
             (isStopped || isTransitioning || isOffline) && "cursor-not-allowed"
           )}
         >
-          Stop
+          {labels.stop}
         </button>
         <button
           onClick={onKill}
@@ -70,7 +72,7 @@ export const ContainerControlsCard = ({
             (isStopped || isOffline) && "cursor-not-allowed"
           )}
         >
-          Kill
+          {labels.kill}
         </button>
         <button
           onClick={onRestart}
@@ -81,7 +83,7 @@ export const ContainerControlsCard = ({
             (isStopped || isTransitioning || isOffline) && "cursor-not-allowed"
           )}
         >
-          Restart
+          {labels.restart}
         </button>
       </div>
     </UsageCard>

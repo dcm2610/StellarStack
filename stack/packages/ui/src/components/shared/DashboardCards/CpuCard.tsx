@@ -9,11 +9,12 @@ import { AnimatedNumber } from "../Animations";
 import { useDragDropGrid } from "../DragDropGrid";
 import { CpuCoreGrid } from "./CpuCoreGrid";
 import { getUsageColor } from "./utils";
-import type { CpuCardProps } from "./types";
+import type { CpuCardProps, CpuCardLabels } from "./types";
 
 interface CpuCardComponentProps extends CpuCardProps {
   isDark: boolean;
   isOffline: boolean;
+  labels: CpuCardLabels;
 }
 
 export const CpuCard = ({
@@ -25,6 +26,7 @@ export const CpuCard = ({
   coreUsage,
   isDark,
   isOffline,
+  labels,
 }: CpuCardComponentProps): JSX.Element => {
   const { getItemSize, isEditing } = useDragDropGrid();
   const size = getItemSize(itemId);
@@ -40,7 +42,7 @@ export const CpuCard = ({
   if (isXxs) {
     return (
       <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
-        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>CPU</span>
+        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.title}</span>
         <span className={cn("text-xl font-mono", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"))}>
           {isOffline ? "--" : <AnimatedNumber value={percentage} suffix="%" />}
         </span>
@@ -57,7 +59,7 @@ export const CpuCard = ({
         "opacity-80",
         isXs ? "text-xs mb-2" : isCompact ? "text-xs mb-4" : "text-md"
       )}>
-        CPU
+        {labels.title}
       </UsageCardTitle>
       <UsageCardContent className={cn("flex-1 flex flex-col", isXs ? "space-y-1" : undefined)}>
         <div className="flex items-start justify-between">
@@ -96,7 +98,7 @@ export const CpuCard = ({
               "text-[9px] uppercase font-medium mb-1",
               isDark ? "text-zinc-500" : "text-zinc-600"
             )}>
-              Core Usage
+              {labels.coreUsage}
             </div>
             <CpuCoreGrid cores={coreUsage} isDark={isDark} isOffline={isOffline} />
           </div>

@@ -6,6 +6,80 @@ export interface CardProps {
   itemId: string;
 }
 
+export interface CpuCardLabels {
+  title: string;
+  coreUsage: string;
+  cores: string;
+}
+
+export interface UsageMetricCardLabels {
+  title: string;
+}
+
+export interface NetworkUsageCardLabels {
+  title: string;
+  download: string;
+  upload: string;
+  interface?: string;
+  adapter?: string;
+  speed?: string;
+  ipv4?: string;
+  gateway?: string;
+  dns?: string;
+}
+
+export interface NetworkInfoCardLabels {
+  title: string;
+  titleShort: string;
+  publicIp: string;
+  publicIpShort: string;
+  privateIp: string;
+  openPorts: string;
+  portsShort: string;
+  macAddress: string;
+}
+
+export interface SystemInfoCardLabels {
+  title: string;
+  titleShort: string;
+  name: string;
+  nodeId: string;
+  nodeIdShort: string;
+  location: string;
+  regionZone: string;
+  provider: string;
+}
+
+export interface ContainerControlsCardLabels {
+  start: string;
+  stop: string;
+  kill: string;
+  restart: string;
+}
+
+export interface ContainerUptimeCardLabels {
+  title: string;
+  titleShort: string;
+  containerStopped: string;
+}
+
+export interface PlayersOnlineCardLabels {
+  title: string;
+  titleShort: string;
+  online: string;
+}
+
+export interface RecentLogsCardLabels {
+  title: string;
+}
+
+export interface ConsoleLabels {
+  title: string;
+  placeholder: string;
+  autoScroll: string;
+  clear: string;
+}
+
 export interface CoreUsage {
   id: number;
   percentage: number;
@@ -13,7 +87,6 @@ export interface CoreUsage {
 }
 
 export interface UsageMetricCardProps extends CardProps {
-  title: string;
   percentage: number;
   details: string[];
   tooltipContent?: ReactNode;

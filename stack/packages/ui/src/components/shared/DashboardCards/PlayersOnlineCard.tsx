@@ -5,7 +5,7 @@ import { cn } from "../../../lib/utils";
 import { UsageCard, UsageCardContent, UsageCardTitle } from "../UsageCard/UsageCard";
 import { AnimatedNumber } from "../Animations";
 import { useDragDropGrid } from "../DragDropGrid";
-import type { CardProps, Player, ContainerStatus } from "./types";
+import type { CardProps, Player, ContainerStatus, PlayersOnlineCardLabels } from "./types";
 
 interface PlayersOnlineCardProps extends CardProps {
   isDark: boolean;
@@ -13,6 +13,7 @@ interface PlayersOnlineCardProps extends CardProps {
   players: Player[];
   maxPlayers: number;
   containerStatus: ContainerStatus;
+  labels: PlayersOnlineCardLabels;
 }
 
 export const PlayersOnlineCard = ({
@@ -22,6 +23,7 @@ export const PlayersOnlineCard = ({
   players,
   maxPlayers,
   containerStatus,
+  labels,
 }: PlayersOnlineCardProps): JSX.Element => {
   const { getItemSize } = useDragDropGrid();
   const size = getItemSize(itemId);
@@ -32,11 +34,13 @@ export const PlayersOnlineCard = ({
   const isCompact = isXxs || isXs;
 
   const isRunning = containerStatus === "running";
+  const maxVisible = isSm ? 8 : 4;
+  const remainingCount = players.length - maxVisible;
 
   if (isXxs) {
     return (
       <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
-        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>Players</span>
+        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.titleShort}</span>
         <span className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
           {isOffline || !isRunning ? "--" : <><AnimatedNumber value={players.length} />/{maxPlayers}</>}
         </span>
@@ -47,7 +51,7 @@ export const PlayersOnlineCard = ({
   return (
     <UsageCard isDark={isDark} className={cn("h-full flex flex-col", isXs && "p-4", isOffline && "opacity-60")}>
       <UsageCardTitle isDark={isDark} className={cn("opacity-80", isCompact ? "text-xs mb-2" : "text-md")}>
-        Players Online
+        {labels.title}
       </UsageCardTitle>
       <UsageCardContent className={cn("flex-1 flex flex-col", isXs ? "space-y-1" : undefined)}>
         <div className="flex items-baseline gap-1">
@@ -74,10 +78,10 @@ export const PlayersOnlineCard = ({
               "text-[10px] uppercase font-medium mb-1",
               isDark ? "text-zinc-500" : "text-zinc-600"
             )}>
-              Online
+              {labels.online}
             </div>
             <div className="space-y-0.5 overflow-y-auto max-h-full">
-              {players.slice(0, isSm ? 8 : 4).map((player) => (
+              {players.slice(0, maxVisible).map((player) => (
                 <div
                   key={player.id}
                   className={cn(
@@ -88,12 +92,12 @@ export const PlayersOnlineCard = ({
                   {player.name}
                 </div>
               ))}
-              {players.length > (isSm ? 8 : 4) && (
+              {remainingCount > 0 && (
                 <div className={cn(
                   "text-[10px]",
                   isDark ? "text-zinc-500" : "text-zinc-500"
                 )}>
-                  +{players.length - (isSm ? 8 : 4)} more
+                  +{remainingCount} more
                 </div>
               )}
             </div>

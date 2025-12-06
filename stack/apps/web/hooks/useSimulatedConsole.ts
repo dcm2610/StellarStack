@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useServerStore } from "../stores/connectionStore";
 import { generateInitialLines, generateRandomLine, type ConsoleLine } from "@workspace/ui/components/shared/Console";
+import { t } from "../lib/i18n";
 
 interface UseSimulatedConsoleReturn {
   lines: ConsoleLine[];
@@ -59,7 +60,7 @@ export const useSimulatedConsole = (): UseSimulatedConsoleReturn => {
           id: `resp-${Date.now()}`,
           timestamp: Date.now(),
           level: "info" as const,
-          message: `Daemon: Command "${command}" executed`,
+          message: `Daemon: ${t("console.commandExecuted", { command })}`,
         },
       ]);
     }, 500);

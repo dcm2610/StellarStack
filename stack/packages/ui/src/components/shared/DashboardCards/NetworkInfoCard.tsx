@@ -4,14 +4,15 @@ import type { JSX } from "react";
 import { cn } from "../../../lib/utils";
 import { UsageCard, UsageCardContent, UsageCardTitle } from "../UsageCard/UsageCard";
 import { useDragDropGrid } from "../DragDropGrid";
-import type { CardProps, NetworkInfoData } from "./types";
+import type { CardProps, NetworkInfoData, NetworkInfoCardLabels } from "./types";
 
 interface NetworkInfoCardProps extends CardProps {
   isDark: boolean;
   networkInfo: NetworkInfoData;
+  labels: NetworkInfoCardLabels;
 }
 
-export const NetworkInfoCard = ({ itemId, isDark, networkInfo }: NetworkInfoCardProps): JSX.Element => {
+export const NetworkInfoCard = ({ itemId, isDark, networkInfo, labels }: NetworkInfoCardProps): JSX.Element => {
   const { getItemSize } = useDragDropGrid();
   const size = getItemSize(itemId);
 
@@ -32,25 +33,25 @@ export const NetworkInfoCard = ({ itemId, isDark, networkInfo }: NetworkInfoCard
         "opacity-80",
         isXs ? "text-xs mb-2" : isCompact ? "text-xs mb-4" : "text-md"
       )}>
-        {isXs ? "NETWORK" : "NETWORK INFO"}
+        {isXs ? labels.titleShort : labels.title}
       </UsageCardTitle>
       <UsageCardContent className={isXs ? "space-y-1" : undefined}>
         <div className={cn(
           isXs ? "space-y-1 text-[10px]" : isCompact ? "space-y-2 text-xs" : "space-y-3 text-sm"
         )}>
           <div>
-            <div className={cn(labelColor, "mb-0.5", isXs ? "text-[9px]" : "text-xs")}>{isXs ? "IP" : "PUBLIC IP"}</div>
+            <div className={cn(labelColor, "mb-0.5", isXs ? "text-[9px]" : "text-xs")}>{isXs ? labels.publicIpShort : labels.publicIp}</div>
             <div className={cn(valueColor, "font-mono", isXs && "text-[10px]")}>{networkInfo.publicIp}</div>
           </div>
           {!isXs && !isCompact && (
             <div>
-              <div className={cn(labelColor, "text-xs mb-0.5")}>PRIVATE IP</div>
+              <div className={cn(labelColor, "text-xs mb-0.5")}>{labels.privateIp}</div>
               <div className={cn(valueColor, "font-mono")}>{networkInfo.privateIp}</div>
             </div>
           )}
           {!isXs && (
             <div>
-              <div className={cn(labelColor, "text-xs mb-0.5")}>OPEN PORTS</div>
+              <div className={cn(labelColor, "text-xs mb-0.5")}>{labels.openPorts}</div>
               <div className={cn(
                 "flex flex-wrap gap-1 mt-1",
                 isLarge && "gap-2"
@@ -65,13 +66,13 @@ export const NetworkInfoCard = ({ itemId, isDark, networkInfo }: NetworkInfoCard
           )}
           {isXs && (
             <div>
-              <div className={cn(labelColor, "text-[9px] mb-0.5")}>PORTS</div>
+              <div className={cn(labelColor, "text-[9px] mb-0.5")}>{labels.portsShort}</div>
               <div className={cn(valueColor, "font-mono text-[10px]")}>{portsString}</div>
             </div>
           )}
           {isLarge && (
             <div>
-              <div className={cn(labelColor, "text-xs mb-0.5")}>MAC ADDRESS</div>
+              <div className={cn(labelColor, "text-xs mb-0.5")}>{labels.macAddress}</div>
               <div className={cn(valueColor, "font-mono")}>{networkInfo.macAddress}</div>
             </div>
           )}

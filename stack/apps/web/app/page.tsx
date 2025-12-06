@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { useTheme as useNextTheme } from "next-themes";
 import { useServerStore } from "../stores/connectionStore";
 import { DragDropGrid, GridItem } from "@workspace/ui/components/shared/DragDropGrid";
@@ -29,10 +29,10 @@ import {
   CardPreview,
 } from "@workspace/ui/components/shared/DashboardCards";
 import { ThemeContext } from "../contexts/ThemeContext";
-import { useServerSimulation, useSimulatedConsole, useContainerControls } from "../hooks";
+import { useServerSimulation, useSimulatedConsole, useContainerControls, useLabels } from "../hooks";
 import { defaultGridItems, defaultHiddenCards } from "../constants";
 
-const DashboardLoading = () => (
+const DashboardLoading = (): JSX.Element => (
   <div className="min-h-svh bg-[#0b0b0a] relative">
     <FloatingDots isDark={true} count={15} />
     <div className="p-8">
@@ -60,11 +60,12 @@ const DashboardLoading = () => (
   </div>
 );
 
-const Page = () => {
+const Page = (): JSX.Element => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCardSheetOpen, setIsCardSheetOpen] = useState(false);
   const { setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
+  const labels = useLabels();
 
   useEffect(() => {
     setMounted(true);
@@ -84,6 +85,16 @@ const Page = () => {
   const isOffline = useServerStore((state) => state.isOffline);
   const { lines: consoleLines, handleCommand } = useSimulatedConsole();
   const containerControls = useContainerControls();
+
+  const getStatusLabel = (): string => {
+    if (isOffline) return labels.status.offline;
+    switch (server.status) {
+      case "running": return labels.status.online;
+      case "starting": return labels.status.starting;
+      case "stopping": return labels.status.stopping;
+      default: return labels.status.stopped;
+    }
+  };
 
   if (!isLoaded) {
     return <DashboardLoading />;
@@ -120,7 +131,7 @@ const Page = () => {
                       )}
                     >
                       <BsGrid className="w-4 h-4 mr-2" />
-                      Manage Cards
+                      {labels.dashboard.manageCards}
                     </Button>
                     <Button
                       variant="outline"
@@ -133,7 +144,7 @@ const Page = () => {
                           : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
                       )}
                     >
-                      Reset Layout
+                      {labels.dashboard.resetLayout}
                     </Button>
                   </>
                 )}
@@ -149,7 +160,7 @@ const Page = () => {
                       : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400")
                   )}
                 >
-                  {isEditing ? "Done Editing" : "Edit Layout"}
+                  {isEditing ? labels.dashboard.doneEditing : labels.dashboard.editLayout}
                 </Button>
                 <Badge
                   variant={isOffline ? "destructive" : server.status === "running" ? "default" : "secondary"}
@@ -160,7 +171,7 @@ const Page = () => {
                     server.status === "stopping" && "bg-amber-500 hover:bg-amber-500"
                   )}
                 >
-                  {isOffline ? "Offline" : server.status === "running" ? "Online" : server.status === "starting" ? "Starting" : server.status === "stopping" ? "Stopping" : "Stopped"}
+                  {getStatusLabel()}
                 </Badge>
                 <Button
                   variant="outline"
@@ -189,10 +200,10 @@ const Page = () => {
             >
               <SheetHeader>
                 <SheetTitle className={isDark ? "text-zinc-100" : "text-zinc-900"}>
-                  Available Cards
+                  {labels.dashboard.availableCards}
                 </SheetTitle>
                 <SheetDescription className={isDark ? "text-zinc-400" : "text-zinc-600"}>
-                  Click a card to add it to your dashboard.
+                  {labels.dashboard.availableCardsDescription}
                 </SheetDescription>
               </SheetHeader>
               <div className="mt-6 space-y-4">
@@ -217,9 +228,9 @@ const Page = () => {
                     "text-center py-8 text-sm",
                     isDark ? "text-zinc-500" : "text-zinc-400"
                   )}>
-                    All cards are on your dashboard.
+                    {labels.dashboard.allCardsOnDashboard}
                     <br />
-                    Remove cards using the X button to add them here.
+                    {labels.dashboard.removeCardsHint}
                   </div>
                 )}
               </div>
@@ -260,6 +271,7 @@ const Page = () => {
                     onStop={containerControls.handleStop}
                     onKill={containerControls.handleKill}
                     onRestart={containerControls.handleRestart}
+                    labels={labels.containerControls}
                   />
                 </GridItem>
               </div>
@@ -268,7 +280,12 @@ const Page = () => {
             {!hiddenCards.includes("system-info") && server.node && (
               <div key="system-info" className="h-full">
                 <GridItem itemId="system-info">
-                  <SystemInformationCard itemId="system-info" isDark={isDark} nodeData={server.node} />
+                  <SystemInformationCard
+                    itemId="system-info"
+                    isDark={isDark}
+                    nodeData={server.node}
+                    labels={labels.systemInfo}
+                  />
                 </GridItem>
               </div>
             )}
@@ -285,6 +302,7 @@ const Page = () => {
                       openPorts: server.networkConfig.openPorts,
                       macAddress: server.networkConfig.macAddress || "",
                     }}
+                    labels={labels.networkInfo}
                   />
                 </GridItem>
               </div>
@@ -296,19 +314,20 @@ const Page = () => {
                   <CpuCard
                     itemId="cpu"
                     percentage={server.cpu.usage.percentage}
-                    details={[`${server.cpu.cores} CORES`, `${server.cpu.frequency} GHz`]}
+                    details={[`${server.cpu.cores} ${labels.cpu.cores || "CORES"}`, `${server.cpu.frequency} GHz`]}
                     history={server.cpu.usage.history}
                     coreUsage={server.cpu.coreUsage}
                     isDark={isDark}
                     isOffline={isOffline}
+                    labels={labels.cpu}
                     tooltipContent={
                       <>
-                        <InfoRow label="Model" value={server.cpu.model || "AMD Ryzen 9 9950X3D"} isDark={isDark} />
-                        <InfoRow label="Architecture" value={server.cpu.architecture || "Zen 5"} isDark={isDark} />
-                        <InfoRow label="Base Clock" value={`${server.cpu.baseFrequency || 4.3} GHz`} isDark={isDark} />
-                        <InfoRow label="Boost Clock" value={`${server.cpu.boostFrequency || 5.7} GHz`} isDark={isDark} />
-                        <InfoRow label="TDP" value={`${server.cpu.tdp || 170}W`} isDark={isDark} />
-                        <InfoRow label="Cache" value={server.cpu.cache || "144MB"} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.cpu.model} value={server.cpu.model || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.cpu.architecture} value={server.cpu.architecture || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.cpu.baseClock} value={`${server.cpu.baseFrequency || 0} GHz`} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.cpu.boostClock} value={`${server.cpu.boostFrequency || 0} GHz`} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.cpu.tdp} value={`${server.cpu.tdp || 0}W`} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.cpu.cache} value={server.cpu.cache || ""} isDark={isDark} />
                       </>
                     }
                   />
@@ -321,19 +340,19 @@ const Page = () => {
                 <GridItem itemId="ram">
                   <UsageMetricCard
                     itemId="ram"
-                    title="RAM"
                     percentage={server.memory.usage.percentage}
-                    details={[`${server.memory.used} / ${server.memory.total} GB`, "DDR5"]}
+                    details={[`${server.memory.used} / ${server.memory.total} GB`, server.memory.type || ""]}
                     history={server.memory.usage.history}
                     isDark={isDark}
                     isOffline={isOffline}
+                    labels={labels.ram}
                     tooltipContent={
                       <>
-                        <InfoRow label="Type" value={server.memory.type || "DDR5"} isDark={isDark} />
-                        <InfoRow label="Speed" value={`${server.memory.speed || 6000} MT/s`} isDark={isDark} />
-                        <InfoRow label="Channels" value={server.memory.channels || "Dual Channel"} isDark={isDark} />
-                        <InfoRow label="Slots Used" value={server.memory.slots || "2 / 4"} isDark={isDark} />
-                        <InfoRow label="Timings" value={server.memory.timings || "CL30-38-38"} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.ram.type} value={server.memory.type || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.ram.speed} value={`${server.memory.speed || 0} MT/s`} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.ram.channels} value={server.memory.channels || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.ram.slotsUsed} value={server.memory.slots || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.ram.timings} value={server.memory.timings || ""} isDark={isDark} />
                       </>
                     }
                   />
@@ -346,19 +365,19 @@ const Page = () => {
                 <GridItem itemId="disk">
                   <UsageMetricCard
                     itemId="disk"
-                    title="DISK"
                     percentage={server.disk.usage.percentage}
-                    details={[`${server.disk.used} / ${server.disk.total} GB`, server.disk.type || "NVMe SSD"]}
+                    details={[`${server.disk.used} / ${server.disk.total} GB`, server.disk.type || ""]}
                     history={server.disk.usage.history}
                     isDark={isDark}
                     isOffline={isOffline}
+                    labels={labels.disk}
                     tooltipContent={
                       <>
-                        <InfoRow label="Model" value={server.disk.model || "Samsung 990 Pro"} isDark={isDark} />
-                        <InfoRow label="Interface" value={server.disk.interface || "PCIe 4.0 x4"} isDark={isDark} />
-                        <InfoRow label="Read Speed" value={server.disk.readSpeed || "7,450 MB/s"} isDark={isDark} />
-                        <InfoRow label="Write Speed" value={server.disk.writeSpeed || "6,900 MB/s"} isDark={isDark} />
-                        <InfoRow label="Health" value={`${server.disk.health || 98}%`} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.disk.model} value={server.disk.model || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.disk.interface} value={server.disk.interface || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.disk.readSpeed} value={server.disk.readSpeed || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.disk.writeSpeed} value={server.disk.writeSpeed || ""} isDark={isDark} />
+                        <InfoRow label={labels.tooltip.disk.health} value={`${server.disk.health || 0}%`} isDark={isDark} />
                       </>
                     }
                   />
@@ -377,6 +396,7 @@ const Page = () => {
                     uploadHistory={server.network.uploadHistory}
                     isDark={isDark}
                     isOffline={isOffline}
+                    labels={labels.network}
                     tooltipData={server.networkConfig.interface ? {
                       interface: server.networkConfig.interface,
                       adapter: server.networkConfig.adapter || "",
@@ -408,6 +428,7 @@ const Page = () => {
                     players={server.gameServer?.players || []}
                     maxPlayers={server.gameServer?.maxPlayers || 20}
                     containerStatus={server.status}
+                    labels={labels.playersOnline}
                   />
                 </GridItem>
               </div>
@@ -422,6 +443,7 @@ const Page = () => {
                     isOffline={isOffline}
                     containerUptime={server.containerUptime || 0}
                     containerStatus={server.status}
+                    labels={labels.containerUptime}
                   />
                 </GridItem>
               </div>
@@ -435,6 +457,7 @@ const Page = () => {
                     isDark={isDark}
                     isOffline={isOffline}
                     logs={server.recentLogs || []}
+                    labels={labels.recentLogs}
                   />
                 </GridItem>
               </div>
@@ -446,7 +469,7 @@ const Page = () => {
               "mt-12 pb-4 text-center text-sm uppercase transition-colors",
               isDark ? "text-zinc-500" : "text-zinc-600"
             )}>
-              &copy; {new Date().getFullYear()} StellarStack
+              &copy; {new Date().getFullYear()} {labels.dashboard.copyright}
             </footer>
           </FadeIn>
         </div>

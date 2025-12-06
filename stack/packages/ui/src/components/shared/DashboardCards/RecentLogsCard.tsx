@@ -4,12 +4,13 @@ import type { JSX } from "react";
 import { cn } from "../../../lib/utils";
 import { UsageCard, UsageCardContent, UsageCardTitle } from "../UsageCard/UsageCard";
 import { useDragDropGrid } from "../DragDropGrid";
-import type { CardProps, LogEntry } from "./types";
+import type { CardProps, LogEntry, RecentLogsCardLabels } from "./types";
 
 interface RecentLogsCardProps extends CardProps {
   isDark: boolean;
   isOffline: boolean;
   logs: LogEntry[];
+  labels: RecentLogsCardLabels;
 }
 
 export const RecentLogsCard = ({
@@ -17,13 +18,14 @@ export const RecentLogsCard = ({
   isDark,
   isOffline,
   logs,
+  labels,
 }: RecentLogsCardProps): JSX.Element => {
   const { getItemSize } = useDragDropGrid();
   const size = getItemSize(itemId);
 
   const isXs = size === "xs";
 
-  const getLevelColor = (level: string) => {
+  const getLevelColor = (level: string): string => {
     switch (level) {
       case "error": return "text-red-400";
       case "warning": return "text-amber-400";
@@ -34,7 +36,7 @@ export const RecentLogsCard = ({
   return (
     <UsageCard isDark={isDark} className={cn("h-full flex flex-col", isXs && "p-4", isOffline && "opacity-60")}>
       <UsageCardTitle isDark={isDark} className={cn("opacity-80", isXs ? "text-xs mb-2" : "text-md")}>
-        Recent Logs
+        {labels.title}
       </UsageCardTitle>
       <UsageCardContent className="flex-1 overflow-hidden">
         <div className="space-y-0.5 overflow-y-auto h-full font-mono text-[10px]">
