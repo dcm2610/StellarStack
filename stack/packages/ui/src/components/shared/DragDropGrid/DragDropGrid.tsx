@@ -12,7 +12,7 @@ import {
 } from "react";
 import { Responsive, WidthProvider, type Layout, type Layouts } from "react-grid-layout";
 import { cn } from "@workspace/ui/lib/utils";
-import { BsGripVertical, BsArrowsFullscreen } from "react-icons/bs";
+import { BsGripVertical, BsArrowsFullscreen, BsX } from "react-icons/bs";
 
 // Import react-grid-layout styles
 import "react-grid-layout/css/styles.css";
@@ -21,7 +21,7 @@ import "react-resizable/css/styles.css";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // Types
-export type GridSize = "xxs" | "xxs-wide" | "xs" | "sm" | "md" | "lg" | "xl";
+export type GridSize = "xxs" | "xxs-wide" | "xs" | "sm" | "md" | "lg" | "xl" | "xxl";
 
 export interface GridItemConfig {
   i: string; // unique id
@@ -41,9 +41,10 @@ export const gridSizeConfig: Record<GridSize, { w: number; h: number }> = {
   md: { w: 6, h: 5 }, // ~314px height
   lg: { w: 6, h: 7 }, // ~446px height
   xl: { w: 12, h: 7 }, // ~446px height
+  xxl: { w: 12, h: 10 }, // ~644px height, full width, for console
 };
 
-const SIZE_ORDER: GridSize[] = ["xxs", "xxs-wide", "xs", "sm", "md", "lg", "xl"];
+const SIZE_ORDER: GridSize[] = ["xxs", "xxs-wide", "xs", "sm", "md", "lg", "xl", "xxl"];
 
 // Breakpoints configuration
 const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
@@ -56,6 +57,7 @@ interface DragDropGridContextValue {
   getItemMinSize: (itemId: string) => GridSize | undefined;
   getItemMaxSize: (itemId: string) => GridSize | undefined;
   canResize: (itemId: string) => boolean;
+  removeItem: (itemId: string) => void;
   isEditing: boolean;
   isDark: boolean;
 }
@@ -125,11 +127,15 @@ export interface DragDropGridProps extends Omit<ComponentPropsWithoutRef<"div">,
   children: ReactNode;
   items: GridItemConfig[];
   onLayoutChange?: (items: GridItemConfig[], layouts: Layouts) => void;
+  onDropItem?: (itemId: string, layout: Layout) => void;
+  onRemoveItem?: (itemId: string) => void;
   rowHeight?: number;
   gap?: number;
   isEditing?: boolean;
   savedLayouts?: Layouts;
   isDark?: boolean;
+  isDroppable?: boolean;
+  allItems?: GridItemConfig[]; // All available items for determining sizes on drop
 }
 
 export function DragDropGrid({
@@ -137,11 +143,15 @@ export function DragDropGrid({
   className,
   items: externalItems,
   onLayoutChange,
+  onDropItem,
+  onRemoveItem,
   rowHeight = 60,
   gap = 16,
   isEditing = false,
   savedLayouts,
   isDark = true,
+  isDroppable = false,
+  allItems,
   ...props
 }: DragDropGridProps) {
   const [items, setItems] = useState<GridItemConfig[]>(externalItems);
@@ -252,8 +262,38 @@ export function DragDropGrid({
     []
   );
 
+  // Handle external drop
+  const onDropRef = useRef(onDropItem);
+  onDropRef.current = onDropItem;
+
+  const handleDrop = useCallback(
+    (layout: Layout[], layoutItem: Layout, event: Event) => {
+      const droppedItemId = (event as DragEvent).dataTransfer?.getData("text/plain");
+      if (droppedItemId && onDropRef.current) {
+        onDropRef.current(droppedItemId, layoutItem);
+      }
+    },
+    []
+  );
+
+  // Remove item function
+  const onRemoveRef = useRef(onRemoveItem);
+  onRemoveRef.current = onRemoveItem;
+
+  const removeItem = useCallback((itemId: string) => {
+    if (onRemoveRef.current) {
+      onRemoveRef.current(itemId);
+    }
+  }, []);
+
+  // Get dropping item size based on allItems config
+  const droppingItem = useCallback(() => {
+    // Default dropping item size
+    return { i: "__dropping-elem__", w: 3, h: 3 };
+  }, []);
+
   return (
-    <DragDropGridContext.Provider value={{ cycleItemSize, getItemSize, getItemMinSize, getItemMaxSize, canResize, isEditing, isDark }}>
+    <DragDropGridContext.Provider value={{ cycleItemSize, getItemSize, getItemMinSize, getItemMaxSize, canResize, removeItem, isEditing, isDark }}>
       <div className={cn("drag-drop-grid", className)} {...props}>
         <ResponsiveGridLayout
           className="layout"
@@ -267,6 +307,9 @@ export function DragDropGrid({
           draggableHandle=".drag-handle"
           isResizable={false}
           useCSSTransforms={true}
+          isDroppable={isDroppable && isEditing}
+          onDrop={handleDrop}
+          droppingItem={droppingItem()}
         >
           {children}
         </ResponsiveGridLayout>
@@ -289,11 +332,15 @@ export function DragDropGrid({
           visibility: hidden;
         }
         .drag-drop-grid .react-grid-placeholder {
-          background: rgba(113, 113, 122, 0.3);
-          border: 2px dashed rgba(161, 161, 170, 0.5);
-          border-radius: 8px;
+          background: rgba(113, 113, 122, 0.15);
+          border: 1px solid rgba(161, 161, 170, 0.3);
+          border-radius: 0;
           transition-duration: 100ms;
           z-index: 2;
+        }
+        .drag-drop-grid .react-grid-item.react-grid-placeholder {
+          background: rgba(113, 113, 122, 0.15);
+          border: 1px solid rgba(161, 161, 170, 0.3);
         }
       `}</style>
     </DragDropGridContext.Provider>
@@ -306,6 +353,7 @@ export interface GridItemProps extends ComponentPropsWithoutRef<"div"> {
   children: ReactNode;
   showResizeHandle?: boolean;
   showDragHandle?: boolean;
+  showRemoveHandle?: boolean;
 }
 
 export function GridItem({
@@ -314,19 +362,23 @@ export function GridItem({
   className,
   showResizeHandle = true,
   showDragHandle = true,
+  showRemoveHandle = true,
   ...props
 }: GridItemProps) {
-  const { cycleItemSize, getItemSize, canResize, isEditing, isDark } = useDragDropGrid();
+  const { cycleItemSize, getItemSize, canResize, removeItem, isEditing, isDark } = useDragDropGrid();
   const size = getItemSize(itemId);
   const isResizable = canResize(itemId);
-
-  console.log("[GridItem] Rendering:", itemId, "isEditing:", isEditing, "isResizable:", isResizable, "canResize:", canResize(itemId));
 
   const handleResize = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("[GridItem] handleResize clicked for:", itemId);
     cycleItemSize(itemId);
+  };
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeItem(itemId);
   };
 
   return (
@@ -347,6 +399,21 @@ export function GridItem({
         >
           <BsGripVertical className={cn("w-3.5 h-3.5 pointer-events-none", isDark ? "text-zinc-400" : "text-zinc-600")} />
         </div>
+      )}
+
+      {/* Remove handle */}
+      {showRemoveHandle && isEditing && (
+        <button
+          onClick={handleRemove}
+          className={cn(
+            "absolute top-2 left-10 z-20 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer",
+            isDark ? "bg-red-900/80 hover:bg-red-800" : "bg-red-100 hover:bg-red-200"
+          )}
+          title="Remove card"
+          type="button"
+        >
+          <BsX className={cn("w-3.5 h-3.5 pointer-events-none", isDark ? "text-red-400" : "text-red-600")} />
+        </button>
       )}
 
       {/* Resize handle */}

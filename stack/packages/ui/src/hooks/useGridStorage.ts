@@ -4,6 +4,7 @@ import type { GridItemConfig, Layouts } from "../components/shared/DragDropGrid"
 export interface GridStorageData {
   items: GridItemConfig[];
   layouts: Layouts;
+  hiddenCards: string[];
   version: number;
 }
 
@@ -14,7 +15,7 @@ export interface UseGridStorageOptions {
   // userId?: string;
 }
 
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 
 /**
  * Hook for persisting grid layout to localStorage.
@@ -27,7 +28,17 @@ export function useGridStorage({ key, defaultItems }: UseGridStorageOptions) {
 
   // Start with defaults to avoid hydration mismatch
   const [items, setItems] = useState<GridItemConfig[]>(defaultItems);
+
+  // Keep a ref to current items for use in callbacks
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
   const [layouts, setLayouts] = useState<Layouts | undefined>(undefined);
+  const [hiddenCards, setHiddenCards] = useState<string[]>([]);
+
+  // Keep a ref to current hiddenCards for use in callbacks
+  const hiddenCardsRef = useRef(hiddenCards);
+  hiddenCardsRef.current = hiddenCards;
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load from localStorage after mount (client-side only)
@@ -52,6 +63,10 @@ export function useGridStorage({ key, defaultItems }: UseGridStorageOptions) {
           if (data.layouts && Object.keys(data.layouts).length > 0) {
             setLayouts(data.layouts);
           }
+          // Load hidden cards
+          if (data.hiddenCards) {
+            setHiddenCards(data.hiddenCards);
+          }
         }
       }
     } catch (error) {
@@ -60,19 +75,14 @@ export function useGridStorage({ key, defaultItems }: UseGridStorageOptions) {
     setIsLoaded(true);
   }, [key]);
 
-  // Save to localStorage
-  const saveLayout = useCallback(
-    (newItems: GridItemConfig[], newLayouts?: Layouts) => {
-      console.log("[useGridStorage] saveLayout called with:", newItems, newLayouts);
-      setItems(newItems);
-      if (newLayouts) {
-        setLayouts(newLayouts);
-      }
-
+  // Helper to save to localStorage
+  const saveToStorage = useCallback(
+    (newItems: GridItemConfig[], newLayouts: Layouts | undefined, newHiddenCards: string[]) => {
       try {
         const data: GridStorageData = {
           items: newItems,
           layouts: newLayouts || ({} as Layouts),
+          hiddenCards: newHiddenCards,
           version: STORAGE_VERSION,
         };
         localStorage.setItem(key, JSON.stringify(data));
@@ -80,19 +90,104 @@ export function useGridStorage({ key, defaultItems }: UseGridStorageOptions) {
       } catch (error) {
         console.warn("Failed to save grid layout to storage:", error);
       }
-
-      // Future: Sync with backend
-      // if (userId) {
-      //   syncToBackend(userId, data);
-      // }
     },
     [key]
+  );
+
+  // Save layout to localStorage
+  const saveLayout = useCallback(
+    (newVisibleItems: GridItemConfig[], newLayouts?: Layouts) => {
+      console.log("[useGridStorage] saveLayout called with:", newVisibleItems, newLayouts);
+
+      // Merge visible items with hidden items to preserve all items
+      const hiddenItemIds = hiddenCardsRef.current;
+      const hiddenItems = itemsRef.current.filter((item) => hiddenItemIds.includes(item.i));
+
+      // Update visible items with new data, keep hidden items unchanged
+      const allItems = defaultItemsRef.current.map((defaultItem) => {
+        // Check if it's in the new visible items (may have updated size)
+        const visibleItem = newVisibleItems.find((i) => i.i === defaultItem.i);
+        if (visibleItem) {
+          return visibleItem;
+        }
+        // Check if it's a hidden item (preserve its size)
+        const hiddenItem = hiddenItems.find((i) => i.i === defaultItem.i);
+        if (hiddenItem) {
+          return hiddenItem;
+        }
+        // Fallback to default
+        return defaultItem;
+      });
+
+      setItems(allItems);
+      if (newLayouts) {
+        setLayouts(newLayouts);
+      }
+      // Use ref to get current hiddenCards to avoid race conditions
+      saveToStorage(allItems, newLayouts, hiddenCardsRef.current);
+    },
+    [saveToStorage]
+  );
+
+  // Toggle card visibility
+  const toggleCardVisibility = useCallback(
+    (cardId: string) => {
+      setHiddenCards((prev) => {
+        const newHidden = prev.includes(cardId)
+          ? prev.filter((id) => id !== cardId)
+          : [...prev, cardId];
+
+        setItems((currentItems) => {
+          setLayouts((currentLayouts) => {
+            saveToStorage(currentItems, currentLayouts, newHidden);
+            return currentLayouts;
+          });
+          return currentItems;
+        });
+
+        return newHidden;
+      });
+    },
+    [saveToStorage]
+  );
+
+  // Show a card - clears layouts so they regenerate with the new card
+  const showCard = useCallback(
+    (cardId: string) => {
+      setHiddenCards((prev) => {
+        if (!prev.includes(cardId)) return prev;
+        const newHidden = prev.filter((id) => id !== cardId);
+        // Update ref immediately so saveLayout uses correct value
+        hiddenCardsRef.current = newHidden;
+        return newHidden;
+      });
+      // Clear layouts so DragDropGrid regenerates them with the newly visible card
+      setLayouts(undefined);
+    },
+    []
+  );
+
+  // Hide a card
+  const hideCard = useCallback(
+    (cardId: string) => {
+      setHiddenCards((prev) => {
+        if (prev.includes(cardId)) return prev;
+        const newHidden = [...prev, cardId];
+        // Update ref immediately so saveLayout uses correct value
+        hiddenCardsRef.current = newHidden;
+        return newHidden;
+      });
+      // Clear layouts so DragDropGrid regenerates them without the hidden card
+      setLayouts(undefined);
+    },
+    []
   );
 
   // Reset to defaults
   const resetLayout = useCallback(() => {
     setItems(defaultItemsRef.current);
     setLayouts(undefined);
+    setHiddenCards([]);
     try {
       localStorage.removeItem(key);
     } catch (error) {
@@ -100,11 +195,19 @@ export function useGridStorage({ key, defaultItems }: UseGridStorageOptions) {
     }
   }, [key]);
 
+  // Get visible items (items not in hiddenCards)
+  const visibleItems = items.filter((item) => !hiddenCards.includes(item.i));
+
   return {
     items,
+    visibleItems,
     layouts,
+    hiddenCards,
     isLoaded,
     saveLayout,
     resetLayout,
+    toggleCardVisibility,
+    showCard,
+    hideCard,
   };
 }

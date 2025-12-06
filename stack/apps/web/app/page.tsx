@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useServerStore } from "../stores/connectionStore";
 import { UsageCard, UsageCardContent, UsageCardTitle } from "@workspace/ui/components/shared/UsageCard/UsageCard";
 import { DragDropGrid, GridItem, useDragDropGrid, type GridItemConfig } from "@workspace/ui/components/shared/DragDropGrid";
 import { useGridStorage } from "@workspace/ui/hooks/useGridStorage";
@@ -9,110 +10,69 @@ import { Console, generateInitialLines, generateRandomLine, type ConsoleLine } f
 import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "@workspace/ui/lib/utils";
-import { BsSun, BsMoon } from "react-icons/bs";
+import { BsSun, BsMoon, BsGrid } from "react-icons/bs";
 import { Sparkline, DualSparkline } from "@workspace/ui/components/shared/Sparkline";
 import { AnimatedBackground } from "@workspace/ui/components/shared/AnimatedBackground";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@workspace/ui/components/sheet";
+import { SidebarTrigger } from "@workspace/ui/components/sidebar";
+import { toast } from "sonner";
 
 // Theme context
 const ThemeContext = createContext<{ isDark: boolean }>({ isDark: true });
 const useTheme = () => useContext(ThemeContext);
 
-// Simulated usage data with realistic fluctuations
-interface UsageData {
-  cpu: { percentage: number; cores: number; frequency: number; history: number[] };
-  ram: { percentage: number; used: number; total: number; history: number[] };
-  disk: { percentage: number; used: number; total: number; history: number[] };
-  network: { percentage: number; download: number; upload: number; downloadHistory: number[]; uploadHistory: number[] };
-}
+// Hook to handle simulation ticks and offline events
+function useServerSimulation() {
+  const { isOffline, setOffline, tickResources } = useServerStore();
 
-const HISTORY_LENGTH = 20;
-
-function useSimulatedUsage(): UsageData {
-  const [data, setData] = useState<UsageData>(() => {
-    // Generate initial history with realistic wave-like patterns
-    const generateHistory = (base: number, volatility: number, min: number = 0, max: number = 100) => {
-      const history: number[] = [];
-      let current = base;
-      for (let i = 0; i < HISTORY_LENGTH; i++) {
-        // Add sine wave pattern + random noise for more realistic variation
-        const wave = Math.sin(i * 0.5) * volatility * 0.3;
-        const noise = (Math.random() - 0.5) * volatility;
-        const spike = Math.random() < 0.1 ? (Math.random() - 0.3) * volatility * 2 : 0;
-        current = Math.max(min, Math.min(max, current + wave + noise + spike));
-        history.push(Math.round(current));
+  // Random offline events
+  useEffect(() => {
+    const offlineInterval = setInterval(() => {
+      if (!isOffline && Math.random() < 0.02) {
+        setOffline(true);
+        const toastId = toast.loading("Connection Lost - Reconnecting...", {
+          duration: Infinity,
+        });
+        const reconnectTime = 3000 + Math.random() * 5000;
+        setTimeout(() => {
+          setOffline(false);
+          toast.dismiss(toastId);
+          toast.success("Connection Restored", { duration: 2000 });
+        }, reconnectTime);
       }
-      return history;
-    };
+    }, 1000);
 
-    return {
-      cpu: { percentage: 42, cores: 8, frequency: 3.2, history: generateHistory(42, 20, 5, 95) },
-      ram: { percentage: 67, used: 10.7, total: 16, history: generateHistory(67, 15, 30, 95) },
-      disk: { percentage: 54, used: 432, total: 800, history: generateHistory(54, 5, 50, 60) },
-      network: {
-        percentage: 23,
-        download: 45,
-        upload: 12,
-        downloadHistory: generateHistory(45, 30, 10, 100),
-        uploadHistory: generateHistory(20, 20, 5, 50),
-      },
-    };
-  });
+    return () => clearInterval(offlineInterval);
+  }, [isOffline, setOffline]);
 
+  // Resource tick updates
   useEffect(() => {
     const interval = setInterval(() => {
-      setData((prev) => {
-        // Helper to add random variation with occasional spikes
-        const vary = (current: number, min: number, max: number, volatility: number = 5) => {
-          const spike = Math.random() < 0.05; // 5% chance of spike
-          const change = spike
-            ? (Math.random() - 0.3) * volatility * 4 // Larger change for spikes (biased up)
-            : (Math.random() - 0.5) * volatility;
-          return Math.min(max, Math.max(min, current + change));
-        };
-
-        const newCpu = vary(prev.cpu.percentage, 5, 95, 8);
-        const newRam = vary(prev.ram.percentage, 30, 95, 3);
-        const newDisk = vary(prev.disk.percentage, 50, 60, 0.5); // Disk changes slowly
-        const newNetwork = vary(prev.network.percentage, 5, 80, 10);
-        const newDownload = Math.round(10 + (newNetwork / 100) * 90);
-        const newUpload = Math.round(5 + (newNetwork / 100) * 30);
-
-        return {
-          cpu: {
-            ...prev.cpu,
-            percentage: Math.round(newCpu),
-            frequency: +(3.0 + (newCpu / 100) * 1.2).toFixed(1),
-            history: [...prev.cpu.history.slice(1), Math.round(newCpu)],
-          },
-          ram: {
-            ...prev.ram,
-            percentage: Math.round(newRam),
-            used: +((newRam / 100) * prev.ram.total).toFixed(1),
-            history: [...prev.ram.history.slice(1), Math.round(newRam)],
-          },
-          disk: {
-            ...prev.disk,
-            percentage: Math.round(newDisk),
-            used: Math.round((newDisk / 100) * prev.disk.total),
-            history: [...prev.disk.history.slice(1), Math.round(newDisk)],
-          },
-          network: {
-            ...prev.network,
-            percentage: Math.round(newNetwork),
-            download: newDownload,
-            upload: newUpload,
-            downloadHistory: [...prev.network.downloadHistory.slice(1), newDownload],
-            uploadHistory: [...prev.network.uploadHistory.slice(1), newUpload],
-          },
-        };
-      });
+      tickResources();
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  return data;
+  }, [tickResources]);
 }
+
+// Card metadata for display in the management sheet
+const cardMetadata: Record<string, { name: string; description: string }> = {
+  "instance-name": { name: "Instance Name", description: "Display the server instance name" },
+  "container-controls": { name: "Container Controls", description: "Start, stop, restart, and kill controls" },
+  "system-info": { name: "System Information", description: "Node details including location and ID" },
+  "network-info": { name: "Network Info", description: "IP addresses and open ports" },
+  "cpu": { name: "CPU Usage", description: "Real-time CPU utilization with history" },
+  "ram": { name: "RAM Usage", description: "Memory usage with history graph" },
+  "disk": { name: "Disk Usage", description: "Storage utilization with history" },
+  "network-usage": { name: "Network Usage", description: "Download and upload speeds" },
+  "console": { name: "Console", description: "Server console with command input" },
+};
 
 // Define the default grid items with their sizes
 const defaultGridItems: GridItemConfig[] = [
@@ -124,7 +84,7 @@ const defaultGridItems: GridItemConfig[] = [
   { i: "ram", size: "xs", minSize: "xxs", maxSize: "sm" },
   { i: "disk", size: "xs", minSize: "xxs", maxSize: "sm" },
   { i: "network-usage", size: "xs", minSize: "xxs", maxSize: "sm" },
-  { i: "console", size: "xl", minSize: "md", maxSize: "xl" },
+  { i: "console", size: "xxl", minSize: "md", maxSize: "xxl" },
 ];
 
 // Loading spinner for the dashboard
@@ -139,8 +99,22 @@ function DashboardLoading() {
 // Hook for simulated console lines
 function useSimulatedConsole() {
   const [lines, setLines] = useState<ConsoleLine[]>(() => generateInitialLines(25));
+  const isOffline = useServerStore((state) => state.isOffline);
+  const containerStatus = useServerStore((state) => state.server.status);
+
+  const shouldGenerateLines = !isOffline && containerStatus === "running";
+
+  // Clear console when container stops
+  useEffect(() => {
+    if (containerStatus === "stopped") {
+      setLines([]);
+    }
+  }, [containerStatus]);
 
   useEffect(() => {
+    // Don't generate lines when offline or container is not running
+    if (!shouldGenerateLines) return;
+
     // Add a new line every 2-5 seconds randomly
     const addLine = () => {
       setLines((prev) => [...prev.slice(-99), generateRandomLine()]);
@@ -156,7 +130,7 @@ function useSimulatedConsole() {
 
     let timeoutId = scheduleNext();
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [shouldGenerateLines]);
 
   const handleCommand = useCallback((command: string) => {
     // Add the command as a user input line
@@ -190,11 +164,18 @@ function useSimulatedConsole() {
 export default function Page() {
   const [isEditing, setIsEditing] = useState(false);
   const [isDark, setIsDark] = useState(true);
-  const { items, layouts, isLoaded, saveLayout, resetLayout } = useGridStorage({
+  const [isCardSheetOpen, setIsCardSheetOpen] = useState(false);
+  const { items, visibleItems, layouts, hiddenCards, isLoaded, saveLayout, resetLayout, showCard, hideCard } = useGridStorage({
     key: "stellarstack-dashboard-layout",
     defaultItems: defaultGridItems,
   });
-  const usage = useSimulatedUsage();
+
+  // Start server simulation (resource ticks + random offline events)
+  useServerSimulation();
+
+  // Get data from the store
+  const server = useServerStore((state) => state.server);
+  const isOffline = useServerStore((state) => state.isOffline);
   const { lines: consoleLines, handleCommand } = useSimulatedConsole();
 
   // Show spinner while loading from localStorage
@@ -205,192 +186,284 @@ export default function Page() {
   return (
     <ThemeContext.Provider value={{ isDark }}>
     <div className={cn(
-      "min-h-svh p-8 transition-colors relative",
+      "min-h-svh transition-colors relative",
       isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
     )}>
       <AnimatedBackground isDark={isDark} />
-      {/* Header with Edit Toggle */}
-      <div className="mx-auto mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-zinc-100"></h1>
-        <div className="flex items-center gap-2">
-          {isEditing && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={resetLayout}
+
+      <div className="p-8">
+        {/* Header with Edit Toggle */}
+        <div className="mx-auto mb-6 flex items-center justify-between">
+          <SidebarTrigger className={cn(
+            "transition-colors",
+            isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+          )} />
+          <div className="flex items-center gap-2">
+              {isEditing && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCardSheetOpen(true)}
+                    className={cn(
+                      "transition-colors",
+                      isDark
+                        ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
+                        : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    )}
+                  >
+                    <BsGrid className="w-4 h-4 mr-2" />
+                    Manage Cards
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetLayout}
+                    className={cn(
+                      "transition-colors",
+                      isDark
+                        ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
+                        : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    )}
+                  >
+                    Reset Layout
+                  </Button>
+                </>
+              )}
+              <Button
+                variant={isEditing ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className={cn(
+                  "transition-colors",
+                  isEditing && (isDark ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200" : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"),
+                  !isEditing && (isDark
+                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
+                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400")
+                )}
+              >
+                {isEditing ? "Done Editing" : "Edit Layout"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDark(!isDark)}
+                className={cn(
+                  "transition-colors p-2",
+                  isDark
+                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
+                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                )}
+              >
+                {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Card Management Sheet */}
+          <Sheet open={isCardSheetOpen} onOpenChange={setIsCardSheetOpen}>
+            <SheetContent
+              side="right"
               className={cn(
-                "transition-colors",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                "w-[400px] sm:max-w-[450px] overflow-y-auto",
+                isDark ? "bg-[#0f0f0f] border-zinc-800" : "bg-white border-zinc-200"
               )}
             >
-              Reset Layout
-            </Button>
-          )}
-          <Button
-            variant={isEditing ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsEditing(!isEditing)}
-            className={cn(
-              "transition-colors",
-              isEditing && (isDark ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200" : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"),
-              !isEditing && (isDark
-                ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400")
-            )}
+              <SheetHeader>
+                <SheetTitle className={isDark ? "text-zinc-100" : "text-zinc-900"}>
+                  Available Cards
+                </SheetTitle>
+                <SheetDescription className={isDark ? "text-zinc-400" : "text-zinc-600"}>
+                  Click a card to add it to your dashboard.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                {hiddenCards
+                  .filter((cardId) => cardId !== "console")
+                  .map((cardId) => (
+                    <div
+                      key={cardId}
+                      onClick={() => showCard(cardId)}
+                      className={cn(
+                        "rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
+                        isDark ? "hover:shadow-black/50" : "hover:shadow-zinc-300/50"
+                      )}
+                    >
+                      <div className="h-[120px] pointer-events-none">
+                        <CardPreview cardId={cardId} isDark={isDark} />
+                      </div>
+                    </div>
+                  ))}
+                {hiddenCards.filter((id) => id !== "console").length === 0 && (
+                  <div className={cn(
+                    "text-center py-8 text-sm",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}>
+                    All cards are on your dashboard.
+                    <br />
+                    Remove cards using the X button to add them here.
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <DragDropGrid
+            className="max-w-7xl mx-auto"
+            items={visibleItems}
+            allItems={items}
+            savedLayouts={layouts}
+            onLayoutChange={saveLayout}
+            onDropItem={(itemId) => showCard(itemId)}
+            onRemoveItem={(itemId) => hideCard(itemId)}
+            rowHeight={50}
+            gap={16}
+            isEditing={isEditing}
+            isDark={isDark}
+            isDroppable={true}
           >
-            {isEditing ? "Done Editing" : "Edit Layout"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsDark(!isDark)}
-            className={cn(
-              "transition-colors p-2",
-              isDark
-                ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+            {/* Instance Name */}
+            {!hiddenCards.includes("instance-name") && (
+              <div key="instance-name" className="h-full">
+                <GridItem itemId="instance-name">
+                  <InstanceNameCard itemId="instance-name" />
+                </GridItem>
+              </div>
             )}
-          >
-            {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
-          </Button>
-        </div>
+
+            {/* Container Controls */}
+            {!hiddenCards.includes("container-controls") && (
+              <div key="container-controls" className="h-full">
+                <GridItem itemId="container-controls">
+                  <ContainerControlsCard itemId="container-controls" />
+                </GridItem>
+              </div>
+            )}
+
+            {/* System Information */}
+            {!hiddenCards.includes("system-info") && (
+              <div key="system-info" className="h-full">
+                <GridItem itemId="system-info">
+                  <SystemInformationCard itemId="system-info" />
+                </GridItem>
+              </div>
+            )}
+
+            {/* Network Info */}
+            {!hiddenCards.includes("network-info") && (
+              <div key="network-info" className="h-full">
+                <GridItem itemId="network-info">
+                  <NetworkInfoCard itemId="network-info" />
+                </GridItem>
+              </div>
+            )}
+
+            {/* CPU Usage */}
+            {!hiddenCards.includes("cpu") && (
+              <div key="cpu" className="h-full">
+                <GridItem itemId="cpu">
+                  <UsageMetricCard
+                    itemId="cpu"
+                    title="CPU"
+                    percentage={server.cpu.usage.percentage}
+                    details={[`${server.cpu.cores} CORES`, `${server.cpu.frequency} GHz`]}
+                    history={server.cpu.usage.history}
+                    tooltipContent={
+                      <>
+                        <InfoRow label="Model" value={server.cpu.model || "AMD Ryzen 9 9950X3D"} isDark={isDark} />
+                        <InfoRow label="Architecture" value={server.cpu.architecture || "Zen 5"} isDark={isDark} />
+                        <InfoRow label="Base Clock" value={`${server.cpu.baseFrequency || 4.3} GHz`} isDark={isDark} />
+                        <InfoRow label="Boost Clock" value={`${server.cpu.boostFrequency || 5.7} GHz`} isDark={isDark} />
+                        <InfoRow label="TDP" value={`${server.cpu.tdp || 170}W`} isDark={isDark} />
+                        <InfoRow label="Cache" value={server.cpu.cache || "144MB"} isDark={isDark} />
+                      </>
+                    }
+                  />
+                </GridItem>
+              </div>
+            )}
+
+            {/* RAM Usage */}
+            {!hiddenCards.includes("ram") && (
+              <div key="ram" className="h-full">
+                <GridItem itemId="ram">
+                  <UsageMetricCard
+                    itemId="ram"
+                    title="RAM"
+                    percentage={server.memory.usage.percentage}
+                    details={[`${server.memory.used} / ${server.memory.total} GB`, "DDR5"]}
+                    history={server.memory.usage.history}
+                    tooltipContent={
+                      <>
+                        <InfoRow label="Type" value={server.memory.type || "DDR5"} isDark={isDark} />
+                        <InfoRow label="Speed" value={`${server.memory.speed || 6000} MT/s`} isDark={isDark} />
+                        <InfoRow label="Channels" value={server.memory.channels || "Dual Channel"} isDark={isDark} />
+                        <InfoRow label="Slots Used" value={server.memory.slots || "2 / 4"} isDark={isDark} />
+                        <InfoRow label="Timings" value={server.memory.timings || "CL30-38-38"} isDark={isDark} />
+                      </>
+                    }
+                  />
+                </GridItem>
+              </div>
+            )}
+
+            {/* Disk Usage */}
+            {!hiddenCards.includes("disk") && (
+              <div key="disk" className="h-full">
+                <GridItem itemId="disk">
+                  <UsageMetricCard
+                    itemId="disk"
+                    title="DISK"
+                    percentage={server.disk.usage.percentage}
+                    details={[`${server.disk.used} / ${server.disk.total} GB`, server.disk.type || "NVMe SSD"]}
+                    history={server.disk.usage.history}
+                    tooltipContent={
+                      <>
+                        <InfoRow label="Model" value={server.disk.model || "Samsung 990 Pro"} isDark={isDark} />
+                        <InfoRow label="Interface" value={server.disk.interface || "PCIe 4.0 x4"} isDark={isDark} />
+                        <InfoRow label="Read Speed" value={server.disk.readSpeed || "7,450 MB/s"} isDark={isDark} />
+                        <InfoRow label="Write Speed" value={server.disk.writeSpeed || "6,900 MB/s"} isDark={isDark} />
+                        <InfoRow label="Health" value={`${server.disk.health || 98}%`} isDark={isDark} />
+                      </>
+                    }
+                  />
+                </GridItem>
+              </div>
+            )}
+
+            {/* Network Usage */}
+            {!hiddenCards.includes("network-usage") && (
+              <div key="network-usage" className="h-full">
+                <GridItem itemId="network-usage">
+                  <NetworkUsageCard
+                    itemId="network-usage"
+                    download={server.network.download}
+                    upload={server.network.upload}
+                    downloadHistory={server.network.downloadHistory}
+                    uploadHistory={server.network.uploadHistory}
+                  />
+                </GridItem>
+              </div>
+            )}
+
+            {/* Console - cannot be removed */}
+            {!hiddenCards.includes("console") && (
+              <div key="console" className="h-full">
+                <GridItem itemId="console" showRemoveHandle={false}>
+                  <Console lines={consoleLines} onCommand={handleCommand} isDark={isDark} isOffline={isOffline} />
+                </GridItem>
+              </div>
+            )}
+          </DragDropGrid>
+
+        {/* Footer */}
+        <footer className={cn(
+          "mt-12 pb-4 text-center text-sm uppercase transition-colors",
+          isDark ? "text-zinc-500" : "text-zinc-600"
+        )}>
+          &copy; {new Date().getFullYear()} StellarStack
+        </footer>
       </div>
-
-      <DragDropGrid
-        className="max-w-7xl mx-auto"
-        items={items}
-        savedLayouts={layouts}
-        onLayoutChange={saveLayout}
-        rowHeight={50}
-        gap={16}
-        isEditing={isEditing}
-        isDark={isDark}
-      >
-        {/* Instance Name */}
-        <div key="instance-name" className="h-full">
-          <GridItem itemId="instance-name">
-            <InstanceNameCard itemId="instance-name" />
-          </GridItem>
-        </div>
-
-        {/* Container Controls */}
-        <div key="container-controls" className="h-full">
-          <GridItem itemId="container-controls">
-            <ContainerControlsCard itemId="container-controls" />
-          </GridItem>
-        </div>
-
-        {/* System Information */}
-        <div key="system-info" className="h-full">
-          <GridItem itemId="system-info">
-            <SystemInformationCard itemId="system-info" />
-          </GridItem>
-        </div>
-
-        {/* Network Info */}
-        <div key="network-info" className="h-full">
-          <GridItem itemId="network-info">
-            <NetworkInfoCard itemId="network-info" />
-          </GridItem>
-        </div>
-
-        {/* CPU Usage */}
-        <div key="cpu" className="h-full">
-          <GridItem itemId="cpu">
-            <UsageMetricCard
-              itemId="cpu"
-              title="CPU"
-              percentage={usage.cpu.percentage}
-              details={[`${usage.cpu.cores} CORES`, `${usage.cpu.frequency} GHz`]}
-              history={usage.cpu.history}
-              tooltipContent={
-                <>
-                  <InfoRow label="Model" value="AMD Ryzen 9 9950X3D" isDark={isDark} />
-                  <InfoRow label="Architecture" value="Zen 5" isDark={isDark} />
-                  <InfoRow label="Base Clock" value="4.3 GHz" isDark={isDark} />
-                  <InfoRow label="Boost Clock" value="5.7 GHz" isDark={isDark} />
-                  <InfoRow label="TDP" value="170W" isDark={isDark} />
-                  <InfoRow label="Cache" value="144MB" isDark={isDark} />
-                </>
-              }
-            />
-          </GridItem>
-        </div>
-
-        {/* RAM Usage */}
-        <div key="ram" className="h-full">
-          <GridItem itemId="ram">
-            <UsageMetricCard
-              itemId="ram"
-              title="RAM"
-              percentage={usage.ram.percentage}
-              details={[`${usage.ram.used} / ${usage.ram.total} GB`, "USED"]}
-              history={usage.ram.history}
-              tooltipContent={
-                <>
-                  <InfoRow label="Type" value="DDR5" isDark={isDark} />
-                  <InfoRow label="Speed" value="6000 MT/s" isDark={isDark} />
-                  <InfoRow label="Channels" value="Dual Channel" isDark={isDark} />
-                  <InfoRow label="Slots Used" value="2 / 4" isDark={isDark} />
-                  <InfoRow label="Timings" value="CL30-38-38" isDark={isDark} />
-                </>
-              }
-            />
-          </GridItem>
-        </div>
-
-        {/* Disk Usage */}
-        <div key="disk" className="h-full">
-          <GridItem itemId="disk">
-            <UsageMetricCard
-              itemId="disk"
-              title="DISK"
-              percentage={usage.disk.percentage}
-              details={[`${usage.disk.used} / ${usage.disk.total} GB`, "NVMe SSD"]}
-              history={usage.disk.history}
-              tooltipContent={
-                <>
-                  <InfoRow label="Model" value="Samsung 990 Pro" isDark={isDark} />
-                  <InfoRow label="Interface" value="PCIe 4.0 x4" isDark={isDark} />
-                  <InfoRow label="Read Speed" value="7,450 MB/s" isDark={isDark} />
-                  <InfoRow label="Write Speed" value="6,900 MB/s" isDark={isDark} />
-                  <InfoRow label="Health" value="98%" isDark={isDark} />
-                </>
-              }
-            />
-          </GridItem>
-        </div>
-
-        {/* Network Usage */}
-        <div key="network-usage" className="h-full">
-          <GridItem itemId="network-usage">
-            <NetworkUsageCard
-              itemId="network-usage"
-              download={usage.network.download}
-              upload={usage.network.upload}
-              downloadHistory={usage.network.downloadHistory}
-              uploadHistory={usage.network.uploadHistory}
-            />
-          </GridItem>
-        </div>
-
-        {/* Console */}
-        <div key="console" className="h-full">
-          <GridItem itemId="console">
-            <Console lines={consoleLines} onCommand={handleCommand} isDark={isDark} />
-          </GridItem>
-        </div>
-      </DragDropGrid>
-
-      {/* Footer */}
-      <footer className={cn(
-        "mt-12 pb-4 text-center text-sm uppercase transition-colors",
-        isDark ? "text-zinc-500" : "text-zinc-600"
-      )}>
-        &copy; {new Date().getFullYear()} StellarStack
-      </footer>
     </div>
     </ThemeContext.Provider>
   );
@@ -408,7 +481,8 @@ interface UsageMetricCardProps {
 }
 
 // Get color based on percentage
-function getUsageColor(percentage: number): string {
+function getUsageColor(percentage: number, isDark: boolean = true): string {
+  if (percentage === 0) return isDark ? "#71717a" : "#a1a1aa"; // gray when stopped
   if (percentage > 75) return "#ef4444"; // red
   if (percentage > 50) return "#f59e0b"; // amber
   return "#22c55e"; // green
@@ -417,6 +491,7 @@ function getUsageColor(percentage: number): string {
 function UsageMetricCard({ itemId, title, percentage, details, tooltipContent, history, color }: UsageMetricCardProps) {
   const { getItemSize, isEditing } = useDragDropGrid();
   const { isDark } = useTheme();
+  const isOffline = useServerStore((state) => state.isOffline);
   const size = getItemSize(itemId);
 
   // Determine layout based on size
@@ -428,20 +503,22 @@ function UsageMetricCard({ itemId, title, percentage, details, tooltipContent, h
   const isLarge = size === "lg" || size === "xl";
   const showSparklineOnly = isSm || isMd || isLarge; // On SM, MD, LG, XL show sparkline instead of bar
 
-  const sparklineColor = color || getUsageColor(percentage);
+  const sparklineColor = isOffline ? (isDark ? "#71717a" : "#a1a1aa") : (color || getUsageColor(percentage, isDark));
 
   // xxs/xxs-wide view: minimal horizontal layout with just title and percentage
   if (isXxs) {
     return (
-      <UsageCard isDark={isDark} className="h-full flex items-center justify-between px-6">
+      <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
         <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{title}</span>
-        <span className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>{percentage}%</span>
+        <span className={cn("text-xl font-mono", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"))}>
+          {isOffline ? "--" : `${percentage}%`}
+        </span>
       </UsageCard>
     );
   }
 
   return (
-    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4")}>
+    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4", isOffline && "opacity-60")}>
       {tooltipContent && (
         <InfoTooltip content={tooltipContent} visible={!isEditing} isDark={isDark} />
       )}
@@ -453,10 +530,10 @@ function UsageMetricCard({ itemId, title, percentage, details, tooltipContent, h
       </UsageCardTitle>
       <UsageCardContent className={isXs ? "space-y-1" : undefined}>
         <span className={cn(
-          isDark ? "text-zinc-100" : "text-zinc-800",
+          isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"),
           isXs ? "text-xl" : isCompact ? "text-2xl" : isLarge ? "text-5xl" : "text-4xl"
         )}>
-          {percentage}%
+          {isOffline ? "--" : `${percentage}%`}
         </span>
         {!isXs && (
           <div className={cn(
@@ -465,7 +542,7 @@ function UsageMetricCard({ itemId, title, percentage, details, tooltipContent, h
             isCompact ? "text-xs mt-2" : "text-sm mt-3"
           )}>
             {details.map((detail, i) => (
-              <div key={i}>{detail}</div>
+              <div key={i}>{isOffline ? "--" : detail}</div>
             ))}
           </div>
         )}
@@ -629,26 +706,32 @@ interface NetworkUsageCardProps {
 function NetworkUsageCard({ itemId, download, upload, downloadHistory, uploadHistory }: NetworkUsageCardProps) {
   const { getItemSize, isEditing } = useDragDropGrid();
   const { isDark } = useTheme();
+  const isOffline = useServerStore((state) => state.isOffline);
   const size = getItemSize(itemId);
 
   const isXxs = size === "xxs" || size === "xxs-wide";
   const isXs = size === "xs";
   const isCompact = size === "xs" || size === "sm" || size === "xxs" || size === "xxs-wide";
 
-  const valueColor = isDark ? "text-zinc-200" : "text-zinc-800";
+  const valueColor = isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-200" : "text-zinc-800");
+  const offlineGray = isDark ? "#71717a" : "#a1a1aa";
 
   // xxs view: minimal horizontal layout with just upload/download speeds
   if (isXxs) {
     return (
-      <UsageCard isDark={isDark} className="h-full flex items-center justify-between px-6">
-        <span className="text-blue-400 font-mono text-sm">↓ {download} MB/s</span>
-        <span className="text-purple-400 font-mono text-sm">↑ {upload} MB/s</span>
+      <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
+        <span className={cn("font-mono text-sm", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-blue-400")}>
+          ↓ {isOffline ? "-- " : download} MB/s
+        </span>
+        <span className={cn("font-mono text-sm", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-purple-400")}>
+          ↑ {isOffline ? "-- " : upload} MB/s
+        </span>
       </UsageCard>
     );
   }
 
   return (
-    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4")}>
+    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4", isOffline && "opacity-60")}>
       <InfoTooltip
         visible={!isEditing}
         isDark={isDark}
@@ -676,12 +759,12 @@ function NetworkUsageCard({ itemId, download, upload, downloadHistory, uploadHis
           isXs ? "text-[10px]" : isCompact ? "text-xs" : "text-sm"
         )}>
           <div className="flex justify-between items-center">
-            <span className="text-blue-400">{isXs ? "↓" : "↓ Download"}</span>
-            <span className={cn(valueColor, "font-mono")}>{download} MB/s</span>
+            <span className={isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-blue-400"}>{isXs ? "↓" : "↓ Download"}</span>
+            <span className={cn(valueColor, "font-mono")}>{isOffline ? "--" : download} MB/s</span>
           </div>
           <div className="flex justify-between items-center mt-0.5">
-            <span className="text-purple-400">{isXs ? "↑" : "↑ Upload"}</span>
-            <span className={cn(valueColor, "font-mono")}>{upload} MB/s</span>
+            <span className={isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : "text-purple-400"}>{isXs ? "↑" : "↑ Upload"}</span>
+            <span className={cn(valueColor, "font-mono")}>{isOffline ? "--" : upload} MB/s</span>
           </div>
         </div>
         {downloadHistory && uploadHistory && (
@@ -689,8 +772,8 @@ function NetworkUsageCard({ itemId, download, upload, downloadHistory, uploadHis
             <DualSparkline
               data1={downloadHistory}
               data2={uploadHistory}
-              color1="#3b82f6"
-              color2="#a855f7"
+              color1={isOffline ? offlineGray : "#3b82f6"}
+              color2={isOffline ? offlineGray : "#a855f7"}
               height={isXs ? 40 : isCompact ? 50 : 60}
               isDark={isDark}
             />
@@ -704,8 +787,7 @@ function NetworkUsageCard({ itemId, download, upload, downloadHistory, uploadHis
 // Instance Name Card
 function InstanceNameCard({ itemId }: { itemId: string }) {
   const { isDark } = useTheme();
-  // Mock data - would come from props/API in real app
-  const instanceName = "A Minecraft Server";
+  const instanceName = useServerStore((state) => state.server.name);
 
   return (
     <UsageCard isDark={isDark} className="h-full flex items-center justify-center">
@@ -716,30 +798,211 @@ function InstanceNameCard({ itemId }: { itemId: string }) {
   );
 }
 
+// Card Preview component for the management sheet
+interface CardPreviewProps {
+  cardId: string;
+  isDark: boolean;
+}
+
+function CardPreview({ cardId, isDark }: CardPreviewProps) {
+  const server = useServerStore((state) => state.server);
+  const valueColor = isDark ? "text-zinc-200" : "text-zinc-800";
+  const badgeBg = isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700";
+
+  switch (cardId) {
+    case "instance-name":
+      return (
+        <UsageCard isDark={isDark} className="h-full flex items-center justify-center">
+          <div className={cn("text-lg font-mono uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            {server.name}
+          </div>
+        </UsageCard>
+      );
+
+    case "container-controls":
+      return (
+        <UsageCard isDark={isDark} className="h-full flex items-center justify-center px-4">
+          <div className="flex gap-2 w-full justify-center">
+            {["Start", "Stop", "Kill", "Restart"].map((label) => (
+              <span
+                key={label}
+                className={cn(
+                  "px-2 py-1 rounded text-[10px] font-medium uppercase",
+                  isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-200 text-zinc-600"
+                )}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </UsageCard>
+      );
+
+    case "system-info":
+      return (
+        <UsageCard isDark={isDark} className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-2", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            System Info
+          </div>
+          <div className="space-y-1 text-[10px]">
+            <div className={valueColor}>{server.system.os}</div>
+            <div className={cn("font-mono", valueColor)}>{server.system.osVersion}</div>
+          </div>
+        </UsageCard>
+      );
+
+    case "network-info":
+      return (
+        <UsageCard isDark={isDark} className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-2", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            Network Info
+          </div>
+          <div className="space-y-1 text-[10px]">
+            <div className={cn("font-mono", valueColor)}>{server.networkConfig.ipAddress}</div>
+            <div className="flex gap-1 mt-1">
+              <span className={cn("px-1 py-0.5 rounded text-[8px]", badgeBg)}>{server.networkConfig.port}</span>
+            </div>
+          </div>
+        </UsageCard>
+      );
+
+    case "cpu":
+      return (
+        <UsageCard isDark={isDark} className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            CPU
+          </div>
+          <div className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+            {server.cpu.usage.percentage}%
+          </div>
+          <div className="mt-2">
+            <Sparkline data={server.cpu.usage.history} color={getUsageColor(server.cpu.usage.percentage, isDark)} height={30} isDark={isDark} />
+          </div>
+        </UsageCard>
+      );
+
+    case "ram":
+      return (
+        <UsageCard isDark={isDark} className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            RAM
+          </div>
+          <div className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+            {server.memory.usage.percentage}%
+          </div>
+          <div className="mt-2">
+            <Sparkline data={server.memory.usage.history} color={getUsageColor(server.memory.usage.percentage, isDark)} height={30} isDark={isDark} />
+          </div>
+        </UsageCard>
+      );
+
+    case "disk":
+      return (
+        <UsageCard isDark={isDark} className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            DISK
+          </div>
+          <div className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+            {server.disk.usage.percentage}%
+          </div>
+          <div className="mt-2">
+            <Sparkline data={server.disk.usage.history} color={getUsageColor(server.disk.usage.percentage, isDark)} height={30} isDark={isDark} />
+          </div>
+        </UsageCard>
+      );
+
+    case "network-usage":
+      return (
+        <UsageCard isDark={isDark} className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            Network
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-blue-400">↓ {server.network.download}</span>
+            <span className="text-purple-400">↑ {server.network.upload}</span>
+          </div>
+          <div className="mt-2">
+            <DualSparkline
+              data1={server.network.downloadHistory}
+              data2={server.network.uploadHistory}
+              color1="#3b82f6"
+              color2="#a855f7"
+              height={30}
+              isDark={isDark}
+            />
+          </div>
+        </UsageCard>
+      );
+
+    default:
+      return (
+        <UsageCard isDark={isDark} className="h-full flex items-center justify-center">
+          <div className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+            {cardMetadata[cardId]?.name || cardId}
+          </div>
+        </UsageCard>
+      );
+  }
+}
+
 // Container Controls Card
 function ContainerControlsCard({ itemId }: { itemId: string }) {
   const { isDark } = useTheme();
-  const [status, setStatus] = useState<"running" | "stopped" | "starting" | "stopping">("running");
+  const isOffline = useServerStore((state) => state.isOffline);
+  const status = useServerStore((state) => state.server.status);
+  const setContainerStatus = useServerStore((state) => state.setContainerStatus);
 
   const handleStart = () => {
-    setStatus("starting");
-    setTimeout(() => setStatus("running"), 1500);
+    if (isOffline) {
+      toast.error("Cannot start server while offline");
+      return;
+    }
+    setContainerStatus("starting");
+    const toastId = toast.loading("Starting server...");
+    setTimeout(() => {
+      setContainerStatus("running");
+      toast.dismiss(toastId);
+      toast.success("Server started successfully");
+    }, 1500);
   };
 
   const handleStop = () => {
-    setStatus("stopping");
-    setTimeout(() => setStatus("stopped"), 1500);
+    if (isOffline) {
+      toast.error("Cannot stop server while offline");
+      return;
+    }
+    setContainerStatus("stopping");
+    const toastId = toast.loading("Stopping server...");
+    setTimeout(() => {
+      setContainerStatus("stopped");
+      toast.dismiss(toastId);
+      toast.info("Server stopped");
+    }, 1500);
   };
 
   const handleKill = () => {
-    setStatus("stopped");
+    if (isOffline) {
+      toast.error("Cannot kill server while offline");
+      return;
+    }
+    setContainerStatus("stopped");
+    toast.warning("Server force killed");
   };
 
   const handleRestart = () => {
-    setStatus("stopping");
+    if (isOffline) {
+      toast.error("Cannot restart server while offline");
+      return;
+    }
+    setContainerStatus("stopping");
+    const toastId = toast.loading("Restarting server...");
     setTimeout(() => {
-      setStatus("starting");
-      setTimeout(() => setStatus("running"), 1000);
+      setContainerStatus("starting");
+      setTimeout(() => {
+        setContainerStatus("running");
+        toast.dismiss(toastId);
+        toast.success("Server restarted successfully");
+      }, 1000);
     }, 1000);
   };
 
@@ -747,54 +1010,57 @@ function ContainerControlsCard({ itemId }: { itemId: string }) {
   const isStopped = status === "stopped";
   const isTransitioning = status === "starting" || status === "stopping";
 
-  const buttonBase = "px-4 py-2 rounded text-xs font-medium uppercase tracking-wider transition-colors";
+  const buttonBase = "px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors";
   const buttonColors = isDark
     ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
     : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300";
+  const disabledColors = isDark
+    ? "bg-zinc-800/50 text-zinc-600"
+    : "bg-zinc-200/50 text-zinc-400";
 
   return (
-    <UsageCard isDark={isDark} className="h-full flex items-center justify-center px-8">
+    <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-center px-8", isOffline && "opacity-60")}>
       <div className="flex gap-4 w-full justify-between max-w-md">
         <button
           onClick={handleStart}
-          disabled={isRunning || isTransitioning}
+          disabled={isRunning || isTransitioning || isOffline}
           className={cn(
             buttonBase,
-            buttonColors,
-            (isRunning || isTransitioning) && "opacity-50 cursor-not-allowed"
+            (isRunning || isTransitioning || isOffline) ? disabledColors : buttonColors,
+            (isRunning || isTransitioning || isOffline) && "cursor-not-allowed"
           )}
         >
           Start
         </button>
         <button
           onClick={handleStop}
-          disabled={isStopped || isTransitioning}
+          disabled={isStopped || isTransitioning || isOffline}
           className={cn(
             buttonBase,
-            buttonColors,
-            (isStopped || isTransitioning) && "opacity-50 cursor-not-allowed"
+            (isStopped || isTransitioning || isOffline) ? disabledColors : buttonColors,
+            (isStopped || isTransitioning || isOffline) && "cursor-not-allowed"
           )}
         >
           Stop
         </button>
         <button
           onClick={handleKill}
-          disabled={isStopped}
+          disabled={isStopped || isOffline}
           className={cn(
             buttonBase,
-            buttonColors,
-            isStopped && "opacity-50 cursor-not-allowed"
+            (isStopped || isOffline) ? disabledColors : buttonColors,
+            (isStopped || isOffline) && "cursor-not-allowed"
           )}
         >
           Kill
         </button>
         <button
           onClick={handleRestart}
-          disabled={isStopped || isTransitioning}
+          disabled={isStopped || isTransitioning || isOffline}
           className={cn(
             buttonBase,
-            buttonColors,
-            (isStopped || isTransitioning) && "opacity-50 cursor-not-allowed"
+            (isStopped || isTransitioning || isOffline) ? disabledColors : buttonColors,
+            (isStopped || isTransitioning || isOffline) && "cursor-not-allowed"
           )}
         >
           Restart

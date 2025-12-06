@@ -13,4 +13,5 @@ export interface ConsoleProps {
   maxLines?: number;
   className?: string;
   isDark?: boolean;
+  isOffline?: boolean;
 }

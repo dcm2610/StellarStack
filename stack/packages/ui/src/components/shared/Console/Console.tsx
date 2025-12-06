@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Loader2Icon } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import type { ConsoleLine, ConsoleProps } from "./types";
 import { TimestampColumnTooltip } from "./TimestampTooltip";
@@ -32,6 +33,7 @@ export function Console({
   maxLines = 100,
   className,
   isDark = true,
+  isOffline = false,
 }: ConsoleProps) {
   const [inputValue, setInputValue] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -91,6 +93,7 @@ export function Console({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOffline) return;
     if (inputValue.trim() && onCommand) {
       onCommand(inputValue.trim());
       setCommandHistory((prev) => [...prev, inputValue.trim()]);
@@ -139,6 +142,7 @@ export function Console({
         isDark
           ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20"
           : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20",
+        isOffline && "opacity-60",
         className
       )}
       onClick={handleConsoleClick}
@@ -178,6 +182,14 @@ export function Console({
       {/* Console output */}
       <ScrollContext.Provider value={scrollSignal}>
         <div className="relative flex-1 overflow-hidden">
+          {/* Offline spinner overlay */}
+          {isOffline && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2Icon className={cn("size-6 animate-spin", isDark ? "text-zinc-400" : "text-zinc-500")} />
+              </div>
+            </div>
+          )}
           {/* Top gradient when scrolled to bottom but can scroll up */}
           <div
             className={cn(
@@ -245,10 +257,12 @@ export function Console({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter command..."
+            placeholder={isOffline ? "Connection lost..." : "Enter command..."}
+            disabled={isOffline}
             className={cn(
               "flex-1 bg-transparent border-none outline-none font-mono text-sm",
-              isDark ? "text-zinc-200 placeholder:text-zinc-700" : "text-zinc-800 placeholder:text-zinc-400"
+              isDark ? "text-zinc-200 placeholder:text-zinc-700" : "text-zinc-800 placeholder:text-zinc-400",
+              isOffline && "cursor-not-allowed"
             )}
           />
         </div>

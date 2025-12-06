@@ -22,10 +22,10 @@ export function AnimatedBackground({
   isDark = true,
   dotSize = 1,
   dotSpacing = 24,
-  glowRadius = 100,
-  glowIntensity = 0.25,
-  trailLength = 12,
-  trailDecay = 0.92,
+  glowRadius = 120,
+  glowIntensity = 0.3,
+  trailLength = 25,
+  trailDecay = 0.96,
 }: AnimatedBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
@@ -48,10 +48,16 @@ export function AnimatedBackground({
 
     // Add current mouse position to trail (throttled)
     const now = Date.now();
-    if (now - lastTrailTimeRef.current > 30 && mouse.x > -500) {
-      trail.unshift({ x: mouse.x, y: mouse.y, age: 1 });
-      if (trail.length > trailLength) {
-        trail.pop();
+    if (now - lastTrailTimeRef.current > 16 && mouse.x > -500) {
+      // Only add point if mouse has moved enough
+      const lastPoint = trail[0];
+      if (!lastPoint ||
+          Math.abs(mouse.x - lastPoint.x) > 3 ||
+          Math.abs(mouse.y - lastPoint.y) > 3) {
+        trail.unshift({ x: mouse.x, y: mouse.y, age: 1 });
+        if (trail.length > trailLength) {
+          trail.pop();
+        }
       }
       lastTrailTimeRef.current = now;
     }
@@ -85,8 +91,11 @@ export function AnimatedBackground({
           const dy = y - point.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
+          // Trail radius shrinks for older points (tapering effect)
+          const trailRadius = glowRadius * (0.4 + 0.6 * point.age);
+
           // Calculate glow intensity based on distance and age
-          const glow = Math.max(0, 1 - distance / glowRadius);
+          const glow = Math.max(0, 1 - distance / trailRadius);
           const intensity = glow * glowIntensity * point.age;
           maxIntensity = Math.max(maxIntensity, intensity);
         }
