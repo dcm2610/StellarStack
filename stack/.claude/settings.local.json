@@ -6,7 +6,10 @@
       "Bash(pnpm add:*)",
       "Bash(pnpx shadcn@latest add:*)",
       "Bash(cat:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(tree:*)",
+      "WebFetch(domain:www.better-auth.com)"
     ],
     "deny": [],
     "ask": []

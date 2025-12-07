@@ -12,12 +12,21 @@ interface AnimatedBackgroundProps {
   trailDecay?: number;
   pulseSpeed?: number;
   pulseIntensity?: number;
+  idlePulseInterval?: number;
+  idlePulseRadius?: number;
 }
 
 interface TrailPoint {
   x: number;
   y: number;
   age: number;
+}
+
+interface IdlePulse {
+  x: number;
+  y: number;
+  startTime: number;
+  duration: number;
 }
 
 export const AnimatedBackground = ({
@@ -30,6 +39,8 @@ export const AnimatedBackground = ({
   trailDecay = 0.98,
   pulseSpeed = 2,
   pulseIntensity = 0.3,
+  idlePulseInterval = 3000,
+  idlePulseRadius = 200,
 }: AnimatedBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
@@ -37,6 +48,9 @@ export const AnimatedBackground = ({
   const animationRef = useRef<number | undefined>(undefined);
   const lastTrailTimeRef = useRef(0);
   const startTimeRef = useRef(Date.now());
+  const lastInteractionRef = useRef(0); // Start at 0 so idle pulses begin immediately
+  const idlePulsesRef = useRef<IdlePulse[]>([]);
+  const lastIdlePulseRef = useRef(0);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -50,8 +64,35 @@ export const AnimatedBackground = ({
     const height = canvas.height / dpr;
     const mouse = mouseRef.current;
     const trail = trailRef.current;
+    const idlePulses = idlePulsesRef.current;
 
     const now = Date.now();
+    const timeSinceInteraction = now - lastInteractionRef.current;
+
+    // Generate idle pulses when no interaction for 2 seconds
+    if (timeSinceInteraction > 2000 && now - lastIdlePulseRef.current > idlePulseInterval) {
+      // Randomly choose between center pulse or random location
+      const useCenter = Math.random() > 0.5;
+      const pulseX = useCenter ? width / 2 : Math.random() * width;
+      const pulseY = useCenter ? height / 2 : Math.random() * height;
+
+      idlePulses.push({
+        x: pulseX,
+        y: pulseY,
+        startTime: now,
+        duration: 2500,
+      });
+      lastIdlePulseRef.current = now;
+    }
+
+    // Clean up expired idle pulses
+    for (let i = idlePulses.length - 1; i >= 0; i--) {
+      const pulse = idlePulses[i];
+      if (pulse && now - pulse.startTime > pulse.duration) {
+        idlePulses.splice(i, 1);
+      }
+    }
+
     if (now - lastTrailTimeRef.current > 16 && mouse.x > -500) {
       const lastPoint = trail[0];
       if (!lastPoint ||
@@ -90,32 +131,53 @@ export const AnimatedBackground = ({
       for (let y = dotSpacing / 2; y < height; y += dotSpacing) {
         let maxIntensity = 0;
 
+        // Trail effect
         for (let i = 0; i < trail.length; i++) {
           const point = trail[i];
           if (!point) continue;
           const dx = x - point.x;
           const dy = y - point.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          // Taper the trail radius based on age (older = smaller)
-          const taperFactor = point.age * point.age; // Quadratic falloff for smooth taper
+          const taperFactor = point.age * point.age;
           const trailRadius = glowRadius * taperFactor;
           const glow = Math.max(0, 1 - distance / trailRadius);
           const intensity = glow * glowIntensity * taperFactor;
           maxIntensity = Math.max(maxIntensity, intensity);
         }
 
+        // Mouse glow effect
         const dx = x - mouse.x;
         const dy = y - mouse.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const glow = Math.max(0, 1 - distance / glowRadius);
 
-        // Add pulse effect that radiates outward from cursor
         const elapsed = (Date.now() - startTimeRef.current) / 1000;
         const pulsePhase = elapsed * pulseSpeed - distance * 0.02;
         const pulse = 1 + Math.sin(pulsePhase * Math.PI) * pulseIntensity;
 
         const currentIntensity = glow * glowIntensity * pulse;
         maxIntensity = Math.max(maxIntensity, currentIntensity);
+
+        // Idle pulse effects - ripple outward from pulse origin
+        for (let i = 0; i < idlePulses.length; i++) {
+          const idlePulse = idlePulses[i];
+          if (!idlePulse) continue;
+
+          const pdx = x - idlePulse.x;
+          const pdy = y - idlePulse.y;
+          const pDistance = Math.sqrt(pdx * pdx + pdy * pdy);
+
+          const progress = (now - idlePulse.startTime) / idlePulse.duration;
+          const rippleRadius = progress * idlePulseRadius * 4;
+          const rippleWidth = idlePulseRadius * 0.6;
+
+          // Create a ring effect that expands outward
+          const distFromRipple = Math.abs(pDistance - rippleRadius);
+          if (distFromRipple < rippleWidth) {
+            const rippleIntensity = (1 - distFromRipple / rippleWidth) * (1 - progress * 0.7) * 0.6;
+            maxIntensity = Math.max(maxIntensity, rippleIntensity);
+          }
+        }
 
         if (maxIntensity > 0.005) {
           const alpha = isDark
@@ -137,7 +199,7 @@ export const AnimatedBackground = ({
     }
 
     animationRef.current = requestAnimationFrame(draw);
-  }, [isDark, dotSize, dotSpacing, glowRadius, glowIntensity, trailLength, trailDecay, pulseSpeed, pulseIntensity]);
+  }, [isDark, dotSize, dotSpacing, glowRadius, glowIntensity, trailLength, trailDecay, pulseSpeed, pulseIntensity, idlePulseInterval, idlePulseRadius]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -163,6 +225,7 @@ export const AnimatedBackground = ({
         x: clientX - rect.left,
         y: clientY - rect.top,
       };
+      lastInteractionRef.current = Date.now();
     };
 
     const handleMouseMove = (e: MouseEvent) => {
