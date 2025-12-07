@@ -11,7 +11,7 @@ import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 import { BsSun, BsMoon, BsGrid } from "react-icons/bs";
 import { AnimatedBackground } from "@workspace/ui/components/shared/AnimatedBackground";
-import { FadeIn, FloatingDots, SkeletonCard } from "@workspace/ui/components/shared/Animations";
+import { FadeIn, FloatingDots } from "@workspace/ui/components/shared/Animations";
 import { Badge } from "@workspace/ui/components/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@workspace/ui/components/sheet";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
@@ -32,35 +32,7 @@ import { ThemeContext } from "../contexts/ThemeContext";
 import { useServerSimulation, useSimulatedConsole, useContainerControls, useLabels } from "../hooks";
 import { defaultGridItems, defaultHiddenCards } from "../constants";
 
-const DashboardLoading = (): JSX.Element => (
-  <div className="min-h-svh bg-[#0b0b0a] relative">
-    <FloatingDots isDark={true} count={15} />
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <SkeletonCard isDark={true} className="h-10 w-10" />
-          <div className="flex gap-2">
-            <SkeletonCard isDark={true} className="h-9 w-24" />
-            <SkeletonCard isDark={true} className="h-9 w-9" />
-          </div>
-        </div>
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-6"><SkeletonCard isDark={true} className="h-16" /></div>
-          <div className="col-span-6"><SkeletonCard isDark={true} className="h-16" /></div>
-          <div className="col-span-6"><SkeletonCard isDark={true} variant="stat" /></div>
-          <div className="col-span-6"><SkeletonCard isDark={true} variant="stat" /></div>
-          <div className="col-span-3"><SkeletonCard isDark={true} variant="stat" /></div>
-          <div className="col-span-3"><SkeletonCard isDark={true} variant="stat" /></div>
-          <div className="col-span-3"><SkeletonCard isDark={true} variant="stat" /></div>
-          <div className="col-span-3"><SkeletonCard isDark={true} variant="stat" /></div>
-          <div className="col-span-12"><SkeletonCard isDark={true} variant="chart" className="h-[300px]" /></div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const Page = (): JSX.Element => {
+const Page = (): JSX.Element | null => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCardSheetOpen, setIsCardSheetOpen] = useState(false);
   const { setTheme, resolvedTheme } = useNextTheme();
@@ -97,7 +69,7 @@ const Page = (): JSX.Element => {
   };
 
   if (!isLoaded) {
-    return <DashboardLoading />;
+    return null;
   }
 
   return (
@@ -108,6 +80,16 @@ const Page = (): JSX.Element => {
       )}>
         <AnimatedBackground isDark={isDark} />
         <FloatingDots isDark={isDark} count={15} />
+
+        {/* Preview Banner */}
+        <div className={cn(
+          "w-full py-2 px-4 text-center text-sm font-medium",
+          isDark
+            ? "bg-amber-500/10 text-amber-400 border-b border-amber-500/20"
+            : "bg-amber-50 text-amber-700 border-b border-amber-200"
+        )}>
+          {labels.dashboard.previewBanner}
+        </div>
 
         <div className="relative p-8">
           <FadeIn delay={0}>
@@ -163,12 +145,14 @@ const Page = (): JSX.Element => {
                   {isEditing ? labels.dashboard.doneEditing : labels.dashboard.editLayout}
                 </Button>
                 <Badge
-                  variant={isOffline ? "destructive" : server.status === "running" ? "default" : "secondary"}
+                  variant="outline"
                   className={cn(
-                    "text-xs font-medium",
-                    !isOffline && server.status === "running" && "bg-green-600 hover:bg-green-600",
-                    server.status === "starting" && "bg-amber-500 hover:bg-amber-500",
-                    server.status === "stopping" && "bg-amber-500 hover:bg-amber-500"
+                    "text-xs font-medium bg-transparent",
+                    isOffline && "border-red-500 text-red-500",
+                    !isOffline && server.status === "running" && "border-green-500 text-green-500",
+                    !isOffline && server.status === "stopped" && "border-zinc-500 text-zinc-500",
+                    !isOffline && server.status === "starting" && "border-amber-500 text-amber-500",
+                    !isOffline && server.status === "stopping" && "border-amber-500 text-amber-500"
                   )}
                 >
                   {getStatusLabel()}
@@ -463,15 +447,6 @@ const Page = (): JSX.Element => {
               </div>
             )}
           </DragDropGrid>
-
-          <FadeIn delay={400}>
-            <footer className={cn(
-              "mt-12 pb-4 text-center text-sm uppercase transition-colors",
-              isDark ? "text-zinc-500" : "text-zinc-600"
-            )}>
-              &copy; {new Date().getFullYear()} {labels.dashboard.copyright}
-            </footer>
-          </FadeIn>
         </div>
       </div>
     </ThemeContext.Provider>

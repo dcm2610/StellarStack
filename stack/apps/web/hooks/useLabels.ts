@@ -23,6 +23,7 @@ interface DashboardLabels {
   allCardsOnDashboard: string;
   removeCardsHint: string;
   copyright: string;
+  previewBanner: string;
 }
 
 interface StatusLabels {
@@ -86,6 +87,7 @@ export const useLabels = (): UseLabelsReturn => {
       allCardsOnDashboard: t("dashboard.allCardsOnDashboard"),
       removeCardsHint: t("dashboard.removeCardsHint"),
       copyright: t("dashboard.copyright"),
+      previewBanner: t("dashboard.previewBanner"),
     },
     status: {
       offline: t("status.offline"),

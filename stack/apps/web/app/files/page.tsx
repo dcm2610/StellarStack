@@ -43,8 +43,6 @@ import {
   NoiseOverlay,
   FloatingDots,
   GradientText,
-  SkeletonCard,
-  Skeleton,
   DropZone,
 } from "@workspace/ui/components/shared/Animations";
 import {
@@ -388,25 +386,7 @@ export default function FilesPage() {
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
-        <FloatingDots isDark={isDark} count={15} />
-        <NoiseOverlay opacity={0.02} />
-        <div className="relative p-8">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 mt-16">
-            <div className="lg:col-span-3 space-y-4">
-              <SkeletonCard isDark={isDark} className="h-16" />
-              <SkeletonCard isDark={isDark} variant="chart" className="h-[500px]" />
-            </div>
-            <div className="space-y-4">
-              <SkeletonCard isDark={isDark} variant="stat" />
-              <SkeletonCard isDark={isDark} variant="stat" />
-              <SkeletonCard isDark={isDark} variant="stat" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

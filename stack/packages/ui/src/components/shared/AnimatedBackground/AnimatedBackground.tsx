@@ -10,6 +10,8 @@ interface AnimatedBackgroundProps {
   glowIntensity?: number;
   trailLength?: number;
   trailDecay?: number;
+  pulseSpeed?: number;
+  pulseIntensity?: number;
 }
 
 interface TrailPoint {
@@ -24,14 +26,17 @@ export const AnimatedBackground = ({
   dotSpacing = 24,
   glowRadius = 120,
   glowIntensity = 0.3,
-  trailLength = 25,
-  trailDecay = 0.96,
+  trailLength = 50,
+  trailDecay = 0.98,
+  pulseSpeed = 2,
+  pulseIntensity = 0.3,
 }: AnimatedBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const trailRef = useRef<TrailPoint[]>([]);
   const animationRef = useRef<number | undefined>(undefined);
   const lastTrailTimeRef = useRef(0);
+  const startTimeRef = useRef(Date.now());
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -78,7 +83,7 @@ export const AnimatedBackground = ({
 
     ctx.clearRect(0, 0, width, height);
 
-    const baseDotColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+    const baseDotColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.12)";
     const glowColor = isDark ? [255, 255, 255] : [0, 0, 0];
 
     for (let x = dotSpacing / 2; x < width; x += dotSpacing) {
@@ -91,9 +96,11 @@ export const AnimatedBackground = ({
           const dx = x - point.x;
           const dy = y - point.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          const trailRadius = glowRadius * (0.4 + 0.6 * point.age);
+          // Taper the trail radius based on age (older = smaller)
+          const taperFactor = point.age * point.age; // Quadratic falloff for smooth taper
+          const trailRadius = glowRadius * taperFactor;
           const glow = Math.max(0, 1 - distance / trailRadius);
-          const intensity = glow * glowIntensity * point.age;
+          const intensity = glow * glowIntensity * taperFactor;
           maxIntensity = Math.max(maxIntensity, intensity);
         }
 
@@ -101,16 +108,22 @@ export const AnimatedBackground = ({
         const dy = y - mouse.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const glow = Math.max(0, 1 - distance / glowRadius);
-        const currentIntensity = glow * glowIntensity;
+
+        // Add pulse effect that radiates outward from cursor
+        const elapsed = (Date.now() - startTimeRef.current) / 1000;
+        const pulsePhase = elapsed * pulseSpeed - distance * 0.02;
+        const pulse = 1 + Math.sin(pulsePhase * Math.PI) * pulseIntensity;
+
+        const currentIntensity = glow * glowIntensity * pulse;
         maxIntensity = Math.max(maxIntensity, currentIntensity);
 
         if (maxIntensity > 0.005) {
           const alpha = isDark
             ? 0.08 + maxIntensity * 0.35
-            : 0.06 + maxIntensity * 0.25;
+            : 0.12 + maxIntensity * 0.5;
           ctx.fillStyle = `rgba(${glowColor[0]}, ${glowColor[1]}, ${glowColor[2]}, ${alpha})`;
 
-          const currentDotSize = dotSize + maxIntensity * 1.2;
+          const currentDotSize = dotSize + maxIntensity * (isDark ? 1.2 : 1.8);
           ctx.beginPath();
           ctx.arc(x, y, currentDotSize, 0, Math.PI * 2);
           ctx.fill();
@@ -124,7 +137,7 @@ export const AnimatedBackground = ({
     }
 
     animationRef.current = requestAnimationFrame(draw);
-  }, [isDark, dotSize, dotSpacing, glowRadius, glowIntensity, trailLength, trailDecay]);
+  }, [isDark, dotSize, dotSpacing, glowRadius, glowIntensity, trailLength, trailDecay, pulseSpeed, pulseIntensity]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

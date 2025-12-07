@@ -6,5 +6,4 @@ export * from "./GlowCard";
 export * from "./NoiseOverlay";
 export * from "./FloatingParticles";
 export * from "./GradientText";
-export * from "./SkeletonCard";
 export * from "./DropZone";

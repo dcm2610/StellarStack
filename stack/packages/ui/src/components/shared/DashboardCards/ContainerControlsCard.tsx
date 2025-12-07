@@ -30,13 +30,13 @@ export const ContainerControlsCard = ({
   const isStopped = status === "stopped";
   const isTransitioning = status === "starting" || status === "stopping";
 
-  const buttonBase = "px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors";
+  const buttonBase = "px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors border bg-transparent";
   const buttonColors = isDark
-    ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-    : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300";
+    ? "border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
+    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800";
   const disabledColors = isDark
-    ? "bg-zinc-800/50 text-zinc-600"
-    : "bg-zinc-200/50 text-zinc-400";
+    ? "border-zinc-800 text-zinc-600"
+    : "border-zinc-200 text-zinc-400";
 
   return (
     <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-center px-8", isOffline && "opacity-60")}>

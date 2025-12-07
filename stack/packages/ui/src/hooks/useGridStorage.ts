@@ -191,7 +191,8 @@ export function useGridStorage({ key, defaultItems, defaultHiddenCards = [] }: U
   const resetLayout = useCallback(() => {
     setItems(defaultItemsRef.current);
     setLayouts(undefined);
-    setHiddenCards([]);
+    setHiddenCards(defaultHiddenCardsRef.current);
+    hiddenCardsRef.current = defaultHiddenCardsRef.current;
     try {
       localStorage.removeItem(key);
     } catch (error) {

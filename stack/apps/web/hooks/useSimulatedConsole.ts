@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useServerStore } from "../stores/connectionStore";
-import { generateInitialLines, generateRandomLine, type ConsoleLine } from "@workspace/ui/components/shared/Console";
+import { generateInitialLines, generateRandomLine, generateStartupSequence, type ConsoleLine } from "@workspace/ui/components/shared/Console";
 import { t } from "../lib/i18n";
 
 interface UseSimulatedConsoleReturn {
@@ -14,15 +14,45 @@ export const useSimulatedConsole = (): UseSimulatedConsoleReturn => {
   const [lines, setLines] = useState<ConsoleLine[]>(() => generateInitialLines(25));
   const isOffline = useServerStore((state) => state.isOffline);
   const containerStatus = useServerStore((state) => state.server.status);
+  const prevStatusRef = useRef(containerStatus);
 
   const shouldGenerateLines = !isOffline && containerStatus === "running";
 
+  // Handle startup sequence when container starts
   useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = containerStatus;
+
+    // Detect transition to "starting" state
+    if (containerStatus === "starting" && prevStatus !== "starting") {
+      setLines([]); // Clear previous logs
+
+      // Flood the console with startup messages
+      const startupLines = generateStartupSequence();
+      let index = 0;
+
+      const floodInterval = setInterval(() => {
+        if (index < startupLines.length) {
+          const line = startupLines[index];
+          if (line) {
+            setLines((prev) => [...prev.slice(-99), { ...line, timestamp: Date.now() }]);
+          }
+          index++;
+        } else {
+          clearInterval(floodInterval);
+        }
+      }, 80); // Fast burst of messages
+
+      return () => clearInterval(floodInterval);
+    }
+
+    // Clear logs when stopped
     if (containerStatus === "stopped") {
       setLines([]);
     }
   }, [containerStatus]);
 
+  // Runtime log generation (slower, random messages)
   useEffect(() => {
     if (!shouldGenerateLines) return;
 
@@ -31,14 +61,18 @@ export const useSimulatedConsole = (): UseSimulatedConsoleReturn => {
     };
 
     const scheduleNext = (): ReturnType<typeof setTimeout> => {
-      const delay = 2000 + Math.random() * 3000;
+      const delay = 3000 + Math.random() * 5000; // Slower: 3-8 seconds
       return setTimeout(() => {
         addLine();
         timeoutId = scheduleNext();
       }, delay);
     };
 
-    let timeoutId: ReturnType<typeof setTimeout> = scheduleNext();
+    // Initial delay before runtime messages start
+    let timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      timeoutId = scheduleNext();
+    }, 2000);
+
     return () => clearTimeout(timeoutId);
   }, [shouldGenerateLines]);
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Loader2Icon } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
+import { Spinner } from "@workspace/ui/components/spinner";
 import type { ConsoleLine, ConsoleProps } from "./types";
 import { TimestampColumnTooltip } from "./TimestampTooltip";
 import { ScrollContext } from "./ScrollContext";
@@ -186,7 +186,7 @@ export function Console({
           {isOffline && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30">
               <div className="flex flex-col items-center gap-2">
-                <Loader2Icon className={cn("size-6 animate-spin", isDark ? "text-zinc-400" : "text-zinc-500")} />
+                <Spinner className={cn("size-6", isDark ? "text-zinc-400" : "text-zinc-500")} />
               </div>
             </div>
           )}

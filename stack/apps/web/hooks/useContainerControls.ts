@@ -1,9 +1,9 @@
 "use client";
 
 import { toast } from "sonner";
-import { useServerStore } from "../stores/connectionStore";
-import { t } from "../lib/i18n";
-import type { ContainerStatus } from "../types/server";
+import { useServerStore } from "@/stores/connectionStore";
+import { t } from "@/lib/i18n";
+import type { ContainerStatus } from "@/types/server";
 
 interface UseContainerControlsReturn {
   status: ContainerStatus;

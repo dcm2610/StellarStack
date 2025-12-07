@@ -61,8 +61,8 @@ export const CpuCard = ({
       )}>
         {labels.title}
       </UsageCardTitle>
-      <UsageCardContent className={cn("flex-1 flex flex-col", isXs ? "space-y-1" : undefined)}>
-        <div className="flex items-start justify-between">
+      <UsageCardContent className={cn("flex-1 flex flex-col min-h-0 !space-y-0", isXs ? "gap-1" : undefined)}>
+        <div className="flex items-start justify-between shrink-0">
           <div>
             <span className={cn(
               isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"),
@@ -93,9 +93,9 @@ export const CpuCard = ({
         </div>
 
         {showCoreGrid && coreUsage && (
-          <div className="mt-2">
+          <div className="mt-2 flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className={cn(
-              "text-[9px] uppercase font-medium mb-1",
+              "text-[9px] uppercase font-medium mb-1 shrink-0",
               isDark ? "text-zinc-500" : "text-zinc-600"
             )}>
               {labels.coreUsage}

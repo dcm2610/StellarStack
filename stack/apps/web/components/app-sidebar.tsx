@@ -179,7 +179,7 @@ export function AppSidebar({ isDark = true }: AppSidebarProps) {
 
       <SidebarFooter className={cn("p-4 border-t", isDark ? "border-zinc-200/10" : "border-zinc-300")}>
         <div className={cn("text-[10px] uppercase tracking-wider", isDark ? "text-zinc-600" : "text-zinc-400")}>
-          StellarStack v1.0.0
+          &copy; StellarStack v1.0.0
         </div>
       </SidebarFooter>
     </Sidebar>

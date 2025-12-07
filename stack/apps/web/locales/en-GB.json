@@ -57,7 +57,8 @@
     "availableCardsDescription": "Click a card to add it to your dashboard.",
     "allCardsOnDashboard": "All cards are on your dashboard.",
     "removeCardsHint": "Remove cards using the X button to add them here.",
-    "copyright": "StellarStack"
+    "copyright": "StellarStack",
+    "previewBanner": "You're viewing an early preview. Some features may be incomplete or change."
   },
   "cards": {
     "cpu": {

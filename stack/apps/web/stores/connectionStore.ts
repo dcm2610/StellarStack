@@ -13,7 +13,7 @@ import type {
 } from "../types/server";
 
 const HISTORY_LENGTH = 20;
-const CPU_CORES = 16;
+const CPU_THREADS = 16; // 9950X3D: 16 cores / 32 threads
 
 // Generate initial history data
 const generateHistory = (base: number, volatility: number, length: number = HISTORY_LENGTH): number[] => {
@@ -26,9 +26,9 @@ const generateHistory = (base: number, volatility: number, length: number = HIST
   return history;
 };
 
-// Generate initial per-core usage data
+// Generate initial per-thread usage data
 const generateCoreUsage = (avgPercentage: number): CoreUsage[] => {
-  return Array.from({ length: CPU_CORES }, (_, i) => {
+  return Array.from({ length: CPU_THREADS }, (_, i) => {
     // Some cores will be more utilized than others
     const baseUsage = avgPercentage + (Math.random() - 0.5) * 40;
     const corePercentage = Math.min(100, Math.max(0, baseUsage));
@@ -81,7 +81,7 @@ const createDefaultServer = (): ServerInstance => ({
       percentage: 45,
       history: generateHistory(45, 20),
     },
-    cores: CPU_CORES,
+    cores: CPU_THREADS,
     frequency: 4.2,
     coreUsage: generateCoreUsage(45),
     model: "AMD Ryzen 9 9950X3D",
