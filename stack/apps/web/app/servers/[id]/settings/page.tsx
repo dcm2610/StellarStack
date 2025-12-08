@@ -124,11 +124,14 @@ const defaultSettings: ServerSettings = {
 };
 
 // Group server types by category
-const serverTypesByCategory = serverTypes.reduce((acc, type) => {
-  if (!acc[type.category]) acc[type.category] = [];
-  acc[type.category].push(type);
+const serverTypesByCategory = serverTypes.reduce<Record<string, ServerTypeOption[]>>((acc, type) => {
+  const category = type.category;
+  if (!acc[category]) {
+    acc[category] = [];
+  }
+  acc[category]!.push(type);
   return acc;
-}, {} as Record<string, ServerTypeOption[]>);
+}, {});
 
 const SettingsPage = (): JSX.Element | null => {
   const params = useParams();
@@ -261,11 +264,14 @@ const SettingsPage = (): JSX.Element | null => {
   };
 
   // Group locations by region
-  const locationsByRegion = locations.reduce((acc, location) => {
-    if (!acc[location.region]) acc[location.region] = [];
-    acc[location.region].push(location);
+  const locationsByRegion = locations.reduce<Record<string, Location[]>>((acc, location) => {
+    const region = location.region;
+    if (!acc[region]) {
+      acc[region] = [];
+    }
+    acc[region]!.push(location);
     return acc;
-  }, {} as Record<string, Location[]>);
+  }, {});
 
   if (!mounted) return null;
 
@@ -1066,7 +1072,7 @@ const SettingsPage = (): JSX.Element | null => {
                 max={90}
                 step={5}
                 value={[splitResources.cpu]}
-                onValueChange={(value) => setSplitResources(prev => ({ ...prev, cpu: value[0] }))}
+                onValueChange={(value) => setSplitResources(prev => ({ ...prev, cpu: value[0] ?? prev.cpu }))}
                 isDark={isDark}
               />
               <div className="flex justify-between mt-2">
@@ -1096,7 +1102,7 @@ const SettingsPage = (): JSX.Element | null => {
                 max={90}
                 step={5}
                 value={[splitResources.memory]}
-                onValueChange={(value) => setSplitResources(prev => ({ ...prev, memory: value[0] }))}
+                onValueChange={(value) => setSplitResources(prev => ({ ...prev, memory: value[0] ?? prev.memory }))}
                 isDark={isDark}
               />
               <div className="flex justify-between mt-2">
@@ -1126,7 +1132,7 @@ const SettingsPage = (): JSX.Element | null => {
                 max={90}
                 step={5}
                 value={[splitResources.disk]}
-                onValueChange={(value) => setSplitResources(prev => ({ ...prev, disk: value[0] }))}
+                onValueChange={(value) => setSplitResources(prev => ({ ...prev, disk: value[0] ?? prev.disk }))}
                 isDark={isDark}
               />
               <div className="flex justify-between mt-2">
