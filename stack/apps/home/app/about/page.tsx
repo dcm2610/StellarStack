@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type JSX } from "react";
+import { useRef, type JSX } from "react";
 import Link from "next/link";
 import { useTheme as useNextTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
@@ -9,8 +9,6 @@ import { Button } from "@workspace/ui/components/button";
 import { AnimatedBackground } from "@workspace/ui/components/shared/AnimatedBackground";
 import { FloatingDots } from "@workspace/ui/components/shared/Animations";
 import {
-  BsSun,
-  BsMoon,
   BsGithub,
   BsArrowRight,
   BsHeart,
@@ -19,6 +17,8 @@ import {
   BsShieldCheck,
 } from "react-icons/bs";
 import { Footer } from "@/components/Footer";
+import { Navigation } from "@/components/Navigation";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 const values = [
   {
@@ -69,12 +69,8 @@ const AnimatedSection = ({ children, className, delay = 0 }: { children: React.R
 };
 
 const AboutPage = (): JSX.Element | null => {
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { resolvedTheme } = useNextTheme();
+  const mounted = useIsMounted();
 
   const isDark = mounted ? resolvedTheme === "dark" : true;
 
@@ -87,72 +83,7 @@ const AboutPage = (): JSX.Element | null => {
     )}>
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={20} />
-
-      {/* Navigation */}
-      <nav className={cn(
-        "fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md",
-        isDark
-          ? "bg-[#0b0b0a]/80 border-zinc-800"
-          : "bg-[#f5f5f4]/80 border-zinc-200"
-      )}>
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className={cn(
-            "text-lg font-light tracking-[0.2em]",
-            isDark ? "text-zinc-100" : "text-zinc-800"
-          )}>
-            STELLARSTACK
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-6">
-              <Link href="/features" className={cn(
-                "text-xs uppercase tracking-wider transition-colors",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )}>
-                Features
-              </Link>
-              <Link href="/roadmap" className={cn(
-                "text-xs uppercase tracking-wider transition-colors",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )}>
-                Roadmap
-              </Link>
-              <Link href="/changelog" className={cn(
-                "text-xs uppercase tracking-wider transition-colors",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )}>
-                Changelog
-              </Link>
-              <a
-                href="https://github.com/stellarstack/stellarstack"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "text-xs uppercase tracking-wider transition-colors flex items-center gap-2",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                )}
-              >
-                <BsGithub className="w-4 h-4" />
-                GitHub
-              </a>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className={cn(
-                "transition-all hover:scale-110 active:scale-95 p-2",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
-              )}
-            >
-              {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-16 px-6">

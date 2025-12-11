@@ -28,8 +28,6 @@ import { Console } from "@workspace/ui/components/shared/Console";
 import { DragDropGrid, GridItem } from "@workspace/ui/components/shared/DragDropGrid";
 import type { GridItemConfig } from "@workspace/ui/components/shared/DragDropGrid";
 import {
-  BsSun,
-  BsMoon,
   BsServer,
   BsShieldCheck,
   BsLightningCharge,
@@ -43,7 +41,6 @@ import {
   BsDatabase,
   BsHddNetwork,
   BsPeople,
-  BsBuilding,
   BsPersonWorkspace,
   BsCodeSlash,
   BsImage,
@@ -71,6 +68,7 @@ import {
   SiGrafana,
 } from "react-icons/si";
 import { Footer } from "@/components/Footer";
+import { Navigation } from "@/components/Navigation";
 
 // Technology stack
 const technologies = [
@@ -396,6 +394,12 @@ const LandingPage = (): JSX.Element | null => {
 
   if (!mounted) return null;
 
+  const homeNavLinks = [
+    { href: "#features", label: "Features", isAnchor: true },
+    { href: "#security", label: "Security", isAnchor: true },
+    { href: "#tech", label: "Tech Stack", isAnchor: true },
+  ];
+
   return (
     <div className={cn(
       "min-h-svh transition-colors relative scroll-smooth",
@@ -403,72 +407,7 @@ const LandingPage = (): JSX.Element | null => {
     )}>
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={20} />
-
-      {/* Navigation */}
-      <nav className={cn(
-        "fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md",
-        isDark
-          ? "bg-[#0b0b0a]/80 border-zinc-800"
-          : "bg-[#f5f5f4]/80 border-zinc-200"
-      )}>
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className={cn(
-            "text-lg font-light tracking-[0.2em]",
-            isDark ? "text-zinc-100" : "text-zinc-800"
-          )}>
-            STELLARSTACK
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className={cn(
-                "text-xs uppercase tracking-wider transition-colors",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )}>
-                Features
-              </a>
-              <a href="#security" className={cn(
-                "text-xs uppercase tracking-wider transition-colors",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )}>
-                Security
-              </a>
-              <a href="#tech" className={cn(
-                "text-xs uppercase tracking-wider transition-colors",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )}>
-                Tech Stack
-              </a>
-              <a
-                href="https://github.com/stellarstack/stellarstack"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "text-xs uppercase tracking-wider transition-colors flex items-center gap-2",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                )}
-              >
-                <BsGithub className="w-4 h-4" />
-                GitHub
-              </a>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className={cn(
-                "transition-all hover:scale-110 active:scale-95 p-2",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
-              )}
-            >
-              {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <Navigation links={homeNavLinks} />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6">

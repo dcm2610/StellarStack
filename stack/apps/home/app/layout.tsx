@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 
 import "@workspace/ui/globals.css"
 import { Providers } from "@/components/providers"
+import { ScrollToTop } from "@/components/ScrollToTop"
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -44,6 +45,7 @@ export default function RootLayout({
         className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased`}
       >
         <Providers>
+          <ScrollToTop />
           {children}
         </Providers>
       </body>
