@@ -2,13 +2,18 @@
 
 import { useState, useEffect, useRef, type JSX } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme as useNextTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
+import Zoom from "react-medium-image-zoom";
+import "react-medium-image-zoom/dist/styles.css";
 import "swiper/css";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
+import { Switch } from "@workspace/ui/components/switch";
+import { Label } from "@workspace/ui/components/label";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
 import { AnimatedBackground } from "@workspace/ui/components/shared/AnimatedBackground";
 import { FloatingDots } from "@workspace/ui/components/shared/Animations";
@@ -61,6 +66,9 @@ import {
   SiTurborepo,
   SiRust,
   SiStorybook,
+  SiTraefikproxy,
+  SiPrometheus,
+  SiGrafana,
 } from "react-icons/si";
 
 // Technology stack
@@ -71,12 +79,15 @@ const technologies = [
   { name: "PostgreSQL", Icon: SiPostgresql },
   { name: "Prisma", Icon: SiPrisma },
   { name: "Docker", Icon: SiDocker },
+  { name: "Traefik", Icon: SiTraefikproxy },
   { name: "Tailwind CSS", Icon: SiTailwindcss },
   { name: "Hono", Icon: SiHono },
   { name: "Redis", Icon: SiRedis },
   { name: "Node.js", Icon: SiNodedotjs },
   { name: "Turborepo", Icon: SiTurborepo },
   { name: "Rust", Icon: SiRust },
+  { name: "Prometheus", Icon: SiPrometheus },
+  { name: "Grafana", Icon: SiGrafana },
   { name: "Storybook", Icon: SiStorybook },
 ];
 
@@ -122,47 +133,27 @@ const highlights = [
   "White-label Ready",
 ];
 
-// Target users from architecture
+// Target users
 const targetUsers = [
   {
-    icon: BsBuilding,
-    title: "Hosting Providers",
-    description: "Run a game server hosting business with full control over infrastructure and customer management.",
+    icon: BsServer,
+    title: "VPS & Dedicated",
+    description: "Got a VPS or dedicated server? Run the install script and have a full game server panel in minutes.",
   },
   {
     icon: BsPeople,
     title: "Gaming Communities",
-    description: "Self-host servers for your clan or guild members with role-based permissions and access control.",
+    description: "Self-host servers for your clan or guild with role-based permissions and member access control.",
   },
   {
     icon: BsPersonWorkspace,
-    title: "Individual Gamers",
-    description: "Manage personal game servers across multiple machines from a single, unified dashboard.",
+    title: "Homelab Enthusiasts",
+    description: "Run game servers on your own hardware. Perfect for those who prefer full control over their infrastructure.",
   },
   {
     icon: BsCodeSlash,
     title: "Developers",
-    description: "Test and deploy game servers during development with instant provisioning and real-time logs.",
-  },
-];
-
-// Architecture highlights
-const architectureFeatures = [
-  {
-    title: "Control Plane",
-    description: "Next.js frontend + Hono API + PostgreSQL + Redis running on your central server.",
-  },
-  {
-    title: "Multi-Node Support",
-    description: "Connect unlimited nodes (dedicated servers, VPS, home machines) via Rust daemons.",
-  },
-  {
-    title: "Real-time Events",
-    description: "Redis pub/sub for instant status updates, metrics streaming, and live console access.",
-  },
-  {
-    title: "Zero-Trust Security",
-    description: "mTLS between components, signed JWT tokens for console access, and comprehensive audit logging.",
+    description: "Contribute to the project, build custom blueprints, or extend functionality with the REST API.",
   },
 ];
 
@@ -325,6 +316,7 @@ const AnimatedSection = ({ children, className, delay = 0 }: { children: React.R
 const LandingPage = (): JSX.Element | null => {
   const { setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
+  const [isEnterpriseArch, setIsEnterpriseArch] = useState(false);
   const [serverData, setServerData] = useState(initialServerData);
   const [consoleLines, setConsoleLines] = useState<ConsoleLine[]>([
     { id: "1", timestamp: Date.now() - 5000, message: "Server started on port 25565", level: "info" },
@@ -540,8 +532,8 @@ const LandingPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              The modern, open-source game server hosting panel. Deploy, manage, and scale
-              game servers with an intuitive interface built for developers and hosting providers.
+              The modern, open-source game server management panel. Self-host on your VPS or
+              dedicated server with our install scripts. Works out of the box for anyone comfortable with Linux.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -932,7 +924,7 @@ const LandingPage = (): JSX.Element | null => {
       {/* Architecture Section */}
       <section className="relative py-32 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             {/* Left: Text Content */}
             <AnimatedSection>
               <h2 className={cn(
@@ -948,7 +940,24 @@ const LandingPage = (): JSX.Element | null => {
                 StellarStack separates your control plane from your game server nodes. Deploy the panel on your central server, then connect unlimited nodes running our lightweight Rust daemon.
               </p>
               <div className="space-y-4">
-                {architectureFeatures.map((feature, i) => (
+                {[
+                  {
+                    title: "Containerized Services",
+                    description: "Each service (Next.js, Hono API, PostgreSQL, Redis) runs in its own Docker container with Traefik for routing.",
+                  },
+                  {
+                    title: "Multi-Node Support",
+                    description: "Connect unlimited nodes (dedicated servers, VPS, home machines) via Rust daemons.",
+                  },
+                  {
+                    title: "Built-in Monitoring",
+                    description: "Prometheus + Grafana for metrics and dashboards, with Watchtower for automatic container updates.",
+                  },
+                  {
+                    title: "Zero-Trust Security",
+                    description: "mTLS between components, signed JWT tokens for console access, and comprehensive audit logging.",
+                  },
+                ].map((feature, i) => (
                   <div key={i} className="flex gap-4">
                     <div className={cn(
                       "w-6 h-6 flex-shrink-0 flex items-center justify-center border mt-0.5",
@@ -976,12 +985,43 @@ const LandingPage = (): JSX.Element | null => {
                   </div>
                 ))}
               </div>
+
+              {/* Architecture Toggle */}
+              <div className="flex items-center gap-4 mt-8 pt-6 border-t border-zinc-700/50">
+                <Label
+                  htmlFor="arch-toggle"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer transition-colors",
+                    !isEnterpriseArch
+                      ? isDark ? "text-zinc-100" : "text-zinc-900"
+                      : isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
+                  Single Node
+                </Label>
+                <Switch
+                  id="arch-toggle"
+                  checked={isEnterpriseArch}
+                  onCheckedChange={setIsEnterpriseArch}
+                />
+                <Label
+                  htmlFor="arch-toggle"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer transition-colors",
+                    isEnterpriseArch
+                      ? isDark ? "text-zinc-100" : "text-zinc-900"
+                      : isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
+                  Multi-Node
+                </Label>
+              </div>
             </AnimatedSection>
 
             {/* Right: Architecture Diagram */}
             <AnimatedSection delay={0.2}>
               <div className={cn(
-                "relative p-8 border font-mono text-xs",
+                "relative p-6 border font-mono text-xs",
                 isDark
                   ? "border-zinc-700 bg-zinc-900/50"
                   : "border-zinc-300 bg-white"
@@ -992,66 +1032,116 @@ const LandingPage = (): JSX.Element | null => {
                 <div className={cn("absolute bottom-0 left-0 w-3 h-3 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
                 <div className={cn("absolute bottom-0 right-0 w-3 h-3 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
 
-                {/* Control Plane Box */}
+                {/* Traefik */}
                 <div className={cn(
-                  "border p-4 mb-6",
-                  isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-200 bg-zinc-50"
+                  "border p-2 mb-3 text-center",
+                  isDark ? "border-blue-500/50 bg-blue-900/20" : "border-blue-300 bg-blue-50"
                 )}>
-                  <div className={cn(
-                    "text-center mb-3 text-[10px] uppercase tracking-widest",
-                    isDark ? "text-zinc-400" : "text-zinc-500"
-                  )}>
-                    Control Plane
+                  <div className={cn("text-[10px] uppercase tracking-widest", isDark ? "text-blue-400" : "text-blue-600")}>
+                    Traefik — Reverse Proxy + SSL
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                </div>
+
+                {/* Connection Line */}
+                <div className="flex justify-center mb-3">
+                  <div className={cn("h-4 border-l-2 border-dashed", isDark ? "border-zinc-600" : "border-zinc-300")} />
+                </div>
+
+                {/* Control Plane with Watchtower */}
+                <div className={cn(
+                  "border p-4 mb-3 relative",
+                  isDark ? "border-zinc-700 bg-zinc-800/30" : "border-zinc-200 bg-zinc-50"
+                )}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={cn("text-[9px] uppercase tracking-widest", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                      Control Plane
+                    </div>
+                    <div className={cn(
+                      "text-[8px] uppercase tracking-widest px-2 py-0.5 border",
+                      isDark ? "border-green-500/50 bg-green-900/20 text-green-400" : "border-green-300 bg-green-50 text-green-600"
+                    )}>
+                      Watchtower
+                    </div>
+                  </div>
+
+                  {/* Control Plane Services */}
+                  <div className="grid grid-cols-2 gap-2">
                     {[
-                      { name: "Next.js", port: ":3000" },
-                      { name: "Hono", port: ":4000" },
-                      { name: "PostgreSQL", port: ":5432" },
-                      { name: "Redis", port: ":6379" },
-                    ].map((item, i) => (
-                      <div key={i} className={cn(
-                        "text-center p-2 border",
-                        isDark ? "border-zinc-600 bg-zinc-900" : "border-zinc-300 bg-white"
-                      )}>
-                        <div className={isDark ? "text-zinc-300" : "text-zinc-700"}>{item.name}</div>
-                        <div className={isDark ? "text-zinc-600" : "text-zinc-400"}>{item.port}</div>
+                      { name: "Next.js", desc: "Frontend" },
+                      { name: "Hono", desc: "API" },
+                      { name: "PostgreSQL", desc: "Database" },
+                      { name: "Redis", desc: "Cache" },
+                    ].map((s) => (
+                      <div key={s.name} className={cn("text-center p-2 border", isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50")}>
+                        <div className={isDark ? "text-zinc-300" : "text-zinc-700"}>{s.name}</div>
+                        <div className={cn("text-[8px]", isDark ? "text-zinc-600" : "text-zinc-400")}>{s.desc}</div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Connection Line */}
-                <div className="flex justify-center mb-6">
+                {/* Connection indicator */}
+                <div className="flex justify-center mb-3">
                   <div className={cn(
-                    "flex flex-col items-center gap-1",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "flex items-center gap-2 px-3 py-1 border",
+                    isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-100"
                   )}>
-                    <div className="text-[10px] uppercase tracking-wider">mTLS / WebSocket</div>
-                    <div className="h-6 border-l-2 border-dashed" style={{ borderColor: "currentColor" }} />
+                    <div className={cn("h-px w-6", isDark ? "bg-zinc-600" : "bg-zinc-300")} />
+                    <div className={cn("text-[9px] uppercase tracking-wider", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                      mTLS + WebSocket
+                    </div>
+                    <div className={cn("h-px w-6", isDark ? "bg-zinc-600" : "bg-zinc-300")} />
                   </div>
                 </div>
 
-                {/* Nodes */}
-                <div className="grid grid-cols-3 gap-3">
-                  {["Node 1", "Node 2", "Node 3"].map((node, i) => (
-                    <div key={i} className={cn(
-                      "border p-3 text-center",
-                      isDark ? "border-zinc-700 bg-zinc-800/30" : "border-zinc-200 bg-zinc-50"
-                    )}>
-                      <BsServer className={cn(
-                        "w-4 h-4 mx-auto mb-2",
-                        isDark ? "text-zinc-400" : "text-zinc-500"
-                      )} />
-                      <div className={isDark ? "text-zinc-300" : "text-zinc-700"}>{node}</div>
-                      <div className={cn(
-                        "text-[10px] mt-1",
-                        isDark ? "text-zinc-600" : "text-zinc-400"
-                      )}>
-                        Rust Daemon
-                      </div>
+                {/* Game Node(s) with Watchtower */}
+                <div className={cn(
+                  "border p-4 mb-3 relative",
+                  isDark ? "border-zinc-700 bg-zinc-800/30" : "border-zinc-200 bg-zinc-50"
+                )}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={cn("text-[9px] uppercase tracking-widest", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                      {isEnterpriseArch ? "Game Nodes" : "Game Node"}
                     </div>
-                  ))}
+                    <div className={cn(
+                      "text-[8px] uppercase tracking-widest px-2 py-0.5 border",
+                      isDark ? "border-green-500/50 bg-green-900/20 text-green-400" : "border-green-300 bg-green-50 text-green-600"
+                    )}>
+                      Watchtower
+                    </div>
+                  </div>
+
+                  {isEnterpriseArch ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { name: "Node 1", location: "US" },
+                        { name: "Node 2", location: "EU" },
+                        { name: "Node 3", location: "Asia" },
+                      ].map((node) => (
+                        <div key={node.name} className={cn("text-center p-2 border", isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50")}>
+                          <BsServer className={cn("w-3 h-3 mx-auto mb-1", isDark ? "text-zinc-500" : "text-zinc-400")} />
+                          <div className={cn("text-[9px]", isDark ? "text-zinc-300" : "text-zinc-700")}>Rust Daemon</div>
+                          <div className={cn("text-[8px]", isDark ? "text-zinc-600" : "text-zinc-400")}>{node.location}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={cn("text-center p-3 border", isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50")}>
+                      <BsServer className={cn("w-4 h-4 mx-auto mb-1", isDark ? "text-zinc-500" : "text-zinc-400")} />
+                      <div className={isDark ? "text-zinc-300" : "text-zinc-700"}>Rust Daemon</div>
+                      <div className={cn("text-[8px]", isDark ? "text-zinc-600" : "text-zinc-400")}>Manages game servers</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Monitoring */}
+                <div className={cn(
+                  "border p-2 text-center",
+                  isDark ? "border-yellow-500/30 bg-yellow-900/10" : "border-yellow-200 bg-yellow-50"
+                )}>
+                  <div className={cn("text-[9px] uppercase tracking-widest", isDark ? "text-yellow-400" : "text-yellow-600")}>
+                    Prometheus + Grafana
+                  </div>
                 </div>
               </div>
             </AnimatedSection>
@@ -1059,7 +1149,7 @@ const LandingPage = (): JSX.Element | null => {
         </div>
       </section>
 
-      {/* Gallery Section Placeholder */}
+      {/* Gallery Section */}
       <section id="gallery" className="relative py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <AnimatedSection className="text-center mb-16">
@@ -1073,48 +1163,73 @@ const LandingPage = (): JSX.Element | null => {
               "text-lg max-w-2xl mx-auto",
               isDark ? "text-zinc-400" : "text-zinc-600"
             )}>
-              Screenshots and demos showcasing the StellarStack experience.
+              Screenshots and demos showcasing the StellarStack experience. Click to zoom.
             </p>
           </AnimatedSection>
 
-          {/* Gallery Grid Placeholder */}
+          {/* Gallery Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <AnimatedSection key={item} delay={item * 0.05} className="h-full">
+            {[
+              { id: 1, title: "Dashboard Overview", image: "https://placehold.co/800x450/18181b/71717a?text=Dashboard+Overview" },
+              { id: 2, title: "Server Console", image: "https://placehold.co/800x450/18181b/71717a?text=Server+Console" },
+              { id: 3, title: "File Manager", image: "https://placehold.co/800x450/18181b/71717a?text=File+Manager" },
+              { id: 4, title: "Node Management", image: "https://placehold.co/800x450/18181b/71717a?text=Node+Management" },
+              { id: 5, title: "User Permissions", image: "https://placehold.co/800x450/18181b/71717a?text=User+Permissions" },
+              { id: 6, title: "Monitoring", image: "https://placehold.co/800x450/18181b/71717a?text=Monitoring" },
+            ].map((item) => (
+              <AnimatedSection key={item.id} delay={item.id * 0.05} className="h-full">
                 <div className={cn(
-                  "relative aspect-video border transition-all hover:scale-[1.02] group overflow-hidden",
+                  "relative border transition-all hover:scale-[1.02] group",
                   isDark
                     ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
                     : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
                 )}>
-                  {/* Placeholder content */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <BsImage className={cn(
-                      "w-12 h-12 mb-3",
-                      isDark ? "text-zinc-700" : "text-zinc-300"
-                    )} />
-                    <span className={cn(
-                      "text-xs uppercase tracking-wider",
-                      isDark ? "text-zinc-600" : "text-zinc-400"
-                    )}>
-                      Coming Soon
-                    </span>
-                  </div>
+                  {item.image ? (
+                    <Zoom>
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        width={800}
+                        height={450}
+                        className="w-full h-auto block"
+                      />
+                    </Zoom>
+                  ) : (
+                    /* Placeholder content */
+                    <div className="aspect-video flex flex-col items-center justify-center">
+                      <BsImage className={cn(
+                        "w-12 h-12 mb-3",
+                        isDark ? "text-zinc-700" : "text-zinc-300"
+                      )} />
+                      <span className={cn(
+                        "text-sm font-medium mb-1",
+                        isDark ? "text-zinc-500" : "text-zinc-400"
+                      )}>
+                        {item.title}
+                      </span>
+                      <span className={cn(
+                        "text-xs uppercase tracking-wider",
+                        isDark ? "text-zinc-600" : "text-zinc-400"
+                      )}>
+                        Coming Soon
+                      </span>
+                    </div>
+                  )}
                   {/* Corner decorations */}
                   <div className={cn(
-                    "absolute top-0 left-0 w-3 h-3 border-t border-l transition-colors",
+                    "absolute top-0 left-0 w-3 h-3 border-t border-l transition-colors pointer-events-none",
                     isDark ? "border-zinc-700 group-hover:border-zinc-500" : "border-zinc-300 group-hover:border-zinc-400"
                   )} />
                   <div className={cn(
-                    "absolute top-0 right-0 w-3 h-3 border-t border-r transition-colors",
+                    "absolute top-0 right-0 w-3 h-3 border-t border-r transition-colors pointer-events-none",
                     isDark ? "border-zinc-700 group-hover:border-zinc-500" : "border-zinc-300 group-hover:border-zinc-400"
                   )} />
                   <div className={cn(
-                    "absolute bottom-0 left-0 w-3 h-3 border-b border-l transition-colors",
+                    "absolute bottom-0 left-0 w-3 h-3 border-b border-l transition-colors pointer-events-none",
                     isDark ? "border-zinc-700 group-hover:border-zinc-500" : "border-zinc-300 group-hover:border-zinc-400"
                   )} />
                   <div className={cn(
-                    "absolute bottom-0 right-0 w-3 h-3 border-b border-r transition-colors",
+                    "absolute bottom-0 right-0 w-3 h-3 border-b border-r transition-colors pointer-events-none",
                     isDark ? "border-zinc-700 group-hover:border-zinc-500" : "border-zinc-300 group-hover:border-zinc-400"
                   )} />
                 </div>
@@ -1215,7 +1330,7 @@ const LandingPage = (): JSX.Element | null => {
             "text-lg mb-10 max-w-xl mx-auto",
             isDark ? "text-zinc-400" : "text-zinc-600"
           )}>
-            Deploy your own game server panel in minutes. Free and open source forever.
+            Run the install script on your VPS or dedicated server. Basic Linux knowledge required. Free and open source forever.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href="https://docs.stellarstack.app" target="_blank" rel="noopener noreferrer">

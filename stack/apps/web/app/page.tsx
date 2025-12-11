@@ -13,8 +13,8 @@ const LoginPage = (): JSX.Element | null => {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@stellarstack.app");
+  const [password, setPassword] = useState("1234567");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
