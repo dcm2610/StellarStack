@@ -1,0 +1,11 @@
+{
+  "title": "Components",
+  "pages": [
+    "index",
+    "button",
+    "card",
+    "dashboard-cards",
+    "console",
+    "animations"
+  ]
+}

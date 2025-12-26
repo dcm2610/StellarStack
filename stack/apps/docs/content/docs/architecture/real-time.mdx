@@ -1,0 +1,243 @@
+---
+title: Real-time Communication
+description: How StellarStack handles real-time updates
+---
+
+# Real-time Communication
+
+StellarStack uses multiple real-time communication patterns depending on the use case.
+
+## Communication Patterns
+
+| Use Case | Technology | Path |
+|----------|------------|------|
+| Console | WebSocket | Frontend → Daemon (direct) |
+| File Manager | WebSocket | Frontend → Daemon (direct) |
+| Metrics | SSE | Daemon → Redis → API → Frontend |
+| Server Status | SSE | Daemon → Redis → API → Frontend |
+| Commands | Redis Pub/Sub | API → Redis → Daemon |
+
+## Console Access
+
+Console access uses a direct WebSocket connection to the daemon for minimal latency.
+
+### Why Direct Connection?
+
+- **Low Latency**: No middleman between user and container
+- **Bidirectional**: Real-time input/output streaming
+- **Efficient**: Reduces load on the API server
+
+### Connection Flow
+
+```
+User ──▶ API (get token) ──▶ Daemon WebSocket ──▶ Container PTY
+```
+
+### WebSocket Protocol
+
+```typescript
+// Messages from daemon to client
+interface ConsoleOutput {
+  type: "output";
+  data: string;      // Console output
+  timestamp: number;
+}
+
+// Messages from client to daemon
+interface ConsoleInput {
+  type: "input";
+  data: string;      // User input
+}
+
+// Control messages
+interface ConsoleControl {
+  type: "resize";
+  cols: number;
+  rows: number;
+}
+```
+
+## Server Status & Metrics
+
+Server status and metrics use Server-Sent Events (SSE) through the API.
+
+### Why SSE?
+
+- **Broadcast**: One daemon update can reach many users
+- **Caching**: Metrics can be cached in Redis
+- **Efficient**: Less overhead than WebSocket for one-way data
+
+### Metrics Flow
+
+```
+Daemon ──▶ Redis Pub/Sub ──▶ API ──▶ SSE ──▶ Multiple Users
+```
+
+### Metrics Structure
+
+```typescript
+interface ServerMetrics {
+  serverId: string;
+  timestamp: number;
+  cpu: {
+    usage: number;      // Percentage
+    cores: number[];    // Per-core usage
+  };
+  memory: {
+    used: number;       // Bytes
+    limit: number;      // Bytes
+    percentage: number;
+  };
+  disk: {
+    used: number;       // Bytes
+    limit: number;      // Bytes
+  };
+  network: {
+    rxBytes: number;
+    txBytes: number;
+    rxRate: number;     // Bytes/sec
+    txRate: number;     // Bytes/sec
+  };
+  players: {
+    online: number;
+    max: number;
+  };
+}
+```
+
+## Redis Pub/Sub Channels
+
+### Node Communication
+
+```
+stellar:nodes:{node_id}:commands   # API → Daemon
+stellar:nodes:{node_id}:events     # Daemon → API
+stellar:nodes:{node_id}:heartbeat  # Health checks
+```
+
+### Server Events
+
+```
+stellar:servers:{server_id}:status   # Status changes
+stellar:servers:{server_id}:metrics  # CPU, RAM, etc.
+stellar:servers:{server_id}:logs     # Log streaming
+```
+
+### Global Events
+
+```
+stellar:events:global   # Platform-wide events
+```
+
+## Command Execution
+
+Commands from the API to daemons use Redis Pub/Sub for reliable delivery.
+
+### Why Redis Pub/Sub?
+
+- **Reliable**: Commands are queued if daemon is temporarily down
+- **Auditable**: All commands pass through the API
+- **Scalable**: Works with multiple API instances
+
+### Command Structure
+
+```typescript
+interface NodeCommand {
+  id: string;          // Unique command ID
+  type: string;        // Command type
+  payload: any;        // Command-specific data
+  timestamp: number;   // Unix timestamp
+  expiresAt: number;   // Command expiration
+}
+```
+
+### Command Flow
+
+```
+User ──▶ API ──▶ Validate ──▶ Redis Pub/Sub ──▶ Daemon
+                                    │
+                              (Acknowledgment)
+                                    │
+User ◀──────────────────────────────┘
+```
+
+## File Manager
+
+File operations use WebSocket for large file transfers.
+
+### Supported Operations
+
+- Directory listing
+- File read/write
+- File upload/download
+- Create/delete files and directories
+- Rename/move files
+- Search files
+
+### Protocol
+
+```typescript
+// List directory
+{
+  type: "list",
+  path: "/server/plugins"
+}
+
+// Read file
+{
+  type: "read",
+  path: "/server/server.properties"
+}
+
+// Write file
+{
+  type: "write",
+  path: "/server/server.properties",
+  content: "server-name=My Server\n..."
+}
+
+// Upload file (chunked)
+{
+  type: "upload",
+  path: "/server/plugins/plugin.jar",
+  chunk: 0,
+  total: 10,
+  data: "base64..."
+}
+```
+
+## Connection Resilience
+
+### Auto-Reconnect
+
+All WebSocket connections implement automatic reconnection:
+
+```typescript
+const connect = () => {
+  const ws = new WebSocket(url);
+
+  ws.onclose = () => {
+    setTimeout(connect, 1000 * Math.min(attempts++, 30));
+  };
+
+  ws.onopen = () => {
+    attempts = 0;
+  };
+};
+```
+
+### Heartbeat
+
+Connections send periodic heartbeats to detect disconnections:
+
+```typescript
+// Every 30 seconds
+ws.send(JSON.stringify({ type: "ping" }));
+
+// Expect response within 10 seconds
+setTimeout(() => {
+  if (!pongReceived) {
+    ws.close();
+  }
+}, 10000);
+```

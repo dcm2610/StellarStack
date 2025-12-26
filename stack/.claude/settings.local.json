@@ -18,7 +18,14 @@
       "WebFetch(domain:shaders.paper.design)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:fumadocs.dev)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm view:*)",
+      "Bash(npx next build)",
+      "Bash(cargo check:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx prisma generate:*)"
     ],
     "deny": [],
     "ask": []

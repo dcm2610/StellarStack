@@ -1,0 +1,17 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "---Getting Started---",
+    "installation",
+    "quick-start",
+    "---Architecture---",
+    "architecture/...",
+    "---Guides---",
+    "guides/...",
+    "---Components---",
+    "components/...",
+    "---API Reference---",
+    "api/..."
+  ]
+}

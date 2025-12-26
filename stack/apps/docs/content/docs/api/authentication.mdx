@@ -1,0 +1,338 @@
+---
+title: Authentication API
+description: Authentication endpoints for StellarStack
+---
+
+# Authentication API
+
+StellarStack uses Better Auth for authentication with support for email/password and social providers.
+
+## Sign In
+
+Authenticate with email and password.
+
+```http
+POST /api/v1/auth/signin
+```
+
+### Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+### Response
+
+```json
+{
+  "user": {
+    "id": "user_xxxxx",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "user",
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  "session": {
+    "id": "session_xxxxx",
+    "expiresAt": "2024-01-08T00:00:00Z"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| `401` | Invalid credentials |
+| `422` | Validation error |
+| `429` | Too many attempts |
+
+## Sign Up
+
+Create a new account.
+
+```http
+POST /api/v1/auth/signup
+```
+
+### Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password",
+  "name": "John Doe"
+}
+```
+
+### Response
+
+```json
+{
+  "user": {
+    "id": "user_xxxxx",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "user",
+    "emailVerified": false,
+    "createdAt": "2024-01-01T00:00:00Z"
+  },
+  "message": "Verification email sent"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| `409` | Email already registered |
+| `422` | Validation error |
+
+## Sign Out
+
+End the current session.
+
+```http
+POST /api/v1/auth/signout
+```
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## Get Session
+
+Get the current session and user.
+
+```http
+GET /api/v1/auth/session
+```
+
+### Response
+
+```json
+{
+  "user": {
+    "id": "user_xxxxx",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "user"
+  },
+  "session": {
+    "id": "session_xxxxx",
+    "expiresAt": "2024-01-08T00:00:00Z"
+  }
+}
+```
+
+### Not Authenticated
+
+```json
+{
+  "user": null,
+  "session": null
+}
+```
+
+## OAuth Providers
+
+### GitHub
+
+```http
+GET /api/v1/auth/github
+```
+
+Redirects to GitHub OAuth flow.
+
+### Discord
+
+```http
+GET /api/v1/auth/discord
+```
+
+Redirects to Discord OAuth flow.
+
+### Callback
+
+```http
+GET /api/v1/auth/callback/:provider
+```
+
+OAuth callback handler. Redirects to dashboard on success.
+
+## API Tokens
+
+Generate API tokens for programmatic access.
+
+### Create Token
+
+```http
+POST /api/v1/auth/tokens
+```
+
+#### Request
+
+```json
+{
+  "name": "CI/CD Token",
+  "expiresIn": 2592000
+}
+```
+
+#### Response
+
+```json
+{
+  "token": {
+    "id": "token_xxxxx",
+    "name": "CI/CD Token",
+    "token": "strk_xxxxx",
+    "expiresAt": "2024-02-01T00:00:00Z",
+    "createdAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+<Card>
+  <CardHeader>
+    <CardTitle>Important</CardTitle>
+  </CardHeader>
+  <CardContent>
+    The token value is only shown once. Store it securely.
+  </CardContent>
+</Card>
+
+### List Tokens
+
+```http
+GET /api/v1/auth/tokens
+```
+
+#### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "token_xxxxx",
+      "name": "CI/CD Token",
+      "lastUsed": "2024-01-01T12:00:00Z",
+      "expiresAt": "2024-02-01T00:00:00Z",
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### Revoke Token
+
+```http
+DELETE /api/v1/auth/tokens/:id
+```
+
+#### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## Password Reset
+
+### Request Reset
+
+```http
+POST /api/v1/auth/forgot-password
+```
+
+#### Request
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+#### Response
+
+```json
+{
+  "message": "If an account exists, a reset email has been sent"
+}
+```
+
+### Reset Password
+
+```http
+POST /api/v1/auth/reset-password
+```
+
+#### Request
+
+```json
+{
+  "token": "reset_token_xxxxx",
+  "password": "new-password"
+}
+```
+
+#### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## Two-Factor Authentication
+
+### Enable 2FA
+
+```http
+POST /api/v1/auth/2fa/enable
+```
+
+#### Response
+
+```json
+{
+  "secret": "JBSWY3DPEHPK3PXP",
+  "qrCode": "data:image/png;base64,..."
+}
+```
+
+### Verify 2FA
+
+```http
+POST /api/v1/auth/2fa/verify
+```
+
+#### Request
+
+```json
+{
+  "code": "123456"
+}
+```
+
+### Disable 2FA
+
+```http
+POST /api/v1/auth/2fa/disable
+```
+
+#### Request
+
+```json
+{
+  "code": "123456"
+}
+```

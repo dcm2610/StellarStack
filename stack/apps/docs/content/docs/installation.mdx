@@ -1,0 +1,210 @@
+---
+title: Installation
+description: Install and deploy StellarStack on your infrastructure
+---
+
+# Installation
+
+This guide covers installing StellarStack on your infrastructure. StellarStack consists of two main components:
+
+1. **Control Plane** - The central web application, API, and database
+2. **Daemon** - Lightweight agents that run on each node to manage game servers
+
+## Prerequisites
+
+### Control Plane Requirements
+
+- Docker and Docker Compose
+- 2+ CPU cores
+- 4GB+ RAM
+- 20GB+ disk space
+- PostgreSQL 15+
+- Redis 7+
+
+### Node Requirements
+
+- Docker installed
+- 1+ CPU cores (depends on game servers)
+- 2GB+ RAM (depends on game servers)
+- Outbound access to Redis (port 6379)
+- Public IP or domain
+- Port 5000 open for daemon
+
+## Quick Install (Docker Compose)
+
+The fastest way to get started is using Docker Compose:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/stellarstack.git
+cd stellarstack
+
+# Copy environment template
+cp .env.example .env
+
+# Edit configuration
+nano .env
+
+# Start services
+docker compose up -d
+```
+
+## Environment Configuration
+
+Create a `.env` file with the following variables:
+
+```bash
+# Database
+DATABASE_URL=postgresql://postgres:password@db:5432/stellarstack
+
+# Redis
+REDIS_URL=redis://redis:6379
+
+# Authentication
+BETTER_AUTH_SECRET=your-super-secret-key
+BETTER_AUTH_URL=https://your-domain.com
+
+# Optional: OAuth providers
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+```
+
+## Docker Compose Configuration
+
+```yaml
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      - db
+      - redis
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=stellarstack
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+## Installing Daemon on Nodes
+
+Once your control plane is running, you can add nodes:
+
+### 1. Generate Registration Token
+
+In the admin panel, navigate to **Nodes** → **Add Node** and generate a registration token.
+
+### 2. Run Installation Script
+
+On your node server, run:
+
+```bash
+curl -fsSL https://your-panel.com/install-daemon.sh | bash -s -- <registration_token>
+```
+
+### 3. Verify Connection
+
+The daemon will automatically connect to the control plane. Check the Nodes page to verify it appears as "Online".
+
+## Manual Daemon Installation
+
+For more control, install the daemon manually:
+
+```bash
+# Create directories
+mkdir -p /etc/stellarstack /var/lib/stellarstack /var/log/stellarstack
+
+# Download daemon binary
+curl -L https://your-panel.com/downloads/daemon/latest/linux-amd64 \
+  -o /usr/local/bin/stellarstack-daemon
+chmod +x /usr/local/bin/stellarstack-daemon
+
+# Create config file
+cat > /etc/stellarstack/daemon.toml << EOF
+[node]
+id = "your-node-id"
+api_token = "your-api-token"
+
+[redis]
+url = "redis://your-redis-server:6379"
+
+[server]
+host = "0.0.0.0"
+port = 5000
+
+[docker]
+socket = "/var/run/docker.sock"
+
+[logging]
+level = "info"
+file = "/var/log/stellarstack/daemon.log"
+EOF
+
+# Create systemd service
+cat > /etc/systemd/system/stellarstack-daemon.service << EOF
+[Unit]
+Description=StellarStack Daemon
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/stellarstack-daemon --config /etc/stellarstack/daemon.toml
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Start service
+systemctl daemon-reload
+systemctl enable stellarstack-daemon
+systemctl start stellarstack-daemon
+```
+
+## Next Steps
+
+After installation:
+
+1. [Create your first game server](/docs/quick-start)
+2. [Configure user permissions](/docs/guides/permissions)
+3. [Set up backups](/docs/guides/backups)

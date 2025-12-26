@@ -1,0 +1,181 @@
+---
+title: Dashboard Cards
+description: Pre-built cards for server monitoring dashboards
+---
+
+# Dashboard Cards
+
+StellarStack includes a collection of pre-built dashboard cards for displaying server metrics and status.
+
+## Available Cards
+
+| Card | Description |
+|------|-------------|
+| `CpuCard` | CPU usage with percentage and chart |
+| `CpuCoreGrid` | Per-core CPU usage grid |
+| `UsageMetricCard` | Generic usage metric display |
+| `NetworkUsageCard` | Network I/O with rates |
+| `ContainerUptimeCard` | Server uptime display |
+| `PlayersOnlineCard` | Online player count |
+| `RecentLogsCard` | Recent console logs |
+| `SystemInformationCard` | System specs |
+| `ContainerControlsCard` | Server control buttons |
+| `InstanceNameCard` | Server name display |
+| `NetworkInfoCard` | Network configuration |
+
+## Import
+
+```tsx
+import { CpuCard } from '@workspace/ui/components/shared/DashboardCards/CpuCard';
+import { NetworkUsageCard } from '@workspace/ui/components/shared/DashboardCards/NetworkUsageCard';
+import { PlayersOnlineCard } from '@workspace/ui/components/shared/DashboardCards/PlayersOnlineCard';
+```
+
+## CpuCard
+
+Displays CPU usage with a visual indicator.
+
+```tsx
+<CpuCard
+  usage={45.2}
+  history={[40, 42, 45, 43, 45]}
+/>
+```
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `usage` | `number` | Current CPU usage (0-100) |
+| `history` | `number[]` | Historical data for sparkline |
+
+## CpuCoreGrid
+
+Shows per-core CPU usage in a grid.
+
+```tsx
+<CpuCoreGrid
+  cores={[
+    { id: 0, usage: 45 },
+    { id: 1, usage: 32 },
+    { id: 2, usage: 78 },
+    { id: 3, usage: 15 },
+  ]}
+/>
+```
+
+## UsageMetricCard
+
+Generic card for any usage metric.
+
+```tsx
+<UsageMetricCard
+  title="Memory"
+  value={2.4}
+  unit="GB"
+  max={4}
+  percentage={60}
+  icon={<Memory />}
+/>
+```
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `title` | `string` | Card title |
+| `value` | `number` | Current value |
+| `unit` | `string` | Value unit (GB, MB, etc.) |
+| `max` | `number` | Maximum value |
+| `percentage` | `number` | Percentage for progress bar |
+| `icon` | `ReactNode` | Icon to display |
+
+## NetworkUsageCard
+
+Displays network traffic with rates.
+
+```tsx
+<NetworkUsageCard
+  rxBytes={1024000}
+  txBytes={512000}
+  rxRate={1024}
+  txRate={512}
+/>
+```
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `rxBytes` | `number` | Total received bytes |
+| `txBytes` | `number` | Total transmitted bytes |
+| `rxRate` | `number` | Current receive rate (bytes/s) |
+| `txRate` | `number` | Current transmit rate (bytes/s) |
+
+## ContainerUptimeCard
+
+Shows server uptime.
+
+```tsx
+<ContainerUptimeCard
+  startedAt={new Date('2024-01-01')}
+  status="running"
+/>
+```
+
+## PlayersOnlineCard
+
+Displays online player count.
+
+```tsx
+<PlayersOnlineCard
+  online={12}
+  max={50}
+  players={['Player1', 'Player2', ...]}
+/>
+```
+
+## RecentLogsCard
+
+Shows recent console output.
+
+```tsx
+<RecentLogsCard
+  logs={[
+    { timestamp: Date.now(), message: '[Server] Started' },
+    { timestamp: Date.now(), message: '[Server] Player joined' },
+  ]}
+  maxLines={10}
+/>
+```
+
+## ContainerControlsCard
+
+Server control buttons.
+
+```tsx
+<ContainerControlsCard
+  status="running"
+  onStart={() => {}}
+  onStop={() => {}}
+  onRestart={() => {}}
+  onKill={() => {}}
+/>
+```
+
+## Dashboard Layout
+
+Use with `DragDropGrid` for customizable layouts:
+
+```tsx
+import { DragDropGrid } from '@workspace/ui/components/shared/DragDropGrid';
+
+<DragDropGrid>
+  <CpuCard usage={45} />
+  <NetworkUsageCard rxBytes={1024} txBytes={512} />
+  <PlayersOnlineCard online={12} max={50} />
+  <RecentLogsCard logs={logs} />
+</DragDropGrid>
+```
+
+Users can drag and rearrange cards, and the layout is persisted automatically.

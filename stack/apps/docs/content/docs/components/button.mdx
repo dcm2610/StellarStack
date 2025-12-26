@@ -1,0 +1,155 @@
+---
+title: Button
+description: Interactive button component with multiple variants
+---
+
+# Button
+
+A versatile button component built with Radix UI Slot and class-variance-authority.
+
+## Import
+
+```tsx
+import { Button } from '@workspace/ui/components/button';
+```
+
+## Usage
+
+```tsx
+<Button>Click me</Button>
+```
+
+## Variants
+
+### Default
+
+```tsx
+<Button variant="default">Default</Button>
+```
+
+<Button>Default Button</Button>
+
+### Destructive
+
+```tsx
+<Button variant="destructive">Delete</Button>
+```
+
+<Button variant="destructive">Delete</Button>
+
+### Outline
+
+```tsx
+<Button variant="outline">Outline</Button>
+```
+
+<Button variant="outline">Outline</Button>
+
+### Secondary
+
+```tsx
+<Button variant="secondary">Secondary</Button>
+```
+
+<Button variant="secondary">Secondary</Button>
+
+### Ghost
+
+```tsx
+<Button variant="ghost">Ghost</Button>
+```
+
+<Button variant="ghost">Ghost</Button>
+
+### Link
+
+```tsx
+<Button variant="link">Link</Button>
+```
+
+<Button variant="link">Link</Button>
+
+## Sizes
+
+```tsx
+<Button size="sm">Small</Button>
+<Button size="default">Default</Button>
+<Button size="lg">Large</Button>
+<Button size="icon">🚀</Button>
+```
+
+## With Icons
+
+```tsx
+import { Play, Square, RotateCw } from 'lucide-react';
+
+<Button>
+  <Play /> Start
+</Button>
+
+<Button variant="destructive">
+  <Square /> Stop
+</Button>
+
+<Button variant="outline">
+  <RotateCw /> Restart
+</Button>
+```
+
+## As Child
+
+Use `asChild` to render as a different element:
+
+```tsx
+<Button asChild>
+  <a href="/docs">Documentation</a>
+</Button>
+```
+
+## Disabled State
+
+```tsx
+<Button disabled>Disabled</Button>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `variant` | `'default' \| 'destructive' \| 'outline' \| 'secondary' \| 'ghost' \| 'link'` | `'default'` | Visual variant |
+| `size` | `'default' \| 'sm' \| 'lg' \| 'icon' \| 'icon-sm' \| 'icon-lg'` | `'default'` | Button size |
+| `asChild` | `boolean` | `false` | Render as child element |
+| `disabled` | `boolean` | `false` | Disabled state |
+| `className` | `string` | - | Additional classes |
+
+## Source
+
+```tsx
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-white hover:bg-destructive/90",
+        outline: "border bg-background shadow-xs hover:bg-accent",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-9 px-4 py-2",
+        sm: "h-8 gap-1.5 px-3",
+        lg: "h-10 px-6",
+        icon: "size-9",
+        "icon-sm": "size-8",
+        "icon-lg": "size-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
+```

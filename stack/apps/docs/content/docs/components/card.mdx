@@ -1,0 +1,174 @@
+---
+title: Card
+description: Container component with header, content, and footer
+---
+
+# Card
+
+A flexible container component for grouping related content.
+
+## Import
+
+```tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  CardAction,
+} from '@workspace/ui/components/card';
+```
+
+## Usage
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Card Title</CardTitle>
+    <CardDescription>Card description text</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p>Card content goes here.</p>
+  </CardContent>
+  <CardFooter>
+    <Button>Action</Button>
+  </CardFooter>
+</Card>
+```
+
+## Examples
+
+### Basic Card
+
+<Card>
+  <CardHeader>
+    <CardTitle>Server Status</CardTitle>
+    <CardDescription>Current server information</CardDescription>
+  </CardHeader>
+  <CardContent>
+    Your server is running normally.
+  </CardContent>
+</Card>
+
+### Card with Action
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Notifications</CardTitle>
+    <CardDescription>Manage notification preferences</CardDescription>
+    <CardAction>
+      <Button variant="outline" size="sm">Settings</Button>
+    </CardAction>
+  </CardHeader>
+  <CardContent>
+    Configure how you receive notifications.
+  </CardContent>
+</Card>
+```
+
+### Card Grid
+
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <Card>
+    <CardHeader>
+      <CardTitle>CPU Usage</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-3xl font-bold">45%</p>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>Memory</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-3xl font-bold">2.4 GB</p>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>Storage</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-3xl font-bold">12.5 GB</p>
+    </CardContent>
+  </Card>
+</div>
+```
+
+### Card with Footer
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Backup</CardTitle>
+    <CardDescription>Last backup: 2 hours ago</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p>Your server is automatically backed up every 6 hours.</p>
+  </CardContent>
+  <CardFooter className="justify-between">
+    <Button variant="outline">View Backups</Button>
+    <Button>Create Backup</Button>
+  </CardFooter>
+</Card>
+```
+
+## Components
+
+### Card
+
+The main container component.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `className` | `string` | Additional classes |
+| `children` | `ReactNode` | Card contents |
+
+### CardHeader
+
+Container for title and description.
+
+### CardTitle
+
+The card's heading.
+
+### CardDescription
+
+Secondary text below the title.
+
+### CardAction
+
+Action button positioned in the header.
+
+### CardContent
+
+Main content area.
+
+### CardFooter
+
+Footer area for actions.
+
+## Styling
+
+Cards use these default styles:
+
+```tsx
+<div className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
+  {children}
+</div>
+```
+
+Customize with className:
+
+```tsx
+<Card className="bg-primary text-primary-foreground">
+  Custom styled card
+</Card>
+```

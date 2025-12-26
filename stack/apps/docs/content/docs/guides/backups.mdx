@@ -1,0 +1,187 @@
+---
+title: Backups
+description: Server backup management in StellarStack
+---
+
+# Backups
+
+StellarStack provides automated and manual backup capabilities for game servers.
+
+## Backup Types
+
+| Type | Description |
+|------|-------------|
+| **Manual** | User-triggered backups |
+| **Scheduled** | Automated recurring backups |
+| **Pre-update** | Automatic backup before updates |
+
+## Creating Backups
+
+### Manual Backup
+
+1. Navigate to **Server** → **Backups**
+2. Click **Create Backup**
+3. Enter a name (optional)
+4. Select files to include
+5. Click **Start Backup**
+
+### Via API
+
+```bash
+curl -X POST https://api.example.com/api/v1/servers/{serverId}/backups \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "pre-update-backup",
+    "ignore": ["logs/*", "*.tmp"]
+  }'
+```
+
+## Scheduled Backups
+
+Set up automated backups on a schedule.
+
+### Create Schedule
+
+1. Navigate to **Server** → **Schedules**
+2. Click **Create Schedule**
+3. Select **Backup** action
+4. Configure timing:
+   - Minute: `0`
+   - Hour: `*/6` (every 6 hours)
+   - Day: `*`
+5. Click **Save**
+
+### Cron Syntax
+
+| Field | Values |
+|-------|--------|
+| Minute | 0-59 |
+| Hour | 0-23 |
+| Day of Month | 1-31 |
+| Month | 1-12 |
+| Day of Week | 0-7 (0 and 7 = Sunday) |
+
+**Examples:**
+- `0 */6 * * *` - Every 6 hours
+- `0 2 * * *` - Daily at 2 AM
+- `0 0 * * 0` - Weekly on Sunday
+
+## Backup Storage
+
+### Local Storage
+
+By default, backups are stored on the node:
+
+```
+/var/lib/stellarstack/backups/{serverId}/
+├── backup-2024-01-01-120000.tar.gz
+├── backup-2024-01-02-120000.tar.gz
+└── backup-2024-01-03-120000.tar.gz
+```
+
+### S3 Compatible Storage
+
+Configure external storage in `.env`:
+
+```bash
+BACKUP_DRIVER=s3
+S3_ENDPOINT=https://s3.amazonaws.com
+S3_BUCKET=stellarstack-backups
+S3_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
+S3_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+S3_REGION=us-east-1
+```
+
+## Retention Policy
+
+Configure how long backups are kept:
+
+```bash
+# Keep backups for 7 days
+BACKUP_RETENTION_DAYS=7
+
+# Maximum backups per server
+BACKUP_MAX_COUNT=10
+```
+
+## Restoring Backups
+
+### From Panel
+
+1. Navigate to **Server** → **Backups**
+2. Find the backup to restore
+3. Click **Restore**
+4. Confirm the action
+
+<Card>
+  <CardHeader>
+    <CardTitle>Warning</CardTitle>
+  </CardHeader>
+  <CardContent>
+    Restoring a backup will overwrite current server files. The server must be stopped before restoring.
+  </CardContent>
+</Card>
+
+### Via API
+
+```bash
+curl -X POST https://api.example.com/api/v1/servers/{serverId}/backups/{backupId}/restore \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Download Backups
+
+Download backups for offline storage:
+
+1. Navigate to **Server** → **Backups**
+2. Click the download icon
+3. Save the `.tar.gz` file
+
+### Via API
+
+```bash
+curl -O https://api.example.com/api/v1/servers/{serverId}/backups/{backupId}/download \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Backup Contents
+
+Backups include:
+
+- Server configuration files
+- World/map data
+- Plugin/mod files
+- Custom scripts
+
+Backups exclude by default:
+
+- Log files
+- Temporary files
+- Cache directories
+- Large binary files
+
+### Custom Ignore Patterns
+
+Configure in server settings:
+
+```json
+{
+  "backup": {
+    "ignore": [
+      "logs/*",
+      "*.log",
+      "cache/*",
+      "*.tmp"
+    ]
+  }
+}
+```
+
+## Best Practices
+
+1. **Regular Schedules** - Set up automated backups
+2. **Test Restores** - Periodically verify backups work
+3. **Off-site Storage** - Use S3 for disaster recovery
+4. **Retention Balance** - Balance storage costs vs. safety
+5. **Pre-update Backups** - Always backup before changes

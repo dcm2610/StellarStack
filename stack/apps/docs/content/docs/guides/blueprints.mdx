@@ -1,0 +1,241 @@
+---
+title: Blueprints
+description: Game server templates and configuration
+---
+
+# Blueprints
+
+Blueprints define how game servers are deployed and configured. They specify the Docker image, startup command, configuration variables, and resource requirements.
+
+## What is a Blueprint?
+
+A blueprint is a template that contains:
+
+- Docker image to use
+- Default startup command
+- Configuration variables
+- Resource recommendations
+- Installation scripts
+- Update procedures
+
+## Built-in Blueprints
+
+StellarStack includes blueprints for popular games:
+
+| Game | Blueprint |
+|------|-----------|
+| Minecraft Java | `minecraft-java` |
+| Minecraft Bedrock | `minecraft-bedrock` |
+| Rust | `rust` |
+| Valheim | `valheim` |
+| ARK: Survival Evolved | `ark` |
+| Counter-Strike 2 | `cs2` |
+| Palworld | `palworld` |
+| Terraria | `terraria` |
+
+## Blueprint Structure
+
+```json
+{
+  "id": "minecraft-java",
+  "name": "Minecraft: Java Edition",
+  "description": "Official Minecraft Java server",
+  "version": "1.0.0",
+  "author": "StellarStack",
+
+  "docker": {
+    "image": "itzg/minecraft-server:latest",
+    "stop_command": "stop",
+    "stop_timeout": 30
+  },
+
+  "startup": {
+    "command": "java -Xms{{SERVER_MEMORY}}M -Xmx{{SERVER_MEMORY}}M -jar server.jar nogui",
+    "entrypoint": "/start"
+  },
+
+  "variables": [
+    {
+      "name": "SERVER_MEMORY",
+      "description": "Server memory in MB",
+      "default": "1024",
+      "required": true,
+      "rules": "numeric|min:512"
+    },
+    {
+      "name": "EULA",
+      "description": "Accept Minecraft EULA",
+      "default": "true",
+      "required": true
+    },
+    {
+      "name": "VERSION",
+      "description": "Minecraft version",
+      "default": "LATEST",
+      "required": false
+    },
+    {
+      "name": "TYPE",
+      "description": "Server type (VANILLA, PAPER, SPIGOT, etc.)",
+      "default": "PAPER",
+      "options": ["VANILLA", "PAPER", "SPIGOT", "FABRIC", "FORGE"]
+    }
+  ],
+
+  "resources": {
+    "cpu": {
+      "minimum": 100,
+      "recommended": 200
+    },
+    "memory": {
+      "minimum": 1024,
+      "recommended": 2048
+    },
+    "disk": {
+      "minimum": 5120,
+      "recommended": 10240
+    }
+  },
+
+  "ports": [
+    {
+      "name": "Game",
+      "port": 25565,
+      "protocol": "tcp",
+      "required": true
+    },
+    {
+      "name": "RCON",
+      "port": 25575,
+      "protocol": "tcp",
+      "required": false
+    }
+  ],
+
+  "scripts": {
+    "install": "#!/bin/bash\necho 'Installing server...'\n",
+    "update": "#!/bin/bash\necho 'Updating server...'\n"
+  }
+}
+```
+
+## Variables
+
+Variables are configuration options that users can modify.
+
+### Variable Types
+
+| Type | Description |
+|------|-------------|
+| `string` | Text value |
+| `number` | Numeric value |
+| `boolean` | True/false |
+| `select` | Dropdown options |
+
+### Validation Rules
+
+| Rule | Description |
+|------|-------------|
+| `required` | Must have a value |
+| `numeric` | Must be a number |
+| `min:X` | Minimum value |
+| `max:X` | Maximum value |
+| `in:a,b,c` | Must be one of options |
+| `regex:pattern` | Match regex pattern |
+
+### Example Variables
+
+```json
+{
+  "variables": [
+    {
+      "name": "MAX_PLAYERS",
+      "description": "Maximum players",
+      "type": "number",
+      "default": "20",
+      "rules": "numeric|min:1|max:100"
+    },
+    {
+      "name": "DIFFICULTY",
+      "description": "Game difficulty",
+      "type": "select",
+      "default": "normal",
+      "options": ["peaceful", "easy", "normal", "hard"]
+    },
+    {
+      "name": "ENABLE_PVP",
+      "description": "Enable PvP combat",
+      "type": "boolean",
+      "default": "true"
+    }
+  ]
+}
+```
+
+## Creating Custom Blueprints
+
+### 1. Create Blueprint File
+
+Create a JSON file in `blueprints/custom/`:
+
+```json
+{
+  "id": "my-game",
+  "name": "My Game Server",
+  "docker": {
+    "image": "my-game:latest"
+  },
+  "startup": {
+    "command": "./start.sh"
+  },
+  "variables": []
+}
+```
+
+### 2. Register Blueprint
+
+In the admin panel:
+
+1. Navigate to **Admin** → **Blueprints**
+2. Click **Import Blueprint**
+3. Upload the JSON file
+4. Click **Save**
+
+### 3. Test Blueprint
+
+1. Create a new server using the blueprint
+2. Verify startup and configuration
+3. Test all variables
+
+## Blueprint API
+
+### List Blueprints
+
+```bash
+curl https://api.example.com/api/v1/blueprints \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Get Blueprint
+
+```bash
+curl https://api.example.com/api/v1/blueprints/minecraft-java \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Create Blueprint (Admin)
+
+```bash
+curl -X POST https://api.example.com/api/v1/admin/blueprints \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @blueprint.json
+```
+
+## Best Practices
+
+1. **Use Official Images** - Prefer maintained Docker images
+2. **Set Sensible Defaults** - Make setup easy for users
+3. **Document Variables** - Clear descriptions help users
+4. **Test Thoroughly** - Verify all configurations work
+5. **Version Blueprints** - Track changes over time

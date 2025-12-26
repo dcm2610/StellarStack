@@ -1,0 +1,10 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "index",
+    "control-plane",
+    "daemon",
+    "authentication",
+    "real-time"
+  ]
+}

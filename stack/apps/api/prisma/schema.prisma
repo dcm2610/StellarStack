@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Better Auth Tables
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  servers  Server[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verifications")
+}
+
+// ============================================
+// Application Tables
+// ============================================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum NodeProtocol {
+  HTTP
+  HTTPS
+  HTTPS_PROXY
+}
+
+model Location {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  country     String?
+  city        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  nodes Node[]
+
+  @@map("locations")
+}
+
+model Node {
+  id            String       @id @default(cuid())
+  displayName   String
+  host          String
+  port          Int
+  protocol      NodeProtocol @default(HTTP)
+  sftpPort      Int          @default(2022)
+
+  // Resource limits for this node
+  memoryLimit   BigInt       // Total memory in bytes
+  diskLimit     BigInt       // Total disk in bytes
+  cpuLimit      Float        // Total CPU cores
+  uploadLimit   BigInt       @default(104857600) // File upload limit in bytes (default 100MB)
+
+  // Authentication
+  token         String       @unique
+  tokenHash     String
+  isOnline      Boolean      @default(false)
+  lastHeartbeat DateTime?
+
+  // Relations
+  locationId    String
+  location      Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  allocations Allocation[]
+  servers     Server[]
+
+  @@map("nodes")
+}
+
+model Allocation {
+  id        String   @id @default(cuid())
+  ip        String
+  port      Int
+  alias     String?
+  assigned  Boolean  @default(false)
+
+  nodeId    String
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  serverId  String?
+  server    Server?  @relation(fields: [serverId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([nodeId, ip, port])
+  @@map("allocations")
+}
+
+model Blueprint {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String?
+
+  // Docker image info
+  imageName   String
+  imageTag    String   @default("latest")
+  registry    String?
+
+  // Default configuration (JSON)
+  config      Json
+
+  // Visibility
+  isPublic    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  servers Server[]
+
+  @@map("blueprints")
+}
+
+model Server {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+
+  // Docker container info
+  containerId  String?
+  status       ServerStatus @default(INSTALLING)
+
+  // Resource allocation
+  memory       BigInt   // Memory in bytes
+  disk         BigInt   // Disk in bytes
+  cpu          Float    // CPU cores
+
+  // Configuration overrides (merged with blueprint)
+  config       Json?
+
+  // Relations
+  nodeId       String
+  node         Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  blueprintId  String
+  blueprint    Blueprint @relation(fields: [blueprintId], references: [id])
+
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  allocations Allocation[]
+
+  @@map("servers")
+}
+
+enum ServerStatus {
+  INSTALLING
+  STARTING
+  RUNNING
+  STOPPING
+  STOPPED
+  ERROR
+}

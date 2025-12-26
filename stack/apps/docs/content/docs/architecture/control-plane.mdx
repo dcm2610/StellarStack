@@ -1,0 +1,181 @@
+---
+title: Control Plane
+description: Deep dive into the StellarStack control plane architecture
+---
+
+# Control Plane
+
+The control plane is the central infrastructure that manages all operations in StellarStack. It consists of four main components working together.
+
+## Next.js Frontend
+
+The frontend provides the user interface and handles server-side rendering.
+
+**Responsibilities:**
+- User interface and experience
+- Server-side rendering for SEO
+- Client-side state management
+- WebSocket connections for real-time updates
+
+**Key Routes:**
+
+```
+/                       # Landing page (public)
+/auth/signin           # Authentication
+/auth/signup           # Registration
+/dashboard             # User dashboard
+/servers               # Server list
+/servers/[id]          # Server management
+/servers/[id]/console  # Live console
+/servers/[id]/files    # File manager
+/nodes                 # Node management (admin)
+/settings              # User settings
+/admin                 # Admin panel
+```
+
+## Hono API
+
+The API server handles all backend operations and authentication.
+
+**Responsibilities:**
+- RESTful API endpoints
+- Authentication middleware (Better Auth)
+- WebSocket proxy for real-time events
+- Redis pub/sub management
+- Rate limiting and request validation
+
+**API Structure:**
+
+```
+/api/v1
+├── /auth                    # Better Auth routes
+│   ├── POST /signin
+│   ├── POST /signup
+│   ├── POST /signout
+│   └── GET  /session
+├── /users
+│   ├── GET    /me
+│   └── PATCH  /me
+├── /servers
+│   ├── GET    /              # List user's servers
+│   ├── POST   /              # Create server
+│   ├── GET    /:id           # Get server details
+│   ├── PATCH  /:id           # Update server
+│   ├── DELETE /:id           # Delete server
+│   ├── POST   /:id/start     # Start server
+│   ├── POST   /:id/stop      # Stop server
+│   ├── POST   /:id/restart   # Restart server
+│   ├── POST   /:id/kill      # Force kill
+│   └── GET    /:id/console-token  # Get console access token
+├── /nodes
+│   ├── GET    /              # List nodes (admin)
+│   ├── POST   /              # Register node
+│   ├── GET    /:id           # Node details
+│   ├── DELETE /:id           # Remove node
+│   └── GET    /:id/stats     # Node statistics
+├── /blueprints
+│   ├── GET    /              # List available blueprints
+│   └── GET    /:id           # Blueprint details
+└── /admin
+    ├── GET    /users         # List all users
+    ├── GET    /stats         # Platform statistics
+    └── POST   /nodes/:id/token  # Generate node token
+```
+
+## PostgreSQL Database
+
+PostgreSQL stores all persistent data.
+
+**Responsibilities:**
+- Persistent data storage
+- User accounts and permissions
+- Server configurations
+- Audit logging
+- Node registry
+
+**Key Characteristics:**
+- Single primary instance (can add read replicas)
+- Automated backups
+- Connection pooling via PgBouncer (optional)
+
+## Redis
+
+Redis handles real-time communication and caching.
+
+**Responsibilities:**
+- Real-time pub/sub messaging
+- Session storage (Better Auth)
+- Caching (metrics, server status)
+- Job queues (BullMQ pattern)
+- Rate limiting counters
+
+**Channel Structure:**
+
+```
+# Node Communication
+stellar:nodes:{node_id}:commands     # API → Daemon commands
+stellar:nodes:{node_id}:events       # Daemon → API events
+stellar:nodes:{node_id}:heartbeat    # Daemon health checks
+
+# Server Events
+stellar:servers:{server_id}:status   # Status changes
+stellar:servers:{server_id}:metrics  # CPU, RAM, etc.
+stellar:servers:{server_id}:logs     # Log streaming (optional)
+
+# Global
+stellar:events:global                # Platform-wide events
+```
+
+**Key Prefixes:**
+
+```
+cache:server:{id}:status      # Cached server status (TTL: 30s)
+cache:node:{id}:metrics       # Cached node metrics (TTL: 10s)
+session:{token}               # User sessions (Better Auth)
+ratelimit:{ip}:{endpoint}     # Rate limiting
+queue:deployments             # Deployment job queue
+queue:backups                 # Backup job queue
+```
+
+## Network Topology
+
+```
+Internet
+    │
+    ├─── stellarstack.app ──────────────▶ Control Plane (Caddy)
+    │                                          │
+    │                                          ├── / ──────────▶ Next.js
+    │                                          └── /api/* ─────▶ Hono
+    │
+    ├─── node-us-west.stellarstack.app ─▶ Node 1 Daemon
+    ├─── node-us-east.stellarstack.app ─▶ Node 2 Daemon
+    └─── node-eu-west.stellarstack.app ─▶ Node 3 Daemon
+```
+
+## Deployment Options
+
+### Single Server
+
+All control plane components on one machine:
+
+```yaml
+services:
+  web:
+    image: stellarstack/web
+  api:
+    image: stellarstack/api
+  db:
+    image: postgres:15
+  redis:
+    image: redis:7
+```
+
+### High Availability
+
+Distributed across multiple servers:
+
+- Load balancer (Caddy/Nginx) with SSL termination
+- Multiple API instances
+- PostgreSQL with read replicas
+- Redis cluster or Sentinel
+- Shared storage for file uploads

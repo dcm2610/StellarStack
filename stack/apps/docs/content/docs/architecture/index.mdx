@@ -1,0 +1,139 @@
+---
+title: Architecture Overview
+description: High-level architecture and design of StellarStack
+---
+
+# Architecture Overview
+
+StellarStack follows a distributed architecture with a central **Control Plane** managing multiple **Node Daemons** that run game servers in Docker containers.
+
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                 CONTROL PLANE                                    │
+│                              (Central Infrastructure)                            │
+│                                                                                  │
+│    ┌──────────────┐      ┌──────────────┐      ┌──────────────┐                 │
+│    │   Caddy/     │      │              │      │              │                 │
+│    │   Nginx      │─────▶│   Next.js    │      │  PostgreSQL  │                 │
+│    │   (Proxy)    │      │  (Frontend)  │      │   (Primary)  │                 │
+│    │   :80/:443   │      │    :3000     │      │    :5432     │                 │
+│    └──────┬───────┘      └──────────────┘      └──────┬───────┘                 │
+│           │                                           │                          │
+│           │              ┌──────────────┐             │                          │
+│           └─────────────▶│    Hono      │◀────────────┘                          │
+│                          │    (API)     │                                        │
+│                          │    :4000     │                                        │
+│                          └──────┬───────┘                                        │
+│                                 │                                                │
+│                          ┌──────▼───────┐                                        │
+│                          │    Redis     │                                        │
+│                          │   Cluster    │                                        │
+│                          │    :6379     │                                        │
+│                          └──────┬───────┘                                        │
+└─────────────────────────────────┼────────────────────────────────────────────────┘
+                                  │
+                    ══════════════╪══════════════  (Secure Channel - mTLS)
+                                  │
+         ┌────────────────────────┼────────────────────────┐
+         │                        │                        │
+         ▼                        ▼                        ▼
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│     NODE 1      │      │     NODE 2      │      │     NODE 3      │
+│   us-west-1     │      │   us-east-1     │      │    eu-west-1    │
+│ ┌─────────────┐ │      │ ┌─────────────┐ │      │ ┌─────────────┐ │
+│ │ Rust Daemon │ │      │ │ Rust Daemon │ │      │ │ Rust Daemon │ │
+│ │   :5000     │ │      │ │   :5000     │ │      │ │   :5000     │ │
+│ └──────┬──────┘ │      │ └──────┬──────┘ │      │ └──────┬──────┘ │
+│ ┌──────▼──────┐ │      │ ┌──────▼──────┐ │      │ ┌──────▼──────┐ │
+│ │   Docker    │ │      │ │   Docker    │ │      │ │   Docker    │ │
+│ │ ┌────┬────┐ │ │      │ │ ┌────┬────┐ │ │      │ │ ┌────┬────┐ │ │
+│ │ │MC01│MC02│ │ │      │ │ │RS01│RS02│ │ │      │ │ │AK01│VH01│ │ │
+│ │ └────┴────┘ │ │      │ │ └────┴────┘ │ │      │ │ └────┴────┘ │ │
+│ └─────────────┘ │      │ └─────────────┘ │      │ └─────────────┘ │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
+```
+
+## Core Components
+
+### Control Plane
+
+The control plane is the central hub that manages everything:
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Web Frontend** | Next.js 15 | User interface, SSR, real-time updates |
+| **API Server** | Hono | REST endpoints, WebSocket proxy, auth |
+| **Database** | PostgreSQL | Users, servers, configurations |
+| **Cache/Pub-Sub** | Redis | Real-time events, session storage |
+
+### Node Plane
+
+Each node runs a lightweight daemon:
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Daemon** | Rust | Container management, metrics |
+| **Docker** | Docker Engine | Game server isolation |
+| **WebSocket** | Native | Direct console access |
+
+## Data Flow Patterns
+
+### Pattern A: Dashboard Load
+
+```
+User ──▶ Next.js ──▶ Hono API ──▶ PostgreSQL
+                         │
+                         └──▶ Redis (cached metrics)
+```
+
+### Pattern B: Server Action (Start/Stop/Restart)
+
+```
+User ──▶ Next.js ──▶ Hono API ──▶ Redis Pub/Sub ──▶ Daemon ──▶ Docker
+                         │                              │
+                         └◀──── Event Confirmation ◀────┘
+```
+
+### Pattern C: Console Access (Direct)
+
+```
+User ──▶ Next.js ──▶ Hono (auth check) ──▶ Issues signed token
+                                                │
+User ◀──────────────────────────────────────────┘
+  │
+  └──▶ Direct WebSocket ──▶ Daemon ──▶ Docker Container PTY
+```
+
+### Pattern D: Real-time Metrics
+
+```
+Daemon ──▶ Redis Pub/Sub ──▶ Hono ──▶ SSE/WebSocket ──▶ Next.js ──▶ User
+```
+
+## Connection Types
+
+| Use Case | Connection Path | Why? |
+|----------|-----------------|------|
+| **Console** | Frontend → Daemon (WebSocket) | Low latency, bidirectional |
+| **Server Actions** | Frontend → API → Redis → Daemon | Auth & audit, queued delivery |
+| **File Manager** | Frontend → Daemon (WebSocket) | Large file transfers |
+| **Metrics** | Daemon → Redis → API → Frontend (SSE) | Broadcast to many users |
+| **Dashboard** | Frontend → API → PostgreSQL | Standard REST pattern |
+
+<Card>
+  <CardHeader>
+    <CardTitle>Key Insight</CardTitle>
+  </CardHeader>
+  <CardContent>
+    Console and file operations bypass the API for performance. The API only issues short-lived signed tokens for authentication.
+  </CardContent>
+</Card>
+
+## Next Steps
+
+- [Control Plane Deep Dive](/docs/architecture/control-plane)
+- [Daemon Architecture](/docs/architecture/daemon)
+- [Authentication System](/docs/architecture/authentication)
+- [Real-time Communication](/docs/architecture/real-time)
