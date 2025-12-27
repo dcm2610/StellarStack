@@ -25,7 +25,21 @@
       "Bash(npx next build)",
       "Bash(cargo check:*)",
       "Bash(npx tsc --noEmit)",
-      "Bash(npx prisma generate:*)"
+      "Bash(npx prisma generate:*)",
+      "Bash(docker compose:*)",
+      "Bash(pnpm db:generate:*)",
+      "Bash(pnpm db:push:*)",
+      "Bash(pnpm db:seed:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx prisma db push)",
+      "Bash(npx tsx:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"yes\" npx prisma db push:*)",
+      "Bash(pnpm --filter=api exec prisma generate:*)",
+      "Bash(pnpm --filter=api exec prisma db push:*)",
+      "Bash(xargs:*)",
+      "Bash(wc:*)",
+      "Bash(cargo build:*)"
     ],
     "deny": [],
     "ask": []

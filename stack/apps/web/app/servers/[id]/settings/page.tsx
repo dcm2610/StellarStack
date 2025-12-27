@@ -20,6 +20,8 @@ import {
 import { Spinner } from "@workspace/ui/components/spinner";
 import { Slider } from "@workspace/ui/components/slider";
 import { BsSun, BsMoon, BsExclamationTriangle, BsCheckCircle, BsGlobe, BsGeoAlt, BsCheck, BsLayers } from "react-icons/bs";
+import { servers } from "@/lib/api";
+import { toast } from "sonner";
 
 interface ServerSettings {
   name: string;
@@ -142,6 +144,7 @@ const SettingsPage = (): JSX.Element | null => {
   const [originalSettings, setOriginalSettings] = useState<ServerSettings>(defaultSettings);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [reinstallModalOpen, setReinstallModalOpen] = useState(false);
+  const [isReinstalling, setIsReinstalling] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Transfer modal state
@@ -293,9 +296,17 @@ const SettingsPage = (): JSX.Element | null => {
     setSettings({ ...originalSettings });
   };
 
-  const handleReinstall = () => {
-    setReinstallModalOpen(false);
-    // Would trigger reinstall here
+  const handleReinstall = async () => {
+    setIsReinstalling(true);
+    try {
+      await servers.reinstall(serverId);
+      setReinstallModalOpen(false);
+      toast.success("Server reinstalled successfully");
+    } catch (error) {
+      toast.error("Failed to reinstall server");
+    } finally {
+      setIsReinstalling(false);
+    }
   };
 
   // Server split handler
@@ -781,11 +792,12 @@ const SettingsPage = (): JSX.Element | null => {
         open={reinstallModalOpen}
         onOpenChange={setReinstallModalOpen}
         title="Reinstall Server"
-        description="Are you sure you want to reinstall this server? This will stop the server and reinstall it with its current configuration. All server files may be lost."
+        description="Are you sure you want to reinstall this server? This will stop the server and run the installation script again with your current configuration. Existing server files will be preserved but may be overwritten by the installation."
         onConfirm={handleReinstall}
         confirmLabel="Reinstall"
         variant="danger"
         isDark={isDark}
+        isLoading={isReinstalling}
       />
 
       {/* Transfer Server Modal */}

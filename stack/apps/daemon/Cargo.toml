@@ -2,43 +2,124 @@
 name = "stellar-daemon"
 version = "0.1.0"
 edition = "2021"
-description = "Docker container management daemon for StellarStack"
+description = "Docker container management daemon for StellarStack (Wings-inspired architecture)"
 
 [dependencies]
 # Async runtime
-tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1", features = ["full", "sync", "parking_lot"] }
+tokio-util = { version = "0.7", features = ["io", "codec", "rt"] }
 
 # Web framework
-axum = { version = "0.8", features = ["ws", "multipart"] }
-tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace"] }
+axum = { version = "0.7", features = ["ws", "multipart", "tokio"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "request-id", "timeout"] }
 
 # Docker API
-bollard = "0.18"
+bollard = "0.17"
+
+# HTTP client for API communication
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
 
 # WebSocket
+tokio-tungstenite = "0.24"
 futures = "0.3"
 futures-util = "0.3"
 
+# SFTP/SSH server
+russh = "0.46"
+russh-sftp = "2.0"
+russh-keys = "0.46"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
 # Logging
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Configuration
+config = "0.14"
+
+# Database for state persistence
+rusqlite = { version = "0.32", features = ["bundled"] }
 
 # Utilities
-uuid = { version = "1.11", features = ["v4", "serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-thiserror = "2.0"
-anyhow = "1.0"
-
-# Crypto
 sha2 = "0.10"
+hmac = "0.12"
+base64 = "0.22"
+hex = "0.4"
+glob = "0.3"
+ignore = "0.4"  # For gitignore-style file matching
 
-# Scheduling
+# Concurrent data structures
+parking_lot = "0.12"
+dashmap = "6"
+crossbeam-channel = "0.5"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Async utilities
+async-trait = "0.1"
+pin-project-lite = "0.2"
+tokio-stream = "0.1"
+
+# Byte handling
+bytes = "1"
+
+# Retry logic
+backoff = { version = "0.4", features = ["tokio"] }
+
+# JWT
+jsonwebtoken = "9"
+
+# Compression
+async-compression = { version = "0.4", features = ["tokio", "gzip"] }
+flate2 = "1"
+tar = "0.4"
+zip = "2"
+
+# Mime type detection
+mime_guess = "2"
+infer = "0.16"
+
+# System info
+sysinfo = "0.32"
+num_cpus = "1"
+
+# Cron scheduling
 tokio-cron-scheduler = "0.13"
 
-# Environment
-dotenvy = "0.15"
+# Scopeguard for cleanup
+scopeguard = "1"
+
+# URL parsing
+url = "2"
+
+# Regex for config parsing
+regex = "1"
+
+# Shell command parsing
+shell-words = "1"
+
+# XML parsing (for config files)
+quick-xml = { version = "0.37", features = ["serialize"] }
+
+# INI parsing
+rust-ini = "0.21"
+
+# Java properties parsing
+java-properties = "2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3"

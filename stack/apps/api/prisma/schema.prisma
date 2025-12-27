@@ -17,7 +17,8 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
-  role          Role      @default(USER)
+  role          String    @default("user")
+  banned        Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -78,11 +79,6 @@ model Verification {
 // Application Tables
 // ============================================
 
-enum Role {
-  USER
-  ADMIN
-}
-
 enum NodeProtocol {
   HTTP
   HTTPS
@@ -122,6 +118,7 @@ model Node {
   tokenHash     String
   isOnline      Boolean      @default(false)
   lastHeartbeat DateTime?
+  heartbeatLatency Int?      // Last heartbeat latency in ms
 
   // Relations
   locationId    String
@@ -161,13 +158,42 @@ model Blueprint {
   name        String
   description String?
   category    String?
+  author      String?
 
-  // Docker image info
+  // Docker image info (primary image)
   imageName   String
   imageTag    String   @default("latest")
   registry    String?
 
-  // Default configuration (JSON)
+  // Multiple docker images with labels (Pterodactyl compatibility)
+  // Format: { "Java 8": "ghcr.io/image:java_8", "Java 11": "ghcr.io/image:java_11" }
+  dockerImages Json?
+
+  // Startup configuration
+  startup       String?   // Startup command template (e.g., "java -Xmx{{SERVER_MEMORY}}M -jar server.jar")
+  stopCommand   String?   // Command to stop server (e.g., "stop")
+
+  // File configuration parsers (Pterodactyl format)
+  // Format: { "server.properties": { "parser": "properties", "find": {...} } }
+  configFiles   Json?
+
+  // Startup detection (when server is "done" starting)
+  // Format: { "done": "For help, type" }
+  startupDetection Json?
+
+  // Installation script
+  installScript    String?   @db.Text
+  installContainer String?   // Container for installation (e.g., "alpine")
+  installEntrypoint String?  // Entrypoint for install (e.g., "ash")
+
+  // Server variables (user-configurable)
+  // Format: [{ "name": "...", "env_variable": "...", "default_value": "...", "user_viewable": true, ... }]
+  variables     Json?
+
+  // Features (e.g., ["eula", "java_version", "pid_limit"])
+  features      Json?
+
+  // Default container configuration (JSON)
   config      Json
 
   // Visibility
@@ -182,7 +208,8 @@ model Blueprint {
 }
 
 model Server {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
+  shortId      String?  // First section of UUID (auto-populated by API)
   name         String
   description  String?
 
@@ -191,12 +218,28 @@ model Server {
   status       ServerStatus @default(INSTALLING)
 
   // Resource allocation
-  memory       BigInt   // Memory in bytes
-  disk         BigInt   // Disk in bytes
-  cpu          Float    // CPU cores
+  memory       BigInt   // Memory limit in MiB
+  disk         BigInt   // Disk limit in MiB
+  cpu          Float    // CPU limit as percentage (100 = 1 thread/core)
+
+  // Advanced resource settings
+  cpuPinning   String?  // Pin to specific CPUs (e.g., "0,1,2,3" or "0-4")
+  swap         BigInt   @default(-1) // Swap in MiB: -1 = unlimited, 0 = disabled, >0 = limited
+  oomKillDisable Boolean @default(false) // Disable OOM killer
+
+  // Backup settings
+  backupLimit  Int      @default(3) // Maximum number of backups
 
   // Configuration overrides (merged with blueprint)
   config       Json?
+
+  // Server-specific variable values (overrides blueprint defaults)
+  // Format: { "MINECRAFT_VERSION": "1.20.4", "SERVER_JARFILE": "server.jar" }
+  variables    Json?
+
+  // Selected docker image from blueprint's dockerImages
+  // e.g., "ghcr.io/ptero-eggs/yolks:java_21"
+  dockerImage  String?
 
   // Relations
   nodeId       String

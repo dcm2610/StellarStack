@@ -39,7 +39,7 @@ export async function requireAdmin(c: Context, next: Next) {
 
   const user = session.user as SessionUser;
 
-  if (user.role !== "ADMIN") {
+  if (user.role !== "admin") {
     return c.json({ error: "Forbidden: Admin access required" }, 403);
   }
 
@@ -115,7 +115,7 @@ export async function requireServerAccess(c: Context, next: Next) {
   }
 
   // Admins can access any server, users only their own
-  if (user.role !== "ADMIN" && server.ownerId !== user.id) {
+  if (user.role !== "admin" && server.ownerId !== user.id) {
     return c.json({ error: "Forbidden: You don't own this server" }, 403);
   }
 

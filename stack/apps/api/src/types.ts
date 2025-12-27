@@ -13,5 +13,5 @@ export type Variables = {
 
 // User with role for auth checks
 export type AuthUser = User & {
-  role: "USER" | "ADMIN";
+  role: "user" | "admin";
 };

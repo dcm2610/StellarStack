@@ -8,30 +8,58 @@ import { Button } from "@workspace/ui/components/button";
 import { AnimatedBackground } from "@workspace/ui/components/shared/AnimatedBackground";
 import { FloatingDots } from "@workspace/ui/components/shared/Animations";
 import { BsSun, BsMoon } from "react-icons/bs";
+import { signIn } from "@/lib/auth-client";
+import { useAuth } from "@/components/auth-provider";
+import { toast } from "sonner";
 
 const LoginPage = (): JSX.Element | null => {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useNextTheme();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [email, setEmail] = useState("admin@stellarstack.app");
-  const [password, setPassword] = useState("1234567");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.push("/servers");
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const isDark = mounted ? resolvedTheme === "dark" : true;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
-    // Simulate login - will be replaced with better-auth
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const result = await signIn.email({
+        email,
+        password,
+      });
 
-    // Redirect to servers page after login
-    router.push("/servers");
+      if (result.error) {
+        setError(result.error.message || "Invalid email or password");
+        toast.error(result.error.message || "Invalid email or password");
+      } else {
+        toast.success("Signed in successfully");
+        router.push("/servers");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!mounted) return null;
@@ -145,6 +173,12 @@ const LoginPage = (): JSX.Element | null => {
               required
             />
           </div>
+
+          {error && (
+            <div className="p-3 text-xs text-red-400 bg-red-900/20 border border-red-800 rounded">
+              {error}
+            </div>
+          )}
 
           <Button
             type="submit"

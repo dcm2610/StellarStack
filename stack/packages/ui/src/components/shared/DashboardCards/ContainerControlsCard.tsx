@@ -38,49 +38,55 @@ export const ContainerControlsCard = ({
     ? "border-zinc-800 text-zinc-600"
     : "border-zinc-200 text-zinc-400";
 
+  // Start button should be enabled when stopped (even if isOffline is true due to stopped state)
+  const startDisabled = isRunning || isTransitioning;
+  const stopDisabled = isStopped || isTransitioning || isOffline;
+  const killDisabled = isStopped || isOffline;
+  const restartDisabled = isStopped || isTransitioning || isOffline;
+
   return (
-    <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-center px-8", isOffline && "opacity-60")}>
+    <UsageCard isDark={isDark} className="h-full flex items-center justify-center px-8">
       <div className="flex gap-4 w-full justify-between max-w-md">
         <button
           onClick={onStart}
-          disabled={isRunning || isTransitioning || isOffline}
+          disabled={startDisabled}
           className={cn(
             buttonBase,
-            (isRunning || isTransitioning || isOffline) ? disabledColors : buttonColors,
-            (isRunning || isTransitioning || isOffline) && "cursor-not-allowed"
+            startDisabled ? disabledColors : buttonColors,
+            startDisabled && "cursor-not-allowed"
           )}
         >
           {labels.start}
         </button>
         <button
           onClick={onStop}
-          disabled={isStopped || isTransitioning || isOffline}
+          disabled={stopDisabled}
           className={cn(
             buttonBase,
-            (isStopped || isTransitioning || isOffline) ? disabledColors : buttonColors,
-            (isStopped || isTransitioning || isOffline) && "cursor-not-allowed"
+            stopDisabled ? disabledColors : buttonColors,
+            stopDisabled && "cursor-not-allowed"
           )}
         >
           {labels.stop}
         </button>
         <button
           onClick={onKill}
-          disabled={isStopped || isOffline}
+          disabled={killDisabled}
           className={cn(
             buttonBase,
-            (isStopped || isOffline) ? disabledColors : buttonColors,
-            (isStopped || isOffline) && "cursor-not-allowed"
+            killDisabled ? disabledColors : buttonColors,
+            killDisabled && "cursor-not-allowed"
           )}
         >
           {labels.kill}
         </button>
         <button
           onClick={onRestart}
-          disabled={isStopped || isTransitioning || isOffline}
+          disabled={restartDisabled}
           className={cn(
             buttonBase,
-            (isStopped || isTransitioning || isOffline) ? disabledColors : buttonColors,
-            (isStopped || isTransitioning || isOffline) && "cursor-not-allowed"
+            restartDisabled ? disabledColors : buttonColors,
+            restartDisabled && "cursor-not-allowed"
           )}
         >
           {labels.restart}

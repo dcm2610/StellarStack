@@ -1,538 +1,121 @@
 # Stellar Daemon API
 
-REST API and WebSocket endpoints for Docker container management.
+REST API and WebSocket endpoints for game server management.
 
-**Base URL:** `http://localhost:3001`
+**Base URL:** `http://localhost:8080`
+
+**Authentication:** Bearer token in `Authorization` header for API routes.
 
 ---
 
-## Health
+## Endpoints Overview
 
-### GET /health
+### Quick Reference Table
 
-Check daemon and Docker connectivity status.
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| **System** ||||
+| `GET` | `/api/system` | Get system information and stats | Yes |
+| **Servers** ||||
+| `GET` | `/api/servers` | List all servers | Yes |
+| `POST` | `/api/servers` | Create a new server | Yes |
+| `GET` | `/api/servers/:id` | Get server details | Yes |
+| `DELETE` | `/api/servers/:id` | Delete a server | Yes |
+| `POST` | `/api/servers/:id/power` | Power action (start/stop/restart/kill) | Yes |
+| `POST` | `/api/servers/:id/commands` | Send console command | Yes |
+| `GET` | `/api/servers/:id/logs` | Get console logs | Yes |
+| `POST` | `/api/servers/:id/install` | Run installation script | Yes |
+| `POST` | `/api/servers/:id/reinstall` | Reinstall server | Yes |
+| `POST` | `/api/servers/:id/sync` | Sync configuration with panel | Yes |
+| `GET` | `/api/servers/:id/ws` | WebSocket connection | Yes |
+| **Files** ||||
+| `GET` | `/api/servers/:id/files/list` | List directory contents | Yes |
+| `GET` | `/api/servers/:id/files/contents` | Read file contents | Yes |
+| `POST` | `/api/servers/:id/files/write` | Write file contents | Yes |
+| `POST` | `/api/servers/:id/files/create-directory` | Create directory | Yes |
+| `POST` | `/api/servers/:id/files/rename` | Rename file or directory | Yes |
+| `POST` | `/api/servers/:id/files/copy` | Copy file or directory | Yes |
+| `DELETE` | `/api/servers/:id/files/delete` | Delete files or directories | Yes |
+| `POST` | `/api/servers/:id/files/compress` | Create archive | Yes |
+| `POST` | `/api/servers/:id/files/decompress` | Extract archive | Yes |
+| `POST` | `/api/servers/:id/files/chmod` | Change file permissions | Yes |
+| **Backups** ||||
+| `GET` | `/api/servers/:id/backup` | List backups | Yes |
+| `POST` | `/api/servers/:id/backup` | Create backup | Yes |
+| `POST` | `/api/servers/:id/backup/restore` | Restore from backup | Yes |
+| `DELETE` | `/api/servers/:id/backup/:backup_id` | Delete backup | Yes |
+| **Downloads/Uploads** ||||
+| `GET` | `/download/backup` | Download backup file | Token |
+| `GET` | `/download/file` | Download server file | Token |
+| `POST` | `/upload/file` | Upload file to server | Token |
+
+---
+
+## Authentication
+
+### Bearer Token
+
+All `/api/*` routes require a valid bearer token:
+
+```
+Authorization: Bearer <node_token>
+```
+
+### Download/Upload Tokens
+
+Download and upload routes use JWT tokens passed as query parameters:
+
+```
+GET /download/file?token=<jwt>&server=<uuid>&path=/file.txt
+```
+
+---
+
+## System
+
+### GET /api/system
+
+Get system information and resource statistics.
 
 **Response:**
 ```json
 {
-  "status": "healthy",
-  "docker": true
-}
-```
-
----
-
-## Containers
-
-### GET /containers
-
-List all containers.
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `all` | boolean | `false` | Include stopped containers |
-
-**Response:**
-```json
-[
-  {
-    "id": "abc123...",
-    "name": "minecraft-server",
-    "image": "itzg/minecraft-server:latest",
-    "state": "running",
-    "status": "Up 2 hours",
-    "created": "2025-12-26T19:00:00Z",
-    "ports": [
-      {
-        "container_port": 25565,
-        "host_port": 25565,
-        "host_ip": "0.0.0.0",
-        "protocol": "tcp"
-      }
-    ],
-    "labels": {}
-  }
-]
-```
-
----
-
-### POST /containers
-
-Create and start a new container from a Blueprint.
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `name` | string | auto-generated | Custom container name |
-
-**Request Body (Blueprint):**
-```json
-{
-  "name": "minecraft-server",
-  "description": "Minecraft Java Server",
-  "category": "gaming",
-  "image": {
-    "name": "itzg/minecraft-server",
-    "tag": "latest",
-    "registry": null
-  },
-  "stdin_open": true,
-  "tty": true,
-  "ports": [
-    {
-      "container_port": 25565,
-      "host_port": 25565,
-      "host_ip": "0.0.0.0",
-      "protocol": "tcp"
-    }
-  ],
-  "environment": {
-    "EULA": "TRUE",
-    "TYPE": "VANILLA"
-  },
-  "resources": {
-    "memory": 4294967296,
-    "memory_swap": null,
-    "cpus": 2.0,
-    "cpu_shares": null,
-    "cpu_period": null,
-    "cpu_quota": null,
-    "cpuset_cpus": null,
-    "cpuset_mems": null,
-    "nano_cpus": null
-  },
-  "mounts": [
-    {
-      "source": "/host/path",
-      "target": "/container/path",
-      "read_only": false,
-      "type": "bind"
-    }
-  ],
-  "volumes": [
-    {
-      "name": "minecraft-data",
-      "target": "/data",
-      "read_only": false
-    }
-  ],
-  "command": null,
-  "entrypoint": null,
-  "working_dir": null,
-  "user": null,
-  "restart_policy": "unlessstopped",
-  "network_mode": null,
-  "hostname": null,
-  "labels": {}
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "id": "abc123def456...",
-  "name": "minecraft-server-a1b2c3d4",
-  "warnings": []
-}
-```
-
----
-
-### GET /containers/{id}
-
-Get detailed information about a container.
-
-**Response:**
-```json
-{
-  "id": "abc123...",
-  "name": "minecraft-server",
-  "image": "itzg/minecraft-server:latest",
-  "state": "running",
-  "status": "RUNNING",
-  "created": "2025-12-26T19:00:00Z",
-  "ports": [],
-  "labels": {}
-}
-```
-
----
-
-### DELETE /containers/{id}
-
-Remove a container.
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `force` | boolean | `false` | Force remove running container |
-
-**Response:**
-```json
-{
-  "action": "remove",
-  "container_id": "abc123...",
-  "success": true,
-  "message": "Container removed"
-}
-```
-
----
-
-### POST /containers/{id}/start
-
-Start a stopped container.
-
-**Response:**
-```json
-{
-  "action": "start",
-  "container_id": "abc123...",
-  "success": true,
-  "message": "Container started"
-}
-```
-
----
-
-### POST /containers/{id}/stop
-
-Stop a running container.
-
-**Request Body (optional):**
-```json
-{
-  "timeout": 10
-}
-```
-
-**Response:**
-```json
-{
-  "action": "stop",
-  "container_id": "abc123...",
-  "success": true,
-  "message": "Container stopped"
-}
-```
-
----
-
-### POST /containers/{id}/restart
-
-Restart a container.
-
-**Request Body (optional):**
-```json
-{
-  "timeout": 10
-}
-```
-
-**Response:**
-```json
-{
-  "action": "restart",
-  "container_id": "abc123...",
-  "success": true,
-  "message": "Container restarted"
-}
-```
-
----
-
-### POST /containers/{id}/kill
-
-Kill a container with a signal.
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `signal` | string | `SIGKILL` | Signal to send |
-
-**Response:**
-```json
-{
-  "action": "kill",
-  "container_id": "abc123...",
-  "success": true,
-  "message": "Container killed"
-}
-```
-
----
-
-### GET /containers/{id}/stats
-
-Get current container resource statistics.
-
-**Response:**
-```json
-{
-  "id": "abc123...",
-  "name": "minecraft-server",
-  "cpu": {
-    "usage_percent": 15.5,
-    "system_cpu_usage": 123456789,
-    "online_cpus": 8
-  },
+  "version": "1.0.0",
+  "kernel": "5.15.0-generic",
+  "architecture": "x86_64",
+  "cpu_count": 8,
   "memory": {
-    "usage": 1073741824,
-    "limit": 4294967296,
-    "usage_percent": 25.0,
-    "cache": 0
+    "total": 17179869184,
+    "available": 8589934592,
+    "used": 8589934592
   },
-  "network": {
-    "rx_bytes": 1048576,
-    "tx_bytes": 524288,
-    "rx_packets": 1000,
-    "tx_packets": 500,
-    "rx_errors": 0,
-    "tx_errors": 0
-  },
-  "block_io": {
-    "read_bytes": 104857600,
-    "write_bytes": 52428800
-  },
-  "pids": 42,
-  "timestamp": "2025-12-26T19:30:00Z"
+  "disk": {
+    "total": 500000000000,
+    "available": 250000000000,
+    "used": 250000000000
+  }
 }
 ```
 
 ---
 
-### GET /containers/{id}/logs
+## Servers
 
-Get container logs.
+### GET /api/servers
 
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `tail` | string | `"100"` | Number of lines from end |
-
-**Response:**
-```json
-[
-  {
-    "type": "stdout",
-    "data": "[Server] Starting minecraft server...",
-    "timestamp": "2025-12-26T19:00:00Z"
-  },
-  {
-    "type": "stderr",
-    "data": "[WARN] Something happened",
-    "timestamp": "2025-12-26T19:00:01Z"
-  }
-]
-```
-
----
-
-## WebSocket Endpoints
-
-### WS /containers/{id}/console
-
-Bidirectional console access for interactive containers.
-
-> **Important:** Container must be created with `stdin_open: true` and `tty: true` for commands to work.
-
-**Connection:** `ws://localhost:3001/containers/{id}/console`
-
-**Incoming Messages (from server):**
-```json
-{
-  "type": "connected",
-  "data": { "container_id": "abc123..." }
-}
-```
-
-```json
-{
-  "type": "log",
-  "data": {
-    "type": "stdout",
-    "data": "[Server] Player joined the game",
-    "timestamp": "2025-12-26T19:30:00Z"
-  }
-}
-```
-
-```json
-{
-  "type": "error",
-  "data": "Container not found: abc123"
-}
-```
-
-**Outgoing Messages (to server):**
-
-JSON format:
-```json
-{"type": "command", "data": "op marquescoding"}
-```
-
-Or raw text:
-```
-op marquescoding
-```
-
-**JavaScript Example:**
-```javascript
-const ws = new WebSocket('ws://localhost:3001/containers/abc123/console');
-
-ws.onopen = () => {
-  console.log('Connected to console');
-};
-
-ws.onmessage = (event) => {
-  const msg = JSON.parse(event.data);
-
-  if (msg.type === 'log') {
-    console.log(`[${msg.data.type}] ${msg.data.data}`);
-  } else if (msg.type === 'error') {
-    console.error(msg.data);
-  }
-};
-
-// Send a command
-ws.send(JSON.stringify({ type: 'command', data: 'op marquescoding' }));
-
-// Or send raw text
-ws.send('say Hello World!');
-```
-
----
-
-### WS /containers/{id}/stats/ws
-
-Live streaming container statistics.
-
-**Connection:** `ws://localhost:3001/containers/{id}/stats/ws`
-
-**Incoming Messages:**
-```json
-{
-  "type": "connected",
-  "data": { "container_id": "abc123..." }
-}
-```
-
-```json
-{
-  "type": "stats",
-  "data": {
-    "id": "abc123...",
-    "name": "minecraft-server",
-    "cpu": {
-      "usage_percent": 15.5,
-      "system_cpu_usage": 123456789,
-      "online_cpus": 8
-    },
-    "memory": {
-      "usage": 1073741824,
-      "limit": 4294967296,
-      "usage_percent": 25.0,
-      "cache": 0
-    },
-    "network": {
-      "rx_bytes": 1048576,
-      "tx_bytes": 524288,
-      "rx_packets": 1000,
-      "tx_packets": 500,
-      "rx_errors": 0,
-      "tx_errors": 0
-    },
-    "block_io": {
-      "read_bytes": 104857600,
-      "write_bytes": 52428800
-    },
-    "pids": 42,
-    "timestamp": "2025-12-26T19:30:00Z"
-  }
-}
-```
-
-**JavaScript Example:**
-```javascript
-const ws = new WebSocket('ws://localhost:3001/containers/abc123/stats/ws');
-
-ws.onmessage = (event) => {
-  const msg = JSON.parse(event.data);
-
-  if (msg.type === 'stats') {
-    console.log(`CPU: ${msg.data.cpu.usage_percent.toFixed(1)}%`);
-    console.log(`Memory: ${msg.data.memory.usage_percent.toFixed(1)}%`);
-  }
-};
-```
-
----
-
-## Blueprint Reference
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Blueprint name |
-| `description` | string | No | Description |
-| `category` | string | No | Category for organization |
-| `image` | object | Yes | Docker image configuration |
-| `image.name` | string | Yes | Image name |
-| `image.tag` | string | No | Image tag (default: `latest`) |
-| `image.registry` | string | No | Custom registry |
-| `stdin_open` | boolean | No | Enable stdin (required for console) |
-| `tty` | boolean | No | Allocate TTY (required for console) |
-| `ports` | array | No | Port mappings |
-| `environment` | object | No | Environment variables |
-| `resources` | object | No | Resource limits (see below) |
-| `resources.memory` | integer | No | Memory limit in bytes |
-| `resources.cpus` | float | No | CPU cores (e.g., `1.0` = 1 core, `0.5` = half, `2.5` = 2.5 cores) |
-| `resources.cpuset_cpus` | string | No | Pin to specific CPUs (e.g., `"0,1"` or `"0-3"`) |
-| `mounts` | array | No | Bind mounts |
-| `volumes` | array | No | Named volumes |
-| `command` | array | No | Override CMD |
-| `entrypoint` | array | No | Override ENTRYPOINT |
-| `working_dir` | string | No | Working directory |
-| `user` | string | No | User to run as |
-| `restart_policy` | string | No | `no`, `always`, `onfailure`, `unlessstopped` |
-| `network_mode` | string | No | Network mode |
-| `hostname` | string | No | Container hostname |
-| `labels` | object | No | Container labels |
-
----
-
-## File Management
-
-### GET /containers/{id}/files
-
-List files in a container directory.
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `path` | string | `/` | Directory path to list |
+List all servers on this node.
 
 **Response:**
 ```json
 {
-  "path": "/data",
-  "files": [
+  "servers": [
     {
-      "name": "server.properties",
-      "path": "/data/server.properties",
-      "type": "file",
-      "size": 1234,
-      "modified": "2025-12-26T19:00:00",
-      "permissions": "-rw-r--r--"
-    },
-    {
-      "name": "world",
-      "path": "/data/world",
-      "type": "directory",
-      "size": 4096,
-      "modified": "2025-12-26T18:00:00",
-      "permissions": "drwxr-xr-x"
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Minecraft Server",
+      "state": "running",
+      "is_installing": false,
+      "is_transferring": false,
+      "is_restoring": false
     }
   ]
 }
@@ -540,137 +123,491 @@ List files in a container directory.
 
 ---
 
-### GET /containers/{id}/files/read
+### POST /api/servers
 
-Get file contents as text.
+Create a new server.
+
+**Request Body:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "start_on_completion": true
+}
+```
+
+**Response (201):**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "created"
+}
+```
+
+---
+
+### GET /api/servers/:id
+
+Get detailed server information.
+
+**Response:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Minecraft Server",
+  "state": "running",
+  "configuration": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "suspended": false,
+    "invocation": "java -Xms128M -Xmx1024M -jar server.jar",
+    "skip_egg_scripts": false,
+    "build": {
+      "memory_limit": 1024,
+      "swap": 0,
+      "cpu_limit": 100,
+      "disk_space": 10240,
+      "io_weight": 500,
+      "threads": null
+    },
+    "container": {
+      "image": "ghcr.io/pterodactyl/yolks:java_17",
+      "oom_disabled": false
+    },
+    "allocations": {
+      "default": {
+        "ip": "0.0.0.0",
+        "port": 25565
+      },
+      "mappings": {
+        "25565": 25565
+      }
+    }
+  },
+  "resources": {
+    "memory_bytes": 536870912,
+    "cpu_absolute": 15.5,
+    "disk_bytes": 1073741824,
+    "network_rx_bytes": 1048576,
+    "network_tx_bytes": 524288,
+    "uptime": 3600
+  }
+}
+```
+
+---
+
+### DELETE /api/servers/:id
+
+Delete a server and all its data.
+
+**Response:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "deleted": true
+}
+```
+
+---
+
+### POST /api/servers/:id/power
+
+Execute a power action on the server.
+
+**Request Body:**
+```json
+{
+  "action": "start",
+  "wait_seconds": 0
+}
+```
+
+| Action | Description |
+|--------|-------------|
+| `start` | Start the server |
+| `stop` | Graceful stop (sends stop command) |
+| `restart` | Stop then start |
+| `kill` | Force kill (SIGKILL) |
+
+**Response:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "action": "start",
+  "success": true
+}
+```
+
+---
+
+### POST /api/servers/:id/commands
+
+Send a command to the server console.
+
+**Request Body:**
+```json
+{
+  "commands": ["say Hello World!", "op player123"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### GET /api/servers/:id/logs
+
+Get recent console logs.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `lines` | integer | `100` | Number of lines to retrieve |
+
+**Response:**
+```json
+{
+  "logs": [
+    "[19:00:00] [Server] Starting minecraft server...",
+    "[19:00:05] [Server] Done! For help, type \"help\""
+  ]
+}
+```
+
+---
+
+### POST /api/servers/:id/install
+
+Run the server installation script.
+
+**Response:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "installing"
+}
+```
+
+---
+
+### POST /api/servers/:id/reinstall
+
+Reinstall the server (delete data and run install).
+
+**Response:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "reinstalling"
+}
+```
+
+---
+
+### POST /api/servers/:id/sync
+
+Sync server configuration with the panel.
+
+**Response:**
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "synced": true
+}
+```
+
+---
+
+## WebSocket
+
+### GET /api/servers/:id/ws
+
+Establish a WebSocket connection for real-time console and stats.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `path` | string | Yes | Path to file |
+| `token` | string | Yes | JWT authentication token |
 
-**Response:** Plain text file contents
+**Connection URL:**
+```
+ws://localhost:8080/api/servers/550e8400.../ws?token=<jwt>
+```
+
+**Incoming Messages (from server):**
+
+Authentication success:
+```json
+{
+  "event": "auth success",
+  "args": []
+}
+```
+
+Console output:
+```json
+{
+  "event": "console output",
+  "args": ["[19:00:00] Server started"]
+}
+```
+
+Server status change:
+```json
+{
+  "event": "status",
+  "args": ["running"]
+}
+```
+
+Resource stats:
+```json
+{
+  "event": "stats",
+  "args": [{
+    "memory_bytes": 536870912,
+    "memory_limit_bytes": 1073741824,
+    "cpu_absolute": 15.5,
+    "network": {
+      "rx_bytes": 1048576,
+      "tx_bytes": 524288
+    },
+    "uptime": 3600,
+    "state": "running"
+  }]
+}
+```
+
+Installation output:
+```json
+{
+  "event": "install output",
+  "args": ["Downloading server files..."]
+}
+```
+
+Installation completed:
+```json
+{
+  "event": "install completed",
+  "args": [{"successful": true}]
+}
+```
+
+**Outgoing Messages (to server):**
+
+Set power state:
+```json
+{
+  "event": "set state",
+  "args": ["start"]
+}
+```
+
+Send command:
+```json
+{
+  "event": "send command",
+  "args": ["say Hello!"]
+}
+```
+
+Request logs:
+```json
+{
+  "event": "send logs",
+  "args": []
+}
+```
+
+Request stats:
+```json
+{
+  "event": "send stats",
+  "args": []
+}
+```
 
 ---
 
-### GET /containers/{id}/files/download
+## Files
 
-Download file as binary attachment.
+### GET /api/servers/:id/files/list
+
+List directory contents.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `directory` | string | `/` | Path to list |
+
+**Response:**
+```json
+{
+  "files": [
+    {
+      "name": "server.properties",
+      "created": "2025-12-26T19:00:00Z",
+      "modified": "2025-12-26T19:30:00Z",
+      "size": 1234,
+      "mode": "0644",
+      "mode_bits": "-rw-r--r--",
+      "is_file": true,
+      "is_symlink": false,
+      "is_editable": true,
+      "mime_type": "text/plain"
+    },
+    {
+      "name": "world",
+      "created": "2025-12-26T18:00:00Z",
+      "modified": "2025-12-26T19:30:00Z",
+      "size": 4096,
+      "mode": "0755",
+      "mode_bits": "drwxr-xr-x",
+      "is_file": false,
+      "is_symlink": false,
+      "is_editable": false,
+      "mime_type": "inode/directory"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/servers/:id/files/contents
+
+Read file contents.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `path` | string | Yes | Path to file |
+| `file` | string | Yes | Path to file |
 
-**Response:** Binary file with Content-Disposition header
+**Response:**
+```json
+{
+  "content": "motd=A Minecraft Server\nmax-players=20\n..."
+}
+```
 
 ---
 
-### POST /containers/{id}/files/write
+### POST /api/servers/:id/files/write
 
 Write content to a file.
 
 **Request Body:**
 ```json
 {
-  "path": "/data/server.properties",
-  "content": "motd=My Server\nmax-players=20"
+  "file": "/server.properties",
+  "content": "motd=My Server\nmax-players=50"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "path": "/data/server.properties"
+  "success": true
 }
 ```
 
 ---
 
-### POST /containers/{id}/files/create
+### POST /api/servers/:id/files/create-directory
 
-Create a file or directory.
+Create a new directory.
 
 **Request Body:**
 ```json
 {
-  "path": "/data/plugins/myplugin",
-  "type": "directory"
-}
-```
-
-Or for a file:
-```json
-{
-  "path": "/data/config.yml",
-  "type": "file",
-  "content": "enabled: true"
+  "name": "plugins",
+  "path": "/"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "path": "/data/plugins/myplugin",
-  "type": "directory"
+  "success": true
 }
 ```
 
 ---
 
-### DELETE /containers/{id}/files/delete
-
-Delete a file or directory.
-
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `path` | string | Yes | Path to delete |
-
-**Response:**
-```json
-{
-  "success": true,
-  "path": "/data/old-config.yml"
-}
-```
-
----
-
-### POST /containers/{id}/files/rename
+### POST /api/servers/:id/files/rename
 
 Rename or move a file/directory.
 
 **Request Body:**
 ```json
 {
-  "from": "/data/old-name.txt",
-  "to": "/data/new-name.txt"
+  "from": "/old-name.txt",
+  "to": "/new-name.txt"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "from": "/data/old-name.txt",
-  "to": "/data/new-name.txt"
+  "success": true
 }
 ```
 
 ---
 
-### POST /containers/{id}/files/archive
+### POST /api/servers/:id/files/copy
 
-Create a tar.gz archive.
+Copy a file or directory.
 
 **Request Body:**
 ```json
 {
-  "path": "/data",
-  "destination": "/data/backup.tar.gz",
+  "location": "/server.properties"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### DELETE /api/servers/:id/files/delete
+
+Delete files or directories.
+
+**Request Body:**
+```json
+{
+  "files": ["/logs/old.log", "/temp"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### POST /api/servers/:id/files/compress
+
+Create a compressed archive.
+
+**Request Body:**
+```json
+{
+  "root": "/",
   "files": ["world", "server.properties"]
 }
 ```
@@ -678,50 +615,51 @@ Create a tar.gz archive.
 **Response:**
 ```json
 {
-  "success": true,
-  "archive": "/data/backup.tar.gz"
+  "archive": {
+    "name": "archive-1703617200.tar.gz",
+    "size": 52428800
+  }
 }
 ```
 
 ---
 
-### POST /containers/{id}/files/extract
+### POST /api/servers/:id/files/decompress
 
 Extract an archive.
 
 **Request Body:**
 ```json
 {
-  "archive_path": "/data/backup.tar.gz",
-  "destination": "/data/restored"
+  "file": "/archive.tar.gz"
 }
 ```
-
-Supported formats: `.tar.gz`, `.tgz`, `.tar`, `.zip`
 
 **Response:**
 ```json
 {
-  "success": true,
-  "extracted_to": "/data/restored"
+  "success": true
 }
 ```
 
 ---
 
-### POST /containers/{id}/files/upload/{path}
+### POST /api/servers/:id/files/chmod
 
-Upload files via multipart form.
+Change file permissions.
 
-**Path Parameter:** Target directory path
-
-**Request:** Multipart form with file(s)
+**Request Body:**
+```json
+{
+  "files": ["/script.sh"],
+  "mode": "0755"
+}
+```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "uploaded": ["/data/uploads/plugin.jar"]
+  "success": true
 }
 ```
 
@@ -729,306 +667,158 @@ Upload files via multipart form.
 
 ## Backups
 
-Backups always include the entire `/data` directory. You can optionally exclude files/directories and lock backups to prevent accidental deletion.
+### GET /api/servers/:id/backup
 
-### GET /containers/{id}/backups
-
-List all backups for a container.
+List all backups for this server.
 
 **Response:**
 ```json
-[
-  {
-    "id": "backup_20251226_190000",
-    "container_id": "abc123...",
-    "name": "backup",
-    "size": 104857600,
-    "hash": "a1b2c3d4...",
-    "created_at": "20251226_190000",
-    "storage": "local",
-    "locked": false
-  }
-]
+{
+  "backups": [
+    {
+      "uuid": "backup-550e8400-e29b-41d4",
+      "name": "daily-backup",
+      "size": 104857600,
+      "checksum": "sha256:a1b2c3d4...",
+      "created_at": "2025-12-26T00:00:00Z",
+      "is_locked": false
+    }
+  ]
+}
 ```
 
 ---
 
-### POST /containers/{id}/backups
+### POST /api/servers/:id/backup
 
-Create a new backup of the `/data` directory.
+Create a new backup.
 
 **Request Body:**
 ```json
 {
-  "name": "before-update",
+  "uuid": "backup-550e8400-e29b-41d4",
   "ignore": ["logs", "cache", "*.tmp"],
-  "locked": true
+  "is_locked": false
+}
+```
+
+**Response:**
+```json
+{
+  "uuid": "backup-550e8400-e29b-41d4",
+  "size": 52428800,
+  "checksum": "sha256:e5f6g7h8...",
+  "status": "completed"
+}
+```
+
+---
+
+### POST /api/servers/:id/backup/restore
+
+Restore server from a backup.
+
+**Request Body:**
+```json
+{
+  "uuid": "backup-550e8400-e29b-41d4",
+  "truncate": true
 }
 ```
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `name` | string | `"backup"` | Backup name prefix |
-| `ignore` | array | `[]` | Files/directories to exclude |
-| `locked` | boolean | `false` | Lock backup to prevent deletion |
+| `uuid` | string | Required | Backup UUID |
+| `truncate` | boolean | `false` | Delete existing files before restore |
 
 **Response:**
 ```json
 {
-  "id": "before-update_20251226_190000",
-  "container_id": "abc123...",
-  "name": "before-update",
-  "size": 52428800,
-  "hash": "e5f6g7h8...",
-  "created_at": "20251226_190000",
-  "storage": "local",
-  "locked": true
+  "uuid": "backup-550e8400-e29b-41d4",
+  "status": "restored"
 }
 ```
 
 ---
 
-### GET /containers/{id}/backups/download
+### DELETE /api/servers/:id/backup/:backup_id
+
+Delete a backup.
+
+**Response:**
+```json
+{
+  "uuid": "backup-550e8400-e29b-41d4",
+  "deleted": true
+}
+```
+
+---
+
+## Downloads & Uploads
+
+### GET /download/backup
 
 Download a backup file.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | Backup ID |
+| `token` | string | Yes | JWT download token |
 
 **Response:** Binary `.tar.gz` file
 
 ---
 
-### POST /containers/{id}/backups/restore
+### GET /download/file
 
-Restore from a backup.
-
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Backup ID |
-
-**Response:**
-```json
-{
-  "success": true,
-  "id": "before-update_20251226_190000",
-  "message": "Backup restored successfully"
-}
-```
-
----
-
-### PATCH /containers/{id}/backups/lock
-
-Lock or unlock a backup.
+Download a server file.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | Backup ID |
+| `token` | string | Yes | JWT download token |
 
-**Request Body:**
-```json
-{
-  "locked": true
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "id": "before-update_20251226_190000",
-  "locked": true
-}
-```
+**Response:** Binary file with appropriate Content-Type
 
 ---
 
-### DELETE /containers/{id}/backups/delete
+### POST /upload/file
 
-Delete a backup. Locked backups cannot be deleted until unlocked.
+Upload a file to a server.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | Backup ID |
+| `token` | string | Yes | JWT upload token |
+| `directory` | string | No | Target directory (default: `/`) |
+
+**Request:** Multipart form data with file(s)
 
 **Response:**
 ```json
 {
   "success": true,
-  "id": "before-update_20251226_190000"
-}
-```
-
-**Error (if locked):**
-```json
-{
-  "error": true,
-  "message": "Cannot delete locked backup. Unlock it first."
+  "files": ["/plugins/myplugin.jar"]
 }
 ```
 
 ---
 
-## Schedules
+## SFTP Server
 
-Schedules are cron-based tasks that persist across daemon restarts.
+The daemon includes an embedded SFTP server for file management.
 
-### GET /containers/{id}/schedules
+**Default Port:** `2022`
 
-List all schedules for a container.
-
-**Response:**
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "container_id": "abc123...",
-    "name": "Daily Backup",
-    "cron": "0 0 * * *",
-    "action": {
-      "backup": {
-        "name": "daily",
-        "paths": ["/data"]
-      }
-    },
-    "enabled": true,
-    "last_run": "2025-12-25T00:00:00Z",
-    "next_run": "2025-12-26T00:00:00Z",
-    "created_at": "2025-12-01T10:00:00Z"
-  }
-]
+**Connection:**
+```bash
+sftp -P 2022 <server_uuid>.<user_uuid>@localhost
 ```
 
----
+**Username Format:** `<server_uuid>.<user_uuid>`
 
-### POST /containers/{id}/schedules
-
-Create a new schedule.
-
-**Request Body:**
-```json
-{
-  "name": "Hourly Restart",
-  "cron": "0 * * * *",
-  "action": {
-    "restart": {}
-  },
-  "enabled": true
-}
-```
-
-**Action Types:**
-
-| Action | Description | Example |
-|--------|-------------|---------|
-| `command` | Execute a command | `{"command": {"command": "say Server restarting!"}}` |
-| `restart` | Restart container | `{"restart": {}}` |
-| `start` | Start container | `{"start": {}}` |
-| `stop` | Stop container | `{"stop": {}}` |
-| `kill` | Kill container | `{"kill": {}}` |
-| `backup` | Create backup | `{"backup": {"name": "auto", "ignore": ["logs"], "locked": false}}` |
-
-**Cron Expression Examples:**
-| Expression | Description |
-|------------|-------------|
-| `0 0 * * *` | Daily at midnight |
-| `0 * * * *` | Every hour |
-| `*/15 * * * *` | Every 15 minutes |
-| `0 0 * * 0` | Weekly on Sunday |
-| `0 0 1 * *` | Monthly on 1st |
-
-**Response:**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "container_id": "abc123...",
-  "name": "Hourly Restart",
-  "cron": "0 * * * *",
-  "action": {"restart": {}},
-  "enabled": true,
-  "last_run": null,
-  "next_run": "2025-12-26T20:00:00Z",
-  "created_at": "2025-12-26T19:30:00Z"
-}
-```
-
----
-
-### GET /containers/{id}/schedules/{schedule_id}
-
-Get a specific schedule.
-
-**Response:** Same as single schedule object above.
-
----
-
-### PATCH /containers/{id}/schedules/{schedule_id}
-
-Update a schedule.
-
-**Request Body (all fields optional):**
-```json
-{
-  "name": "New Name",
-  "cron": "0 0 * * *",
-  "action": {"restart": {}},
-  "enabled": false
-}
-```
-
-**Response:** Updated schedule object.
-
----
-
-### DELETE /containers/{id}/schedules/{schedule_id}
-
-Delete a schedule.
-
-**Response:**
-```json
-{
-  "success": true,
-  "id": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
----
-
-### POST /containers/{id}/schedules/{schedule_id}/run
-
-Execute a schedule immediately (manual trigger).
-
-**Response:**
-```json
-{
-  "success": true,
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "Schedule executed"
-}
-```
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HOST` | `0.0.0.0` | Bind address |
-| `PORT` | `3001` | Bind port |
-| `DOCKER_SOCKET` | Platform default | Docker socket path |
-| `BACKUP_STORAGE` | `local` | Backup storage type (`local` or `s3`) |
-| `BACKUP_LOCAL_PATH` | `/var/backups` | Local backup directory |
-| `BACKUP_S3_BUCKET` | - | S3 bucket name |
-| `BACKUP_S3_REGION` | - | S3 region |
-| `BACKUP_S3_ACCESS_KEY` | - | S3 access key |
-| `BACKUP_S3_SECRET_KEY` | - | S3 secret key |
-| `SCHEDULES_PATH` | `/var/lib/stellar/schedules` | Schedule persistence directory |
+**Password:** User's panel password or API key
 
 ---
 
@@ -1038,13 +828,72 @@ All errors follow this format:
 
 ```json
 {
-  "error": true,
-  "message": "Container not found: abc123"
+  "error": "error_code",
+  "message": "Human readable error message"
 }
 ```
 
-| Status Code | Description |
-|-------------|-------------|
-| 400 | Bad request / validation error |
-| 404 | Container not found |
-| 500 | Internal server error / Docker error |
+| Status Code | Error Code | Description |
+|-------------|------------|-------------|
+| 400 | `bad_request` | Invalid request body or parameters |
+| 401 | `unauthorized` | Missing or invalid authentication |
+| 403 | `forbidden` | Permission denied |
+| 404 | `not_found` | Server or resource not found |
+| 409 | `conflict` | Server is busy (installing/transferring) |
+| 500 | `internal_error` | Internal server error |
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STELLAR_DEBUG` | `false` | Enable debug logging |
+| `STELLAR_API_HOST` | `0.0.0.0` | API bind address |
+| `STELLAR_API_PORT` | `8080` | API bind port |
+| `STELLAR_DATA_DIR` | `/var/lib/stellar/volumes` | Server data directory |
+| `STELLAR_BACKUP_DIR` | `/var/lib/stellar/backups` | Backup storage directory |
+| `STELLAR_SFTP_PORT` | `2022` | SFTP server port |
+| `STELLAR_PANEL_URL` | - | Panel API URL |
+| `STELLAR_NODE_TOKEN_ID` | - | Node authentication ID |
+| `STELLAR_NODE_TOKEN` | - | Node authentication token |
+
+### config.yml
+
+```yaml
+debug: false
+
+api:
+  host: "0.0.0.0"
+  port: 8080
+  ssl:
+    enabled: false
+    cert: ""
+    key: ""
+  upload_limit: 100
+
+system:
+  root_directory: /var/lib/stellar
+  data_directory: /var/lib/stellar/volumes
+  backup_directory: /var/lib/stellar/backups
+  log_directory: /var/log/stellar
+
+docker:
+  socket: /var/run/docker.sock
+  network:
+    name: stellar
+    driver: bridge
+
+remote:
+  url: "https://panel.example.com"
+  token_id: "node_abc123"
+  token: "secret_token"
+  timeout: 30
+
+sftp:
+  bind_address: "0.0.0.0"
+  bind_port: 2022
+  read_only: false
+```

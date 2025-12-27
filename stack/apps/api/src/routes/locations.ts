@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../lib/db";
 import { requireAdmin } from "../middleware/auth";
+import type { Variables } from "../types";
 
-const locations = new Hono();
+const locations = new Hono<{ Variables: Variables }>();
 
 // Validation schemas
 const createLocationSchema = z.object({

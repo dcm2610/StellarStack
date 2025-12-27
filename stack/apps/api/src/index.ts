@@ -14,8 +14,26 @@ const app = new Hono();
 
 // Middleware
 app.use("*", logger());
+
+// CORS for auth routes (must be before the auth handler)
 app.use(
-  "*",
+  "/api/auth/*",
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["POST", "GET", "OPTIONS"],
+    credentials: true,
+  })
+);
+
+// Better Auth routes
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  return auth.handler(c.req.raw);
+});
+
+// CORS for other API routes
+app.use(
+  "/api/*",
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
@@ -25,11 +43,6 @@ app.use(
 // Health check
 app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// Better Auth routes
-app.on(["POST", "GET"], "/api/auth/**", (c) => {
-  return auth.handler(c.req.raw);
 });
 
 // API routes

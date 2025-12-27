@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type JSX } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, type JSX } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme as useNextTheme } from "next-themes";
@@ -55,12 +55,15 @@ import {
   BsChevronExpand,
   BsThreeDotsVertical,
   BsPencil,
-  BsArchive,
   BsFileText,
   BsHddFill,
   BsX,
   BsCloudUpload,
 } from "react-icons/bs";
+import { servers } from "@/lib/api";
+import type { FileInfo } from "@/lib/api";
+import { useServer } from "@/components/server-provider";
+import { toast } from "sonner";
 
 interface FileItem {
   id: string;
@@ -69,52 +72,17 @@ interface FileItem {
   size: string;
   sizeBytes: number;
   modified: string;
+  path: string;
 }
 
-const EDITABLE_EXTENSIONS = [".yml", ".yaml", ".json", ".txt", ".properties", ".conf", ".cfg", ".ini", ".log", ".md"];
-
-// Mock file system structure for demo
-const mockFileSystem: Record<string, FileItem[]> = {
-  "/": [
-    { id: "1", name: "server.properties", type: "file", size: "2.4 KB", sizeBytes: 2457, modified: "2025-01-15 14:30" },
-    { id: "2", name: "world", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-15 12:00" },
-    { id: "3", name: "plugins", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-14 18:45" },
-    { id: "4", name: "logs", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-15 14:32" },
-    { id: "5", name: "config.yml", type: "file", size: "8.1 KB", sizeBytes: 8294, modified: "2025-01-13 09:20" },
-    { id: "6", name: "whitelist.json", type: "file", size: "512 B", sizeBytes: 512, modified: "2025-01-10 16:00" },
-    { id: "7", name: "banned-players.json", type: "file", size: "128 B", sizeBytes: 128, modified: "2025-01-08 11:30" },
-    { id: "8", name: "ops.json", type: "file", size: "256 B", sizeBytes: 256, modified: "2025-01-05 20:15" },
-    { id: "9", name: "server.jar", type: "file", size: "45.2 MB", sizeBytes: 47395225, modified: "2025-01-01 10:00" },
-    { id: "10", name: "eula.txt", type: "file", size: "64 B", sizeBytes: 64, modified: "2025-01-01 10:00" },
-  ],
-  "/world": [
-    { id: "w1", name: "region", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-15 12:00" },
-    { id: "w2", name: "data", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-15 11:00" },
-    { id: "w3", name: "level.dat", type: "file", size: "4.2 KB", sizeBytes: 4300, modified: "2025-01-15 12:00" },
-    { id: "w4", name: "session.lock", type: "file", size: "3 B", sizeBytes: 3, modified: "2025-01-15 12:00" },
-  ],
-  "/plugins": [
-    { id: "p1", name: "EssentialsX", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-14 18:00" },
-    { id: "p2", name: "WorldEdit", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-13 10:00" },
-    { id: "p3", name: "EssentialsX.jar", type: "file", size: "1.2 MB", sizeBytes: 1258291, modified: "2025-01-14 18:00" },
-    { id: "p4", name: "WorldEdit.jar", type: "file", size: "2.8 MB", sizeBytes: 2936012, modified: "2025-01-13 10:00" },
-  ],
-  "/logs": [
-    { id: "l1", name: "latest.log", type: "file", size: "128 KB", sizeBytes: 131072, modified: "2025-01-15 14:32" },
-    { id: "l2", name: "2025-01-14.log.gz", type: "file", size: "45 KB", sizeBytes: 46080, modified: "2025-01-14 23:59" },
-    { id: "l3", name: "2025-01-13.log.gz", type: "file", size: "52 KB", sizeBytes: 53248, modified: "2025-01-13 23:59" },
-  ],
-  "/plugins/EssentialsX": [
-    { id: "pe1", name: "config.yml", type: "file", size: "24 KB", sizeBytes: 24576, modified: "2025-01-14 18:00" },
-    { id: "pe2", name: "userdata", type: "folder", size: "--", sizeBytes: 0, modified: "2025-01-14 17:00" },
-  ],
-};
+const EDITABLE_EXTENSIONS = [".yml", ".yaml", ".json", ".txt", ".properties", ".conf", ".cfg", ".ini", ".log", ".md", ".sh", ".bat", ".toml"];
 
 const FilesPage = (): JSX.Element | null => {
   const params = useParams();
   const router = useRouter();
   const serverId = params.id as string;
   const pathSegments = params.path as string[] | undefined;
+  const { server } = useServer();
 
   // Derive current path from URL params
   const currentPath = pathSegments && pathSegments.length > 0
@@ -127,17 +95,8 @@ const FilesPage = (): JSX.Element | null => {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
-
-  // Get files for current path from mock file system
   const [files, setFiles] = useState<FileItem[]>([]);
-
-  useEffect(() => {
-    // Simulate fetching files for the current directory
-    const filesForPath = mockFileSystem[currentPath] || [];
-    setFiles(filesForPath);
-    // Reset selection when path changes
-    setRowSelection({});
-  }, [currentPath]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -151,20 +110,181 @@ const FilesPage = (): JSX.Element | null => {
   const [editorModalOpen, setEditorModalOpen] = useState(false);
   const [fileToEdit, setFileToEdit] = useState<FileItem | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
-  const [fileToArchive, setFileToArchive] = useState<FileItem | null>(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounterRef = useRef(0);
+  const [diskUsage, setDiskUsage] = useState<{ used: number; total: number }>({ used: 0, total: 0 });
 
-  // Storage info
-  const storageUsed = 2.4; // GB
-  const storageTotal = 10; // GB
-  const storagePercentage = (storageUsed / storageTotal) * 100;
+  // Storage info - total from server allocation, used from actual disk usage
+  const storageUsedGB = diskUsage.used / (1024 * 1024 * 1024);
+  const storageTotalGB = server ? server.disk / 1024 : 10; // server.disk is in MB
+  const storagePercentage = storageTotalGB > 0 ? (storageUsedGB / storageTotalGB) * 100 : 0;
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const fetchDiskUsage = useCallback(async () => {
+    try {
+      const usage = await servers.files.diskUsage(serverId);
+      setDiskUsage({ used: usage.used_bytes, total: server?.disk ? server.disk * 1024 * 1024 : 0 });
+    } catch {
+      // Silently fail - disk usage is not critical
+    }
+  }, [serverId, server?.disk]);
+
+  const fetchFiles = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await servers.files.list(serverId, currentPath === "/" ? undefined : currentPath);
+      const mappedFiles: FileItem[] = data.files.map((f: FileInfo) => ({
+        id: f.path,
+        name: f.name,
+        type: f.type === "directory" ? "folder" : "file",
+        size: f.type === "directory" ? "--" : formatFileSize(f.size),
+        sizeBytes: f.size,
+        modified: new Date(f.modified).toLocaleString(),
+        path: f.path,
+      }));
+      setFiles(mappedFiles);
+      // Refresh disk usage after file list changes
+      fetchDiskUsage();
+    } catch (error) {
+      toast.error("Failed to fetch files");
+      setFiles([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [serverId, currentPath, fetchDiskUsage]);
+
+  useEffect(() => {
+    fetchFiles();
+    setRowSelection({});
+  }, [fetchFiles]);
+
+  // Global drag-and-drop handlers
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current++;
+      if (e.dataTransfer?.types.includes("Files")) {
+        setIsDraggingOver(true);
+      }
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current--;
+      if (dragCounterRef.current === 0) {
+        setIsDraggingOver(false);
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsDraggingOver(false);
+
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        const droppedFiles = Array.from(e.dataTransfer.files);
+        handleDroppedFiles(droppedFiles);
+      }
+    };
+
+    document.addEventListener("dragenter", handleDragEnter);
+    document.addEventListener("dragleave", handleDragLeave);
+    document.addEventListener("dragover", handleDragOver);
+    document.addEventListener("drop", handleDrop);
+
+    return () => {
+      document.removeEventListener("dragenter", handleDragEnter);
+      document.removeEventListener("dragleave", handleDragLeave);
+      document.removeEventListener("dragover", handleDragOver);
+      document.removeEventListener("drop", handleDrop);
+    };
+  }, [currentPath, serverId]);
+
+  // Handle dropped files - upload directly with optimistic updates
+  const handleDroppedFiles = async (droppedFiles: File[]) => {
+    if (droppedFiles.length === 0 || isUploading) return;
+
+    setIsUploading(true);
+    const toastId = toast.loading(`Uploading ${droppedFiles.length} file(s)...`);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      const newFiles: FileItem[] = [];
+
+      for (const file of droppedFiles) {
+        try {
+          const content = await file.text();
+          const filePath = currentPath === "/"
+            ? `/${file.name}`
+            : `${currentPath}/${file.name}`;
+          await servers.files.create(serverId, filePath, "file", content);
+          successCount++;
+
+          // Add to optimistic list
+          newFiles.push({
+            id: filePath,
+            name: file.name,
+            type: "file",
+            size: formatFileSize(file.size),
+            sizeBytes: file.size,
+            modified: new Date().toLocaleString(),
+            path: filePath,
+          });
+        } catch {
+          failCount++;
+        }
+      }
+
+      // Optimistically add new files (filter out duplicates)
+      if (newFiles.length > 0) {
+        setFiles(prev => {
+          const existingPaths = new Set(prev.map(f => f.path));
+          const uniqueNewFiles = newFiles.filter(f => !existingPaths.has(f.path));
+          return [...prev, ...uniqueNewFiles];
+        });
+      }
+
+      if (failCount === 0) {
+        toast.success(`Uploaded ${successCount} file(s)`, { id: toastId });
+      } else if (successCount === 0) {
+        toast.error(`Failed to upload files`, { id: toastId });
+      } else {
+        toast.warning(`Uploaded ${successCount}, failed ${failCount}`, { id: toastId });
+      }
+
+      // Refresh disk usage
+      fetchDiskUsage();
+    } catch (error) {
+      toast.error("Failed to upload files", { id: toastId });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const isDark = mounted ? resolvedTheme === "dark" : true;
 
@@ -201,10 +321,20 @@ const FilesPage = (): JSX.Element | null => {
     setDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (fileToDelete) {
-      setFiles(prev => prev.filter(f => f.id !== fileToDelete.id));
+  const confirmDelete = async () => {
+    if (!fileToDelete) return;
+    const deletePath = fileToDelete.path;
+    try {
+      await servers.files.delete(serverId, deletePath);
+      // Optimistically remove from list
+      setFiles(prev => prev.filter(f => f.path !== deletePath));
+      toast.success("File deleted");
+      fetchDiskUsage();
+    } catch (error) {
+      toast.error("Failed to delete file");
+    } finally {
       setFileToDelete(null);
+      setDeleteModalOpen(false);
     }
   };
 
@@ -212,10 +342,22 @@ const FilesPage = (): JSX.Element | null => {
     setBulkDeleteModalOpen(true);
   };
 
-  const confirmBulkDelete = () => {
+  const confirmBulkDelete = async () => {
     const selectedIds = Object.keys(rowSelection);
-    setFiles(prev => prev.filter(f => !selectedIds.includes(f.id)));
-    setRowSelection({});
+    try {
+      await Promise.all(selectedIds.map(path => servers.files.delete(serverId, path)));
+      // Optimistically remove from list
+      setFiles(prev => prev.filter(f => !selectedIds.includes(f.path)));
+      toast.success(`Deleted ${selectedIds.length} file(s)`);
+      setRowSelection({});
+      fetchDiskUsage();
+    } catch (error) {
+      toast.error("Failed to delete some files");
+      // Refetch on error to ensure consistency
+      fetchFiles();
+    } finally {
+      setBulkDeleteModalOpen(false);
+    }
   };
 
   const handleRename = (file: FileItem) => {
@@ -224,11 +366,25 @@ const FilesPage = (): JSX.Element | null => {
     setRenameModalOpen(true);
   };
 
-  const confirmRename = () => {
-    if (fileToRename && newFileName.trim()) {
+  const confirmRename = async () => {
+    if (!fileToRename || !newFileName.trim()) return;
+    const oldPath = fileToRename.path;
+    const newPath = currentPath === "/"
+      ? `/${newFileName.trim()}`
+      : `${currentPath}/${newFileName.trim()}`;
+    const newName = newFileName.trim();
+    try {
+      await servers.files.rename(serverId, oldPath, newPath);
+      // Optimistically update the file in list
       setFiles(prev => prev.map(f =>
-        f.id === fileToRename.id ? { ...f, name: newFileName.trim() } : f
+        f.path === oldPath
+          ? { ...f, name: newName, path: newPath, id: newPath }
+          : f
       ));
+      toast.success("File renamed");
+    } catch (error) {
+      toast.error("Failed to rename file");
+    } finally {
       setRenameModalOpen(false);
       setFileToRename(null);
       setNewFileName("");
@@ -240,65 +396,62 @@ const FilesPage = (): JSX.Element | null => {
     setNewFolderModalOpen(true);
   };
 
-  const confirmNewFolder = () => {
-    if (newFolderName.trim()) {
-      const newFolder: FileItem = {
-        id: `folder-${Date.now()}`,
-        name: newFolderName.trim(),
+  const confirmNewFolder = async () => {
+    if (!newFolderName.trim()) return;
+    const folderPath = currentPath === "/"
+      ? `/${newFolderName.trim()}`
+      : `${currentPath}/${newFolderName.trim()}`;
+    const folderName = newFolderName.trim();
+    try {
+      await servers.files.create(serverId, folderPath, "directory");
+      // Optimistically add folder to list
+      setFiles(prev => [...prev, {
+        id: folderPath,
+        name: folderName,
         type: "folder",
         size: "--",
         sizeBytes: 0,
-        modified: new Date().toISOString().slice(0, 16).replace("T", " "),
-      };
-      setFiles(prev => [...prev, newFolder]);
+        modified: new Date().toLocaleString(),
+        path: folderPath,
+      }]);
+      toast.success("Folder created");
+    } catch (error) {
+      toast.error("Failed to create folder");
+    } finally {
       setNewFolderModalOpen(false);
       setNewFolderName("");
     }
   };
 
-  const handleEdit = (file: FileItem) => {
+  const handleEdit = async (file: FileItem) => {
     setFileToEdit(file);
-    // Mock file content - in real implementation, fetch from API
-    const mockContent = file.name === "server.properties"
-      ? `# Minecraft Server Properties
-server-port=25565
-max-players=20
-level-name=world
-gamemode=survival
-difficulty=normal
-enable-command-block=false
-motd=A Minecraft Server`
-      : file.name === "config.yml"
-        ? `# Server Configuration
-server:
-  name: "My Server"
-  port: 25565
-  max-players: 20
-
-settings:
-  pvp: true
-  difficulty: normal`
-        : `# ${file.name}\n\nFile content goes here...`;
-    setFileContent(mockContent);
+    setIsLoadingContent(true);
     setEditorModalOpen(true);
+    try {
+      const content = await servers.files.read(serverId, file.path);
+      setFileContent(typeof content === "string" ? content : JSON.stringify(content, null, 2));
+    } catch (error) {
+      toast.error("Failed to load file content");
+      setFileContent("");
+    } finally {
+      setIsLoadingContent(false);
+    }
   };
 
-  const confirmSaveFile = () => {
-    // In real implementation, save to API
-    console.log("Saving file:", fileToEdit?.name, fileContent);
-    setFileToEdit(null);
-    setFileContent("");
-  };
-
-  const handleArchive = (file: FileItem) => {
-    setFileToArchive(file);
-    setArchiveModalOpen(true);
-  };
-
-  const confirmArchive = () => {
-    // In real implementation, create archive via API
-    console.log("Archiving:", fileToArchive?.name);
-    setFileToArchive(null);
+  const confirmSaveFile = async () => {
+    if (!fileToEdit) return;
+    setIsSaving(true);
+    try {
+      await servers.files.write(serverId, fileToEdit.path, fileContent);
+      toast.success("File saved");
+      setEditorModalOpen(false);
+      setFileToEdit(null);
+      setFileContent("");
+    } catch (error) {
+      toast.error("Failed to save file");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleUploadClick = () => {
@@ -323,35 +476,44 @@ settings:
     setUploadFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const confirmUpload = () => {
+  const confirmUpload = async () => {
     if (uploadFiles.length === 0) return;
-
     setIsUploading(true);
-
-    // Simulate upload - in real implementation, upload via API
-    setTimeout(() => {
-      const newFiles: FileItem[] = uploadFiles.map((file, index) => ({
-        id: `upload-${Date.now()}-${index}`,
-        name: file.name,
-        type: "file" as const,
-        size: formatFileSize(file.size),
-        sizeBytes: file.size,
-        modified: new Date().toISOString().slice(0, 16).replace("T", " "),
-      }));
-
-      setFiles(prev => [...newFiles, ...prev]);
-      setIsUploading(false);
+    const newFiles: FileItem[] = [];
+    try {
+      for (const file of uploadFiles) {
+        const content = await file.text();
+        const filePath = currentPath === "/"
+          ? `/${file.name}`
+          : `${currentPath}/${file.name}`;
+        await servers.files.create(serverId, filePath, "file", content);
+        newFiles.push({
+          id: filePath,
+          name: file.name,
+          type: "file",
+          size: formatFileSize(file.size),
+          sizeBytes: file.size,
+          modified: new Date().toLocaleString(),
+          path: filePath,
+        });
+      }
+      // Optimistically add new files
+      if (newFiles.length > 0) {
+        setFiles(prev => {
+          const existingPaths = new Set(prev.map(f => f.path));
+          const uniqueNewFiles = newFiles.filter(f => !existingPaths.has(f.path));
+          return [...prev, ...uniqueNewFiles];
+        });
+      }
+      toast.success(`Uploaded ${uploadFiles.length} file(s)`);
       setUploadModalOpen(false);
       setUploadFiles([]);
-    }, 1500);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+      fetchDiskUsage();
+    } catch (error) {
+      toast.error("Failed to upload files");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const columns: ColumnDef<FileItem>[] = useMemo(() => [
@@ -531,16 +693,25 @@ settings:
                   Edit
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                onClick={() => handleArchive(file)}
-                className={cn(
-                  "gap-2 text-xs uppercase tracking-wider cursor-pointer",
-                  isDark ? "text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100" : "text-zinc-700 focus:bg-zinc-100"
-                )}
-              >
-                <BsArchive className="w-3 h-3" />
-                Archive
-              </DropdownMenuItem>
+              {file.type === "file" && (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      const { downloadUrl } = await servers.files.getDownloadToken(serverId, file.path);
+                      window.open(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`, "_blank");
+                    } catch (error) {
+                      toast.error("Failed to generate download link");
+                    }
+                  }}
+                  className={cn(
+                    "gap-2 text-xs uppercase tracking-wider cursor-pointer",
+                    isDark ? "text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100" : "text-zinc-700 focus:bg-zinc-100"
+                  )}
+                >
+                  <BsDownload className="w-3 h-3" />
+                  Download
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator className={isDark ? "bg-zinc-700" : "bg-zinc-200"} />
               <DropdownMenuItem
                 onClick={() => handleDelete(file)}
@@ -557,7 +728,7 @@ settings:
         );
       },
     },
-  ], [isDark, currentPath]);
+  ], [isDark, currentPath, serverId]);
 
   const table = useReactTable({
     data: files,
@@ -612,7 +783,7 @@ settings:
                     "text-sm",
                     isDark ? "text-zinc-500" : "text-zinc-500"
                   )}>
-                    Server {serverId} •
+                    {server?.name || `Server ${serverId}`} -
                   </span>
                   <Link
                     href={getBasePath()}
@@ -687,7 +858,7 @@ settings:
                     Storage
                   </span>
                   <span className={cn("text-xs", isDark ? "text-zinc-400" : "text-zinc-500")}>
-                    {storageUsed} GB / {storageTotal} GB
+                    {storageUsedGB.toFixed(2)} GB / {storageTotalGB.toFixed(1)} GB
                   </span>
                 </div>
                 <div className={cn("h-2 w-full", isDark ? "bg-zinc-800" : "bg-zinc-200")}>
@@ -696,7 +867,7 @@ settings:
                       "h-full transition-all",
                       storagePercentage > 90 ? "bg-red-500" : storagePercentage > 70 ? "bg-amber-500" : "bg-green-500"
                     )}
-                    style={{ width: `${storagePercentage}%` }}
+                    style={{ width: `${Math.min(100, storagePercentage)}%` }}
                   />
                 </div>
               </div>
@@ -774,20 +945,6 @@ settings:
                   variant="outline"
                   size="sm"
                   disabled={selectedCount === 0}
-                  className={cn(
-                    "transition-all gap-2",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500 disabled:opacity-30"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400 disabled:opacity-30"
-                  )}
-                >
-                  <BsDownload className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wider">Download</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={selectedCount === 0}
                   onClick={handleBulkDelete}
                   className={cn(
                     "transition-all gap-2",
@@ -845,48 +1002,65 @@ settings:
                 ))}
               </TableHeader>
               <TableBody>
-                <AnimatePresence mode="popLayout">
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <motion.tr
-                        key={row.original.id}
-                        layout
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20, scale: 0.95 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        data-state={row.getIsSelected() && "selected"}
-                        className={cn(
-                          "border-b cursor-pointer transition-colors",
-                          isDark
-                            ? "border-zinc-800/50 hover:bg-zinc-800/30 data-[state=selected]:bg-zinc-800/50"
-                            : "border-zinc-100 hover:bg-zinc-100/50 data-[state=selected]:bg-zinc-200/50"
-                        )}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="px-4 py-3">
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </motion.tr>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className={cn(
-                          "h-24 text-center text-sm",
-                          isDark ? "text-zinc-500" : "text-zinc-400"
-                        )}
-                      >
-                        No files found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </AnimatePresence>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className={cn(
+                        "h-24 text-center text-sm",
+                        isDark ? "text-zinc-500" : "text-zinc-400"
+                      )}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Spinner className="w-4 h-4" />
+                        Loading files...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <AnimatePresence mode="popLayout">
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <motion.tr
+                          key={row.original.id}
+                          layout
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          data-state={row.getIsSelected() && "selected"}
+                          className={cn(
+                            "border-b cursor-pointer transition-colors",
+                            isDark
+                              ? "border-zinc-800/50 hover:bg-zinc-800/30 data-[state=selected]:bg-zinc-800/50"
+                              : "border-zinc-100 hover:bg-zinc-100/50 data-[state=selected]:bg-zinc-200/50"
+                          )}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="px-4 py-3">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </motion.tr>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className={cn(
+                            "h-24 text-center text-sm",
+                            isDark ? "text-zinc-500" : "text-zinc-400"
+                          )}
+                        >
+                          No files found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </AnimatePresence>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -896,10 +1070,65 @@ settings:
             "mt-4 text-xs",
             isDark ? "text-zinc-600" : "text-zinc-400"
           )}>
-            {table.getFilteredRowModel().rows.length} file(s) • {selectedCount} selected
+            {table.getFilteredRowModel().rows.length} file(s) - {selectedCount} selected
           </div>
         </div>
       </div>
+
+      {/* Drag and Drop Overlay */}
+      <AnimatePresence>
+        {isDraggingOver && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          >
+            {/* Backdrop */}
+            <div className={cn(
+              "absolute inset-0",
+              isDark ? "bg-black/80" : "bg-white/80"
+            )} />
+
+            {/* Drop zone indicator */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className={cn(
+                "relative border-4 border-dashed rounded-lg p-16 text-center",
+                isDark
+                  ? "border-zinc-500 bg-zinc-900/90"
+                  : "border-zinc-400 bg-white/90"
+              )}
+            >
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <BsCloudUpload className={cn(
+                  "w-16 h-16 mx-auto mb-4",
+                  isDark ? "text-zinc-400" : "text-zinc-500"
+                )} />
+              </motion.div>
+              <p className={cn(
+                "text-xl font-light tracking-wider",
+                isDark ? "text-zinc-200" : "text-zinc-700"
+              )}>
+                DROP FILES TO UPLOAD
+              </p>
+              <p className={cn(
+                "text-sm mt-2",
+                isDark ? "text-zinc-500" : "text-zinc-400"
+              )}>
+                Files will be uploaded to: {currentPath}
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Single File Modal */}
       <ConfirmationModal
@@ -978,37 +1207,41 @@ settings:
       {/* File Editor Modal */}
       <FormModal
         open={editorModalOpen}
-        onOpenChange={setEditorModalOpen}
+        onOpenChange={(open) => {
+          if (!isSaving) {
+            setEditorModalOpen(open);
+            if (!open) {
+              setFileToEdit(null);
+              setFileContent("");
+            }
+          }
+        }}
         title={`Edit: ${fileToEdit?.name || ""}`}
-        submitLabel="Save"
+        submitLabel={isSaving ? "Saving..." : "Save"}
         onSubmit={confirmSaveFile}
         isDark={isDark}
         size="xl"
+        isValid={!isLoadingContent && !isSaving}
       >
-        <textarea
-          value={fileContent}
-          onChange={(e) => setFileContent(e.target.value)}
-          rows={20}
-          spellCheck={false}
-          className={cn(
-            "w-full px-3 py-2 text-sm font-mono border outline-none transition-colors resize-none",
-            isDark
-              ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200 focus:border-zinc-500"
-              : "bg-white border-zinc-300 text-zinc-800 focus:border-zinc-400"
-          )}
-        />
+        {isLoadingContent ? (
+          <div className="flex items-center justify-center py-12">
+            <Spinner className="w-6 h-6" />
+          </div>
+        ) : (
+          <textarea
+            value={fileContent}
+            onChange={(e) => setFileContent(e.target.value)}
+            rows={20}
+            spellCheck={false}
+            className={cn(
+              "w-full px-3 py-2 text-sm font-mono border outline-none transition-colors resize-none",
+              isDark
+                ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200 focus:border-zinc-500"
+                : "bg-white border-zinc-300 text-zinc-800 focus:border-zinc-400"
+            )}
+          />
+        )}
       </FormModal>
-
-      {/* Archive Modal */}
-      <ConfirmationModal
-        open={archiveModalOpen}
-        onOpenChange={setArchiveModalOpen}
-        title="Archive"
-        description={`Create a compressed archive of "${fileToArchive?.name}"?`}
-        confirmLabel="Archive"
-        onConfirm={confirmArchive}
-        isDark={isDark}
-      />
 
       {/* Upload Modal */}
       <FormModal
@@ -1058,7 +1291,7 @@ settings:
               "text-xs mt-1",
               isDark ? "text-zinc-600" : "text-zinc-400"
             )}>
-              Maximum file size: 100MB
+              Text files only (binary uploads coming soon)
             </p>
           </div>
 

@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../lib/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
+import type { Variables } from "../types";
 
-const account = new Hono();
+const account = new Hono<{ Variables: Variables }>();
 
 // Validation schemas
 const updateProfileSchema = z.object({
@@ -14,7 +15,7 @@ const updateProfileSchema = z.object({
 const updateUserSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
-  role: z.enum(["USER", "ADMIN"]).optional(),
+  role: z.enum(["user", "admin"]).optional(),
   image: z.string().url().optional(),
 });
 

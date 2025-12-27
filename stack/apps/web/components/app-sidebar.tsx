@@ -32,8 +32,10 @@ import {
   LogOutIcon,
   BellIcon,
   ChevronUpIcon,
+  ShieldIcon,
 } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
+import { useAuth } from "./auth-provider";
 
 // Navigation items - href will be prefixed with /servers/[id]
 const navItems = [
@@ -53,31 +55,36 @@ interface AppSidebarProps {
   isDark?: boolean;
 }
 
-// User menu items
-const userMenuItems = [
-  { title: "Account Settings", icon: UserIcon, href: "/account" },
-  { title: "Notifications", icon: BellIcon, href: "/notifications" },
-];
-
 export function AppSidebar({ isDark = true }: AppSidebarProps) {
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
   const serverId = params.id as string;
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { user: authUser, signOut, isAdmin } = useAuth();
 
-  // Mock user data - will be replaced with auth
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    initials: "JD",
+  // User data from auth
+  const user = authUser ? {
+    name: authUser.name || "User",
+    email: authUser.email,
+    initials: (authUser.name || "U").slice(0, 2).toUpperCase(),
+  } : {
+    name: "Guest",
+    email: "",
+    initials: "G",
   };
+
+  // User menu items - dynamic based on role
+  const userMenuItems = [
+    { title: "Account Settings", icon: UserIcon, href: "/account" },
+    { title: "Notifications", icon: BellIcon, href: "/account/notifications" },
+    ...(isAdmin ? [{ title: "Admin Panel", icon: ShieldIcon, href: "/admin" }] : []),
+  ];
 
   const getFullHref = (href: string) => `/servers/${serverId}${href}`;
 
-  const handleSignOut = () => {
-    // Will be replaced with better-auth signout
-    router.push("/");
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   return (

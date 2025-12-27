@@ -3,8 +3,19 @@ import { z } from "zod";
 import { db } from "../lib/db";
 import { generateToken, hashToken } from "../lib/crypto";
 import { requireAdmin, requireDaemon } from "../middleware/auth";
+import type { Variables } from "../types";
 
-const nodes = new Hono();
+const nodes = new Hono<{ Variables: Variables }>();
+
+// Helper to convert BigInt fields to Number for JSON serialization
+function serializeNode(node: any) {
+  return {
+    ...node,
+    memoryLimit: Number(node.memoryLimit),
+    diskLimit: Number(node.diskLimit),
+    uploadLimit: Number(node.uploadLimit),
+  };
+}
 
 // Validation schemas
 const createNodeSchema = z.object({
@@ -48,8 +59,8 @@ nodes.get("/", requireAdmin, async (c) => {
     orderBy: { displayName: "asc" },
   });
 
-  // Remove sensitive token info
-  const safeNodes = allNodes.map(({ token, tokenHash, ...node }) => node);
+  // Remove sensitive token info and serialize BigInt fields
+  const safeNodes = allNodes.map(({ token, tokenHash, ...node }) => serializeNode(node));
 
   return c.json(safeNodes);
 });
@@ -82,10 +93,10 @@ nodes.get("/:id", requireAdmin, async (c) => {
     return c.json({ error: "Node not found" }, 404);
   }
 
-  // Remove sensitive token info
+  // Remove sensitive token info and serialize BigInt fields
   const { token, tokenHash, ...safeNode } = node;
 
-  return c.json(safeNode);
+  return c.json(serializeNode(safeNode));
 });
 
 // Create node (admin only) - returns token ONCE
@@ -184,7 +195,7 @@ nodes.patch("/:id", requireAdmin, async (c) => {
     });
 
     const { token, tokenHash, ...safeNode } = node;
-    return c.json(safeNode);
+    return c.json(serializeNode(safeNode));
   } catch {
     return c.json({ error: "Node not found" }, 404);
   }
@@ -299,11 +310,136 @@ nodes.delete("/:id/allocations/:allocationId", requireAdmin, async (c) => {
   }
 });
 
+// Get node stats from daemon (admin only, proxied)
+nodes.get("/:id/stats", requireAdmin, async (c) => {
+  const { id } = c.req.param();
+
+  const node = await db.node.findUnique({
+    where: { id },
+  });
+
+  if (!node) {
+    return c.json({ error: "Node not found" }, 404);
+  }
+
+  if (!node.isOnline) {
+    return c.json({ error: "Node is offline" }, 400);
+  }
+
+  // Proxy request to daemon
+  const protocol = node.protocol === "HTTP" ? "http" : "https";
+  const url = `${protocol}://${node.host}:${node.port}/stats`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${node.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return c.json({ error: "Failed to fetch stats from daemon" }, 500);
+    }
+
+    const stats = await response.json();
+    return c.json(stats);
+  } catch (error) {
+    return c.json({ error: "Failed to connect to daemon" }, 500);
+  }
+});
+
 // === Daemon endpoints ===
 
-// Daemon heartbeat
+// Daemon handshake - called on startup to verify connection and get config
+nodes.post("/handshake", requireDaemon, async (c) => {
+  const node = c.get("node");
+
+  // Get full node info with servers
+  const fullNode = await db.node.findUnique({
+    where: { id: node.id },
+    include: {
+      location: {
+        select: { id: true, name: true, country: true, city: true },
+      },
+      servers: {
+        include: {
+          blueprint: true,
+          allocations: true,
+        },
+      },
+    },
+  });
+
+  if (!fullNode) {
+    return c.json({ error: "Node not found" }, 404);
+  }
+
+  // Mark as online
+  await db.node.update({
+    where: { id: node.id },
+    data: {
+      isOnline: true,
+      lastHeartbeat: new Date(),
+    },
+  });
+
+  return c.json({
+    success: true,
+    node: {
+      id: fullNode.id,
+      displayName: fullNode.displayName,
+      host: fullNode.host,
+      port: fullNode.port,
+      protocol: fullNode.protocol,
+      sftpPort: fullNode.sftpPort,
+      memoryLimit: Number(fullNode.memoryLimit),
+      diskLimit: Number(fullNode.diskLimit),
+      cpuLimit: fullNode.cpuLimit,
+      uploadLimit: Number(fullNode.uploadLimit),
+      location: fullNode.location,
+    },
+    servers: fullNode.servers.map((server) => ({
+      id: server.id,
+      name: server.name,
+      containerId: server.containerId,
+      status: server.status,
+      memory: Number(server.memory),
+      disk: Number(server.disk),
+      cpu: server.cpu,
+      config: server.config,
+      blueprint: {
+        id: server.blueprint.id,
+        name: server.blueprint.name,
+        imageName: server.blueprint.imageName,
+        imageTag: server.blueprint.imageTag,
+        registry: server.blueprint.registry,
+        config: server.blueprint.config,
+      },
+      allocations: server.allocations.map((a) => ({
+        id: a.id,
+        ip: a.ip,
+        port: a.port,
+        alias: a.alias,
+      })),
+    })),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Daemon heartbeat - called periodically to stay online
 nodes.post("/heartbeat", requireDaemon, async (c) => {
   const node = c.get("node");
+  const body = await c.req.json().catch(() => ({}));
+
+  // Daemon can optionally report its measured latency (from previous heartbeat RTT)
+  if (body.latency !== undefined) {
+    await db.node.update({
+      where: { id: node.id },
+      data: {
+        heartbeatLatency: Math.round(body.latency),
+      },
+    });
+  }
 
   return c.json({
     acknowledged: true,

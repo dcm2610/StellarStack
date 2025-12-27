@@ -34,3 +34,10 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
+
+# Rust
+target/
+
+# Daemon local data
+.stellar/
+apps/daemon/config.yml

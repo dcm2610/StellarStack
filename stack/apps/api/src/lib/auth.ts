@@ -4,6 +4,7 @@ import { admin } from "better-auth/plugins";
 import { db } from "./db";
 
 export const auth = betterAuth({
+  basePath: "/api/auth",
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
@@ -20,7 +21,13 @@ export const auth = betterAuth({
       role: {
         type: "string",
         required: false,
-        defaultValue: "USER",
+        defaultValue: "user",
+        input: false,
+      },
+      banned: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
         input: false,
       },
     },
