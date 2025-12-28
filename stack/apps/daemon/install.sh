@@ -199,6 +199,41 @@ check_requirements() {
         fi
     fi
 
+    # Check git
+    if command -v git &> /dev/null; then
+        print_success "Git installed"
+    else
+        print_warning "Git is not installed"
+        echo -e "  ${SECONDARY}Git is required to clone the repository.${NC}"
+        echo -e "  ${SECONDARY}Would you like to install Git now?${NC} ${MUTED}[Y/n]${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r install_git_choice
+
+        if [ "$install_git_choice" = "n" ] || [ "$install_git_choice" = "N" ]; then
+            print_error "Git is required. Exiting."
+            exit 1
+        fi
+
+        # Install git
+        if command -v apt-get &> /dev/null; then
+            apt-get update -qq && apt-get install -y git
+        elif command -v dnf &> /dev/null; then
+            dnf install -y git
+        elif command -v yum &> /dev/null; then
+            yum install -y git
+        else
+            print_error "Could not install git automatically"
+            exit 1
+        fi
+
+        if command -v git &> /dev/null; then
+            print_success "Git installed successfully"
+        else
+            print_error "Failed to install Git"
+            exit 1
+        fi
+    fi
+
     # Check certbot (will be installed later if needed for SSL)
     if command -v certbot &> /dev/null; then
         print_success "Certbot installed"
@@ -549,73 +584,100 @@ EOF
     print_success "Configuration written to ${CONFIG_FILE}"
 }
 
+# Install build dependencies
+install_build_deps() {
+    print_info "Installing build dependencies..."
+
+    if command -v apt-get &> /dev/null; then
+        apt-get update -qq
+        apt-get install -y build-essential pkg-config libssl-dev
+    elif command -v dnf &> /dev/null; then
+        dnf groupinstall -y "Development Tools"
+        dnf install -y openssl-devel pkg-config
+    elif command -v yum &> /dev/null; then
+        yum groupinstall -y "Development Tools"
+        yum install -y openssl-devel pkg-config
+    else
+        print_warning "Could not detect package manager for build deps"
+        print_info "You may need to manually install: build-essential, pkg-config, libssl-dev"
+    fi
+}
+
+# Install Rust if not present
+install_rust() {
+    print_info "Installing Rust..."
+
+    # Install build dependencies first
+    install_build_deps
+
+    if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; then
+        # Source cargo env for current session
+        export PATH="$HOME/.cargo/bin:$PATH"
+        print_success "Rust installed successfully"
+    else
+        print_error "Failed to install Rust"
+        exit 1
+    fi
+}
+
 # Download and install the daemon binary
 install_daemon() {
     print_step "INSTALLING DAEMON"
 
-    # Check if binary exists in current directory (for local builds)
-    if [ -f "./target/release/${BINARY_NAME}" ]; then
-        print_info "Using local build..."
-        cp "./target/release/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-    elif [ -f "./${BINARY_NAME}" ]; then
-        print_info "Using binary from current directory..."
-        cp "./${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-    else
-        print_info "Downloading daemon binary..."
+    GITHUB_REPO="MarquesCoding/StellarStack"
+    BUILD_DIR="/tmp/stellar-daemon-build"
 
-        # Detect architecture
-        ARCH=$(uname -m)
-        case $ARCH in
-            x86_64)
-                ARCH="x86_64"
-                ;;
-            aarch64|arm64)
-                ARCH="aarch64"
-                ;;
-            *)
-                print_error "Unsupported architecture: ${ARCH}"
-                exit 1
-                ;;
-        esac
+    # Check if Rust is installed
+    if ! command -v cargo &> /dev/null; then
+        print_warning "Rust is not installed"
+        echo -e "  ${SECONDARY}Rust is required to build the daemon.${NC}"
+        echo -e "  ${SECONDARY}Would you like to install Rust now?${NC} ${MUTED}[Y/n]${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r install_rust_choice
 
-        # Try to download from GitHub releases
-        GITHUB_REPO="MarquesCoding/StellarStack"
-        DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/daemon-latest/stellar-daemon-linux-${ARCH}"
-
-        print_info "Downloading from: ${DOWNLOAD_URL}"
-
-        if curl -fsSL -o "${INSTALL_DIR}/${BINARY_NAME}" "${DOWNLOAD_URL}"; then
-            print_success "Downloaded daemon binary"
-        else
-            print_warning "Failed to download from latest release, trying versioned releases..."
-
-            # Try to get the latest versioned release
-            LATEST_TAG=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases" | grep -o '"tag_name": "daemon-v[^"]*"' | head -1 | cut -d'"' -f4)
-
-            if [ -n "$LATEST_TAG" ]; then
-                DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_TAG}/stellar-daemon-linux-${ARCH}"
-                print_info "Trying: ${DOWNLOAD_URL}"
-
-                if curl -fsSL -o "${INSTALL_DIR}/${BINARY_NAME}" "${DOWNLOAD_URL}"; then
-                    print_success "Downloaded daemon binary (${LATEST_TAG})"
-                else
-                    print_error "Failed to download daemon binary"
-                    print_info "Please build from source:"
-                    echo -e "  ${MUTED}cd apps/daemon && cargo build --release${NC}"
-                    echo -e "  ${MUTED}cp target/release/stellar-daemon ${INSTALL_DIR}/${NC}"
-                    exit 1
-                fi
-            else
-                print_error "No releases found"
-                print_info "Please build from source:"
-                echo -e "  ${MUTED}cd apps/daemon && cargo build --release${NC}"
-                echo -e "  ${MUTED}cp target/release/stellar-daemon ${INSTALL_DIR}/${NC}"
-                exit 1
-            fi
+        if [ "$install_rust_choice" = "n" ] || [ "$install_rust_choice" = "N" ]; then
+            print_error "Rust is required. Exiting."
+            exit 1
         fi
+
+        install_rust
+    else
+        RUST_VERSION=$(rustc --version | cut -d ' ' -f2)
+        print_success "Rust installed: v${RUST_VERSION}"
     fi
 
+    # Clone the repository
+    print_info "Cloning StellarStack repository..."
+
+    rm -rf "${BUILD_DIR}"
+    if git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "${BUILD_DIR}"; then
+        print_success "Repository cloned"
+    else
+        print_error "Failed to clone repository"
+        exit 1
+    fi
+
+    # Build the daemon
+    print_info "Building daemon (this may take a few minutes)..."
+
+    cd "${BUILD_DIR}/stack/apps/daemon"
+
+    if cargo build --release; then
+        print_success "Daemon built successfully"
+    else
+        print_error "Failed to build daemon"
+        rm -rf "${BUILD_DIR}"
+        exit 1
+    fi
+
+    # Copy binary to install directory
+    cp "target/release/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
+
+    # Cleanup build directory
+    cd /
+    rm -rf "${BUILD_DIR}"
+
     print_success "Daemon installed to ${INSTALL_DIR}/${BINARY_NAME}"
 }
 
