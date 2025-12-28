@@ -167,6 +167,26 @@ impl Manager {
         }
     }
 
+    /// Sync all container statuses to the panel on startup
+    /// This ensures the panel has accurate status information after daemon restart
+    pub async fn sync_all_statuses(&self) {
+        info!("Syncing container statuses to panel...");
+        let mut synced = 0;
+        let mut failed = 0;
+
+        for server in self.all() {
+            match server.sync_status_to_panel().await {
+                Ok(_) => synced += 1,
+                Err(e) => {
+                    warn!("Failed to sync status for server {}: {}", server.uuid(), e);
+                    failed += 1;
+                }
+            }
+        }
+
+        info!("Status sync complete: {} synced, {} failed", synced, failed);
+    }
+
     /// Start Redis publishers for all servers
     pub async fn start_redis_publishers(&self) {
         if !self.config.redis.enabled {

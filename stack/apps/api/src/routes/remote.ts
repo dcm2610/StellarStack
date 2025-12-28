@@ -94,7 +94,15 @@ remote.get("/servers", async (c) => {
 
     // Build startup detection
     const startupDetection = (blueprint.startupDetection as any) || {};
-    const donePatterns = startupDetection.done ? [startupDetection.done] : [];
+    let donePatterns: string[] = [];
+    if (typeof startupDetection.done === 'string') {
+      donePatterns = [startupDetection.done];
+    } else if (Array.isArray(startupDetection.done)) {
+      donePatterns = startupDetection.done;
+    } else if (typeof startupDetection === 'string') {
+      // Handle case where startupDetection is just a string
+      donePatterns = [startupDetection];
+    }
 
     return {
       uuid: server.id,
@@ -198,7 +206,14 @@ remote.get("/servers/:uuid", async (c) => {
   }
 
   const startupDetection = (blueprint.startupDetection as any) || {};
-  const donePatterns = startupDetection.done ? [startupDetection.done] : [];
+  let donePatterns: string[] = [];
+  if (typeof startupDetection.done === 'string') {
+    donePatterns = [startupDetection.done];
+  } else if (Array.isArray(startupDetection.done)) {
+    donePatterns = startupDetection.done;
+  } else if (typeof startupDetection === 'string') {
+    donePatterns = [startupDetection];
+  }
 
   return c.json({
     data: {
@@ -259,8 +274,11 @@ remote.post("/servers/:uuid/status", async (c) => {
   const { uuid } = c.req.param();
   const body = await c.req.json();
 
+  console.log(`[Remote] Status update request for server ${uuid}:`, body);
+
   const parsed = statusSchema.safeParse(body);
   if (!parsed.success) {
+    console.log(`[Remote] Invalid status for server ${uuid}:`, parsed.error.errors);
     return c.json({ error: "Invalid status", details: parsed.error.errors }, 400);
   }
 
@@ -269,6 +287,7 @@ remote.post("/servers/:uuid/status", async (c) => {
   });
 
   if (!server) {
+    console.log(`[Remote] Server ${uuid} not found on node ${node.id}`);
     return c.json({ error: "Server not found" }, 404);
   }
 
@@ -283,10 +302,15 @@ remote.post("/servers/:uuid/status", async (c) => {
     error: "ERROR",
   };
 
+  const newStatus = statusMap[parsed.data.status];
+  console.log(`[Remote] Updating server ${uuid} status from ${server.status} to ${newStatus}`);
+
   await db.server.update({
     where: { id: uuid },
-    data: { status: statusMap[parsed.data.status] as any },
+    data: { status: newStatus as any },
   });
+
+  console.log(`[Remote] Server ${uuid} status updated successfully to ${newStatus}`);
 
   return c.json({ success: true });
 });

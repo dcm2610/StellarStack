@@ -162,7 +162,7 @@ export default function LocationsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none rounded-lg",
+                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
                   isDark
                     ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -180,7 +180,7 @@ export default function LocationsPage() {
                 </div>
               ) : filteredLocations.length === 0 ? (
                 <div className={cn(
-                  "col-span-full text-center py-12 border rounded-lg",
+                  "col-span-full text-center py-12 border",
                   isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
                 )}>
                   {searchQuery ? "No locations match your search." : "No locations configured. Add your first location."}
@@ -190,17 +190,17 @@ export default function LocationsPage() {
                   <div
                     key={location.id}
                     className={cn(
-                      "relative p-4 border transition-colors rounded-lg",
+                      "relative p-4 border transition-colors",
                       isDark
-                        ? "bg-zinc-900/50 border-zinc-700/50 hover:border-zinc-600"
-                        : "bg-white border-zinc-200 hover:border-zinc-300"
+                        ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 hover:border-zinc-700"
+                        : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 hover:border-zinc-400"
                     )}
                   >
-                    <CornerAccents isDark={isDark} size="sm" color="blue" />
+                    <CornerAccents isDark={isDark} size="sm" />
 
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <MapPinIcon className={cn("w-6 h-6 mt-0.5", isDark ? "text-blue-400" : "text-blue-600")} />
+                        <MapPinIcon className={cn("w-6 h-6 mt-0.5", isDark ? "text-zinc-400" : "text-zinc-600")} />
                         <div>
                           <div className={cn("font-medium", isDark ? "text-zinc-100" : "text-zinc-800")}>
                             {location.name}

@@ -75,22 +75,9 @@ export default function AdminServersPage() {
     );
   }, [serversList, searchQuery]);
 
-  const getStatusColor = (status: Server["status"]) => {
-    switch (status) {
-      case "RUNNING":
-        return "text-green-500 border-green-500";
-      case "STOPPED":
-        return "text-zinc-500 border-zinc-500";
-      case "STARTING":
-      case "STOPPING":
-        return "text-amber-500 border-amber-500";
-      case "INSTALLING":
-        return "text-blue-500 border-blue-500";
-      case "ERROR":
-        return "text-red-500 border-red-500";
-      default:
-        return "text-zinc-500 border-zinc-500";
-    }
+  const getStatusStyle = (status: Server["status"], isDark: boolean) => {
+    // Use neutral zinc colors for all statuses
+    return isDark ? "text-zinc-300 border-zinc-600" : "text-zinc-600 border-zinc-400";
   };
 
   if (!mounted) return null;
@@ -161,7 +148,7 @@ export default function AdminServersPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none rounded-lg",
+                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
                   isDark
                     ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -179,7 +166,7 @@ export default function AdminServersPage() {
                 </div>
               ) : filteredServers.length === 0 ? (
                 <div className={cn(
-                  "text-center py-12 border rounded-lg",
+                  "text-center py-12 border",
                   isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
                 )}>
                   {searchQuery ? "No servers match your search." : "No servers found. Create your first server."}
@@ -191,7 +178,7 @@ export default function AdminServersPage() {
                       <ContextMenuTrigger asChild>
                         <div
                           className={cn(
-                            "relative p-5 border transition-all hover:scale-[1.005] group rounded-lg cursor-context-menu",
+                            "relative p-5 border transition-all hover:scale-[1.005] group cursor-context-menu",
                             isDark
                               ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20 hover:border-zinc-700"
                               : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20 hover:border-zinc-400"
@@ -202,10 +189,10 @@ export default function AdminServersPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div className={cn(
-                                "p-2.5 border rounded-lg",
+                                "p-2.5 border",
                                 isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
                               )}>
-                                <ServerIcon className={cn("w-5 h-5", isDark ? "text-purple-400" : "text-purple-600")} />
+                                <ServerIcon className={cn("w-5 h-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
                               </div>
                               <div>
                                 <div className="flex items-center gap-3">
@@ -216,15 +203,15 @@ export default function AdminServersPage() {
                                     {server.name}
                                   </h2>
                                   <span className={cn(
-                                    "text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 border rounded",
-                                    getStatusColor(server.status)
+                                    "text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 border",
+                                    getStatusStyle(server.status, isDark)
                                   )}>
                                     {server.status}
                                   </span>
                                   {server.shortId && (
                                     <span className={cn(
-                                      "text-[10px] font-mono px-1.5 py-0.5 rounded",
-                                      isDark ? "text-zinc-600 bg-zinc-800" : "text-zinc-400 bg-zinc-100"
+                                      "text-[10px] font-mono px-1.5 py-0.5 border",
+                                      isDark ? "text-zinc-500 border-zinc-700" : "text-zinc-500 border-zinc-300"
                                     )}>
                                       {server.shortId}
                                     </span>
@@ -252,7 +239,7 @@ export default function AdminServersPage() {
                                 onClick={() => router.push(`/servers/${server.id}`)}
                                 className={cn(
                                   "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                  isDark ? "border-purple-900/50 text-purple-400 hover:bg-purple-900/20" : "border-purple-200 text-purple-600 hover:bg-purple-50"
+                                  isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                                 )}
                               >
                                 <ExternalLinkIcon className="w-3.5 h-3.5" />
@@ -265,7 +252,7 @@ export default function AdminServersPage() {
                                   disabled={start.isPending}
                                   className={cn(
                                     "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                    isDark ? "border-green-900/50 text-green-400 hover:bg-green-900/20" : "border-green-200 text-green-600 hover:bg-green-50"
+                                    isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                                   )}
                                 >
                                   <PlayIcon className="w-3.5 h-3.5" />
@@ -280,7 +267,7 @@ export default function AdminServersPage() {
                                     disabled={stop.isPending}
                                     className={cn(
                                       "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                      isDark ? "border-amber-900/50 text-amber-400 hover:bg-amber-900/20" : "border-amber-200 text-amber-600 hover:bg-amber-50"
+                                      isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                                     )}
                                   >
                                     <SquareIcon className="w-3.5 h-3.5" />
@@ -292,7 +279,7 @@ export default function AdminServersPage() {
                                     disabled={restart.isPending}
                                     className={cn(
                                       "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                      isDark ? "border-blue-900/50 text-blue-400 hover:bg-blue-900/20" : "border-blue-200 text-blue-600 hover:bg-blue-50"
+                                      isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                                     )}
                                   >
                                     <RefreshCwIcon className="w-3.5 h-3.5" />
@@ -347,7 +334,7 @@ export default function AdminServersPage() {
                         {server.status === "STOPPED" && (
                           <ContextMenuItem
                             onClick={() => handleAction(server, "start")}
-                            className="gap-2 cursor-pointer text-green-500"
+                            className="gap-2 cursor-pointer"
                           >
                             <PlayIcon className="w-4 h-4" />
                             Start Server
@@ -357,14 +344,14 @@ export default function AdminServersPage() {
                           <>
                             <ContextMenuItem
                               onClick={() => handleAction(server, "stop")}
-                              className="gap-2 cursor-pointer text-amber-500"
+                              className="gap-2 cursor-pointer"
                             >
                               <SquareIcon className="w-4 h-4" />
                               Stop Server
                             </ContextMenuItem>
                             <ContextMenuItem
                               onClick={() => handleAction(server, "restart")}
-                              className="gap-2 cursor-pointer text-blue-500"
+                              className="gap-2 cursor-pointer"
                             >
                               <RefreshCwIcon className="w-4 h-4" />
                               Restart Server

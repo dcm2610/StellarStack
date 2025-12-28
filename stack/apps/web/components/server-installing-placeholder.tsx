@@ -36,7 +36,7 @@ export function ServerInstallingPlaceholder({
             style={{ width: 80, height: 80, margin: -8 }}
           />
           <div className={cn(
-            "relative w-16 h-16 flex items-center justify-center rounded-lg border",
+            "relative w-16 h-16 flex items-center justify-center border",
             isDark
               ? "bg-zinc-900 border-zinc-700"
               : "bg-white border-zinc-300"

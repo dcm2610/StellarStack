@@ -394,6 +394,20 @@ servers.post("/", requireAdmin, async (c) => {
   // Get primary allocation
   const primaryAllocation = allocations[0];
 
+  // Parse startup detection from blueprint
+  const startupDetection = (blueprint.startupDetection as any) || {};
+  const startupDonePatterns: string[] = [];
+
+  // Handle various formats of startupDetection
+  if (typeof startupDetection.done === 'string') {
+    startupDonePatterns.push(startupDetection.done);
+  } else if (Array.isArray(startupDetection.done)) {
+    startupDonePatterns.push(...startupDetection.done);
+  } else if (typeof startupDetection === 'string') {
+    // Simple string format
+    startupDonePatterns.push(startupDetection);
+  }
+
   // Build daemon request in the format the Rust daemon expects
   const daemonRequest_body = {
     uuid: server.id,
@@ -429,6 +443,18 @@ servers.post("/", requireAdmin, async (c) => {
       file_denylist: [],
     },
     mounts: [],
+    // Process configuration for startup detection and stop handling
+    process_configuration: {
+      startup: {
+        done: startupDonePatterns,
+        user_interaction: [],
+        strip_ansi: false,
+      },
+      stop: blueprint.stopCommand
+        ? { type: "command", value: blueprint.stopCommand }
+        : { type: "signal", value: "SIGTERM" },
+      configs: [],
+    },
   };
 
   // Send to daemon
@@ -1040,17 +1066,18 @@ function normalizePath(path: string): string {
   return path.replace(/\\/g, "/");
 }
 
-// Get disk usage - not yet implemented in new daemon, return mock data
+// Get disk usage
 servers.get("/:serverId/files/disk-usage", requireServerAccess, async (c) => {
   const server = c.get("server");
 
   try {
     const fullServer = await getServerWithNode(server.id);
-    // TODO: Add disk usage endpoint to daemon
-    return c.json({
-      used_bytes: 0,
-      path: "/",
-    });
+    const result = await daemonRequest(
+      fullServer.node,
+      "GET",
+      `/api/servers/${server.id}/files/disk-usage`
+    );
+    return c.json(result);
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }

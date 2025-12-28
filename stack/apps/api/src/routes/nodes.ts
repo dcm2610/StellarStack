@@ -445,15 +445,21 @@ nodes.post("/heartbeat", requireDaemon, async (c) => {
   const node = c.get("node");
   const body = await c.req.json().catch(() => ({}));
 
+  // Update heartbeat timestamp and optionally latency
+  const updateData: { lastHeartbeat: Date; isOnline: boolean; heartbeatLatency?: number } = {
+    lastHeartbeat: new Date(),
+    isOnline: true,
+  };
+
   // Daemon can optionally report its measured latency (from previous heartbeat RTT)
   if (body.latency !== undefined) {
-    await db.node.update({
-      where: { id: node.id },
-      data: {
-        heartbeatLatency: Math.round(body.latency),
-      },
-    });
+    updateData.heartbeatLatency = Math.round(body.latency);
   }
+
+  await db.node.update({
+    where: { id: node.id },
+    data: updateData,
+  });
 
   return c.json({
     acknowledged: true,

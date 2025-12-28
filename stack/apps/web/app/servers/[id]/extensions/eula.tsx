@@ -124,7 +124,7 @@ export function EulaExtension({ serverId, lines, onRestart }: EulaExtensionProps
         </DialogHeader>
 
         <div className={cn(
-          "p-4 rounded-lg text-sm space-y-3",
+          "p-4 text-sm space-y-3",
           isDark ? "bg-zinc-900/50 border border-zinc-800" : "bg-zinc-100 border border-zinc-200"
         )}>
           <p className={isDark ? "text-zinc-300" : "text-zinc-700"}>

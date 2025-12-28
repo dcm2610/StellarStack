@@ -133,7 +133,7 @@ export default function NewServerPage() {
   };
 
   const cardClasses = cn(
-    "relative border p-4 rounded-lg",
+    "relative border p-4",
     isDark ? "border-zinc-700/50 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
   );
 
@@ -496,11 +496,11 @@ export default function NewServerPage() {
                               <label
                                 key={allocation.id}
                                 className={cn(
-                                  "flex items-center gap-2 p-3 border cursor-pointer transition-colors rounded-lg",
+                                  "flex items-center gap-2 p-3 border cursor-pointer transition-colors",
                                   formData.allocationIds.includes(allocation.id)
                                     ? isDark
-                                      ? "border-green-600 bg-green-900/20"
-                                      : "border-green-400 bg-green-50"
+                                      ? "border-zinc-400 bg-zinc-800/50"
+                                      : "border-zinc-500 bg-zinc-100"
                                     : isDark
                                       ? "border-zinc-700 hover:border-zinc-600"
                                       : "border-zinc-200 hover:border-zinc-300"
@@ -551,23 +551,23 @@ export default function NewServerPage() {
                       ))}
                     </select>
                     {selectedBlueprint && (
-                      <div className={cn("mt-3 p-3 border text-xs rounded-lg", isDark ? "border-zinc-700 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50")}>
+                      <div className={cn("mt-3 p-3 border text-xs", isDark ? "border-zinc-700 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50")}>
                         {selectedBlueprint.description && (
                           <p className={isDark ? "text-zinc-400" : "text-zinc-600"}>{selectedBlueprint.description}</p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2">
                           {selectedBlueprint.dockerImages && Object.keys(selectedBlueprint.dockerImages).length > 0 && (
-                            <span className={cn("px-1.5 py-0.5 text-[10px] rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-200 text-zinc-500")}>
+                            <span className={cn("px-1.5 py-0.5 text-[10px] border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                               {Object.keys(selectedBlueprint.dockerImages).length} docker images
                             </span>
                           )}
                           {selectedBlueprint.variables && selectedBlueprint.variables.length > 0 && (
-                            <span className={cn("px-1.5 py-0.5 text-[10px] rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-200 text-zinc-500")}>
+                            <span className={cn("px-1.5 py-0.5 text-[10px] border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                               {selectedBlueprint.variables.length} variables
                             </span>
                           )}
                           {selectedBlueprint.startup && (
-                            <span className={cn("px-1.5 py-0.5 text-[10px] rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-200 text-zinc-500")}>
+                            <span className={cn("px-1.5 py-0.5 text-[10px] border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                               startup command
                             </span>
                           )}
@@ -591,11 +591,11 @@ export default function NewServerPage() {
                             type="button"
                             onClick={() => setSelectedDockerImage(image)}
                             className={cn(
-                              "px-3 py-2 text-xs font-medium uppercase tracking-wider border transition-all rounded-lg",
+                              "px-3 py-2 text-xs font-medium uppercase tracking-wider border transition-all",
                               selectedDockerImage === image
                                 ? isDark
-                                  ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                                  : "border-purple-500 bg-purple-50 text-purple-700"
+                                  ? "border-zinc-400 bg-zinc-700/50 text-zinc-200"
+                                  : "border-zinc-500 bg-zinc-100 text-zinc-800"
                                 : isDark
                                   ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                                   : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800"

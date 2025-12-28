@@ -83,12 +83,12 @@ export const nodes = {
   list: () => request<Node[]>("/api/nodes"),
   get: (id: string) => request<Node>(`/api/nodes/${id}`),
   create: (data: CreateNodeData) =>
-    request<{ node: Node; token: string }>("/api/nodes", { method: "POST", body: data }),
+    request<{ node: Node; token_id: string; token: string }>("/api/nodes", { method: "POST", body: data }),
   update: (id: string, data: Partial<CreateNodeData>) =>
     request<Node>(`/api/nodes/${id}`, { method: "PATCH", body: data }),
   delete: (id: string) => request(`/api/nodes/${id}`, { method: "DELETE" }),
   regenerateToken: (id: string) =>
-    request<{ token: string }>(`/api/nodes/${id}/regenerate-token`, { method: "POST" }),
+    request<{ token_id: string; token: string }>(`/api/nodes/${id}/regenerate-token`, { method: "POST" }),
 
   // Stats
   getStats: (id: string) => request<NodeStats>(`/api/nodes/${id}/stats`),
@@ -488,6 +488,7 @@ export interface FileList {
 
 export interface DiskUsage {
   used_bytes: number;
+  limit_bytes: number;
   path: string;
 }
 

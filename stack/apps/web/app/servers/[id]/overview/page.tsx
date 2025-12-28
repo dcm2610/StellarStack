@@ -418,7 +418,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       key={cardId}
                       onClick={() => showCard(cardId)}
                       className={cn(
-                        "rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
+                        "overflow-hidden cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
                         isDark ? "hover:shadow-black/50" : "hover:shadow-zinc-300/50"
                       )}
                     >

@@ -20,7 +20,7 @@ export function useAdminTheme() {
   const inputClasses = useMemo(
     () =>
       cn(
-        "w-full px-3 py-2 border text-sm transition-colors focus:outline-none rounded-md",
+        "w-full px-3 py-2 border text-sm transition-colors focus:outline-none",
         isDark
           ? "bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-zinc-500 placeholder:text-zinc-500"
           : "bg-white border-zinc-300 text-zinc-900 focus:border-zinc-400 placeholder:text-zinc-400"
@@ -54,7 +54,7 @@ export function useAdminTheme() {
   const searchInputClasses = useMemo(
     () =>
       cn(
-        "w-full pl-10 pr-4 py-2.5 text-sm border transition-colors focus:outline-none rounded-lg",
+        "w-full pl-10 pr-4 py-2.5 text-sm border transition-colors focus:outline-none",
         isDark
           ? "bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:border-zinc-600"
           : "bg-white border-zinc-200 text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -66,7 +66,7 @@ export function useAdminTheme() {
   const textareaClasses = useMemo(
     () =>
       cn(
-        "w-full px-3 py-2 border text-sm transition-colors focus:outline-none rounded-md resize-none",
+        "w-full px-3 py-2 border text-sm transition-colors focus:outline-none resize-none",
         isDark
           ? "bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-zinc-500 placeholder:text-zinc-500"
           : "bg-white border-zinc-300 text-zinc-900 focus:border-zinc-400 placeholder:text-zinc-400"
@@ -78,7 +78,7 @@ export function useAdminTheme() {
   const selectClasses = useMemo(
     () =>
       cn(
-        "w-full px-3 py-2 border text-sm transition-colors focus:outline-none rounded-md appearance-none cursor-pointer",
+        "w-full px-3 py-2 border text-sm transition-colors focus:outline-none appearance-none cursor-pointer",
         isDark
           ? "bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-zinc-500"
           : "bg-white border-zinc-300 text-zinc-900 focus:border-zinc-400"
@@ -90,19 +90,19 @@ export function useAdminTheme() {
   const buttonClasses = useMemo(
     () => ({
       primary: cn(
-        "px-4 py-2 text-sm font-medium transition-colors rounded-md",
+        "px-4 py-2 text-sm font-medium transition-colors",
         isDark
           ? "bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700"
           : "bg-zinc-900 text-white hover:bg-zinc-800"
       ),
       secondary: cn(
-        "px-4 py-2 text-sm font-medium transition-colors rounded-md border",
+        "px-4 py-2 text-sm font-medium transition-colors border",
         isDark
           ? "bg-transparent text-zinc-300 border-zinc-700 hover:bg-zinc-800"
           : "bg-transparent text-zinc-700 border-zinc-300 hover:bg-zinc-100"
       ),
       danger: cn(
-        "px-4 py-2 text-sm font-medium transition-colors rounded-md",
+        "px-4 py-2 text-sm font-medium transition-colors",
         isDark
           ? "bg-red-900/30 text-red-400 border border-red-900/50 hover:bg-red-900/50"
           : "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"

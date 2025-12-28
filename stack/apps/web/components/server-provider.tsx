@@ -39,13 +39,19 @@ interface ServerProviderProps {
 }
 
 export function ServerProvider({ serverId, children }: ServerProviderProps) {
-  // React Query hooks
+  // Track previous status to detect when installation completes
+  const prevStatusRef = useRef<string | null>(null);
+
+  // React Query hooks - poll faster during installation
   const {
     data: server = null,
     isLoading,
     error: serverError,
     refetch: refetchServer,
-  } = useServerQuery(serverId);
+  } = useServerQuery(serverId, {
+    // Poll every 2 seconds during installation, every 5 seconds otherwise
+    refetchInterval: prevStatusRef.current === "INSTALLING" ? 2000 : 5000,
+  });
 
   // Only fetch console info when server exists and is not suspended
   const {
@@ -60,9 +66,6 @@ export function ServerProvider({ serverId, children }: ServerProviderProps) {
 
   // Check if server is currently installing
   const isInstalling = server?.status === "INSTALLING";
-
-  // Track previous status to detect when installation completes
-  const prevStatusRef = useRef<string | null>(null);
 
   // Play sound when server finishes installing
   useEffect(() => {

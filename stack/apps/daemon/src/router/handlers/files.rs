@@ -280,3 +280,30 @@ fn get_filesystem(server: &Server) -> Result<Filesystem, ApiError> {
         config.egg.file_denylist.clone(),
     ).map_err(|e| ApiError::internal(e.to_string()))
 }
+
+/// Disk usage response
+#[derive(Debug, Serialize)]
+pub struct DiskUsageResponse {
+    pub used_bytes: u64,
+    pub limit_bytes: u64,
+    pub path: String,
+}
+
+/// Get disk usage for the server
+pub async fn disk_usage(
+    Extension(server): Extension<Arc<Server>>,
+) -> Result<Json<DiskUsageResponse>, ApiError> {
+    let fs = get_filesystem(&server)?;
+
+    // Calculate actual disk usage
+    let used = fs.disk_usage().calculate(server.data_dir()).await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    let limit = server.config().disk_bytes();
+
+    Ok(Json(DiskUsageResponse {
+        used_bytes: used,
+        limit_bytes: limit,
+        path: "/".to_string(),
+    }))
+}

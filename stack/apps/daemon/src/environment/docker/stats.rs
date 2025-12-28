@@ -77,9 +77,25 @@ pub async fn poll_stats(
                 event_bus.publish(Event::Stats(stats));
             }
             Err(e) => {
-                // Container might have stopped
-                if let bollard::errors::Error::DockerResponseServerError { status_code: 404, .. } = e {
-                    debug!("Container {} not found, stopping stats", container_name);
+                // Container might have stopped - check various error conditions
+                let error_str = e.to_string();
+
+                let is_stopped = matches!(
+                    &e,
+                    bollard::errors::Error::DockerResponseServerError { status_code: 404, .. } |
+                    bollard::errors::Error::DockerResponseServerError { status_code: 409, .. }
+                ) || error_str.contains("container is stopped")
+                  || error_str.contains("not running")
+                  || error_str.contains("No such container");
+
+                // JSON deserialization errors typically happen when Docker sends incomplete
+                // stats as the container is exiting - treat these as normal stop conditions
+                let is_json_error = matches!(&e, bollard::errors::Error::JsonDataError { .. })
+                    || error_str.contains("missing field")
+                    || error_str.contains("Failed to deserialize");
+
+                if is_stopped || is_json_error {
+                    debug!("Container {} stopped or sent incomplete stats, stopping stats poller", container_name);
                     break;
                 }
                 warn!("Error reading stats from {}: {}", container_name, e);
@@ -198,8 +214,25 @@ pub fn start_stats_poller(
                             event_bus.publish(Event::Stats(stats));
                         }
                         Err(e) => {
-                            if let bollard::errors::Error::DockerResponseServerError { status_code: 404, .. } = e {
-                                debug!("Container {} not found, stopping stats poller", container_name);
+                            // Container might have stopped - check various error conditions
+                            let error_str = e.to_string();
+
+                            let is_stopped = matches!(
+                                &e,
+                                bollard::errors::Error::DockerResponseServerError { status_code: 404, .. } |
+                                bollard::errors::Error::DockerResponseServerError { status_code: 409, .. }
+                            ) || error_str.contains("container is stopped")
+                              || error_str.contains("not running")
+                              || error_str.contains("No such container");
+
+                            // JSON deserialization errors typically happen when Docker sends incomplete
+                            // stats as the container is exiting - treat these as normal stop conditions
+                            let is_json_error = matches!(&e, bollard::errors::Error::JsonDataError { .. })
+                                || error_str.contains("missing field")
+                                || error_str.contains("Failed to deserialize");
+
+                            if is_stopped || is_json_error {
+                                debug!("Container {} stopped or sent incomplete stats, stopping stats poller", container_name);
                                 break;
                             }
                             warn!("Stats error for {}: {}", container_name, e);

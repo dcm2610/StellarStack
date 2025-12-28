@@ -115,7 +115,7 @@ export default function FileEditPage() {
               <button
                 onClick={handleBack}
                 className={cn(
-                  "p-2 rounded-md transition-colors",
+                  "p-2 transition-colors",
                   isDark
                     ? "hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200"
                     : "hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900"
@@ -127,8 +127,8 @@ export default function FileEditPage() {
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "p-2 rounded-lg",
-                    isDark ? "bg-zinc-800" : "bg-zinc-100"
+                    "p-2 border",
+                    isDark ? "bg-zinc-800 border-zinc-700" : "bg-zinc-100 border-zinc-300"
                   )}
                 >
                   <File className={cn("w-5 h-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
@@ -151,10 +151,10 @@ export default function FileEditPage() {
 
               {hasChanges && (
                 <span className={cn(
-                  "px-2 py-1 text-xs rounded",
+                  "px-2 py-1 text-xs border",
                   isDark
-                    ? "bg-amber-900/30 text-amber-400"
-                    : "bg-amber-100 text-amber-700"
+                    ? "border-zinc-600 text-zinc-400"
+                    : "border-zinc-400 text-zinc-600"
                 )}>
                   Unsaved changes
                 </span>
@@ -163,8 +163,8 @@ export default function FileEditPage() {
 
             <div className="flex items-center gap-3">
               <span className={cn(
-                "text-xs px-2 py-1 rounded uppercase tracking-wider",
-                isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"
+                "text-xs px-2 py-1 border uppercase tracking-wider",
+                isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
               )}>
                 {language}
               </span>
@@ -173,7 +173,7 @@ export default function FileEditPage() {
                 onClick={handleSave}
                 disabled={!hasChanges || write.isPending}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors",
                   hasChanges && !write.isPending
                     ? isDark
                       ? "bg-white text-black hover:bg-zinc-200"
@@ -208,7 +208,7 @@ export default function FileEditPage() {
               <button
                 onClick={handleBack}
                 className={cn(
-                  "px-4 py-2 rounded-md text-sm",
+                  "px-4 py-2 text-sm",
                   isDark
                     ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                     : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"

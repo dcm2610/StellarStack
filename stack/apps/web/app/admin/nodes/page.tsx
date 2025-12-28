@@ -36,13 +36,13 @@ export default function NodesPage() {
   // React Query hooks
   const { data: nodesList = [], isLoading } = useNodes();
   const { data: locationsList = [] } = useLocations();
-  const { create, update, remove } = useNodeMutations();
+  const { create, remove } = useNodeMutations();
 
   // UI state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingNode, setEditingNode] = useState<Node | null>(null);
-  const [showToken, setShowToken] = useState<string | null>(null);
+  const [showToken, setShowToken] = useState<{ token: string; token_id: string } | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedTokenId, setCopiedTokenId] = useState(false);
   const [deleteConfirmNode, setDeleteConfirmNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -73,41 +73,18 @@ export default function NodesPage() {
       uploadLimit: 104857600,
       locationId: "",
     });
-    setEditingNode(null);
   };
 
   const handleSubmit = async () => {
     try {
-      if (editingNode) {
-        await update.mutateAsync({ id: editingNode.id, data: formData });
-        toast.success("Node updated successfully");
-      } else {
-        const result = await create.mutateAsync(formData);
-        setShowToken(result.token);
-        toast.success("Node created successfully");
-      }
+      const result = await create.mutateAsync(formData);
+      setShowToken({ token: result.token, token_id: result.token_id });
+      toast.success("Node created successfully");
       setIsModalOpen(false);
       resetForm();
     } catch (error) {
-      toast.error(editingNode ? "Failed to update node" : "Failed to create node");
+      toast.error("Failed to create node");
     }
-  };
-
-  const handleEdit = (node: Node) => {
-    setEditingNode(node);
-    setFormData({
-      displayName: node.displayName,
-      host: node.host,
-      port: node.port,
-      protocol: node.protocol,
-      sftpPort: node.sftpPort,
-      memoryLimit: node.memoryLimit,
-      diskLimit: node.diskLimit,
-      cpuLimit: node.cpuLimit,
-      uploadLimit: node.uploadLimit,
-      locationId: node.locationId || "",
-    });
-    setIsModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -123,9 +100,17 @@ export default function NodesPage() {
 
   const copyToken = () => {
     if (showToken) {
-      navigator.clipboard.writeText(showToken);
+      navigator.clipboard.writeText(showToken.token);
       setCopiedToken(true);
       setTimeout(() => setCopiedToken(false), 2000);
+    }
+  };
+
+  const copyTokenId = () => {
+    if (showToken) {
+      navigator.clipboard.writeText(showToken.token_id);
+      setCopiedTokenId(true);
+      setTimeout(() => setCopiedTokenId(false), 2000);
     }
   };
 
@@ -212,7 +197,7 @@ export default function NodesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none rounded-lg",
+                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
                   isDark
                     ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -230,7 +215,7 @@ export default function NodesPage() {
                 </div>
               ) : filteredNodes.length === 0 ? (
                 <div className={cn(
-                  "text-center py-12 border rounded-lg",
+                  "text-center py-12 border",
                   isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
                 )}>
                   {searchQuery ? "No nodes match your search." : "No nodes configured. Add your first node to get started."}
@@ -242,7 +227,7 @@ export default function NodesPage() {
                       <ContextMenuTrigger asChild>
                         <div
                           className={cn(
-                            "relative p-5 border transition-all hover:scale-[1.005] group rounded-lg cursor-context-menu",
+                            "relative p-5 border transition-all hover:scale-[1.005] group cursor-context-menu",
                             isDark
                               ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20 hover:border-zinc-700"
                               : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20 hover:border-zinc-400"
@@ -255,7 +240,7 @@ export default function NodesPage() {
                               <CpuIcon className={cn(
                                 "w-8 h-8",
                                 node.isOnline
-                                  ? (isDark ? "text-green-400" : "text-green-600")
+                                  ? (isDark ? "text-zinc-300" : "text-zinc-700")
                                   : (isDark ? "text-zinc-600" : "text-zinc-400")
                               )} />
                               <div>
@@ -265,10 +250,10 @@ export default function NodesPage() {
                                 )}>
                                   {node.displayName}
                                   <span className={cn(
-                                    "text-[10px] px-1.5 py-0.5 uppercase tracking-wider rounded",
+                                    "text-[10px] px-1.5 py-0.5 uppercase tracking-wider border",
                                     node.isOnline
-                                      ? (isDark ? "bg-green-900/50 text-green-400" : "bg-green-100 text-green-700")
-                                      : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-100 text-zinc-500")
+                                      ? (isDark ? "border-zinc-600 text-zinc-300" : "border-zinc-400 text-zinc-600")
+                                      : (isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")
                                   )}>
                                     {node.isOnline ? "Online" : "Offline"}
                                   </span>
@@ -281,7 +266,7 @@ export default function NodesPage() {
                                   <span>RAM: {formatBytes(node.memoryLimit)}</span>
                                   <span>Disk: {formatBytes(node.diskLimit)}</span>
                                   {node.heartbeatLatency && (
-                                    <span className={cn(isDark ? "text-green-400" : "text-green-600")}>
+                                    <span className={cn(isDark ? "text-zinc-400" : "text-zinc-600")}>
                                       {node.heartbeatLatency}ms
                                     </span>
                                   )}
@@ -303,7 +288,7 @@ export default function NodesPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleEdit(node)}
+                                onClick={() => router.push(`/admin/nodes/${node.id}/edit`)}
                                 className={cn(
                                   "text-xs p-2 transition-all hover:scale-110 active:scale-95",
                                   isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
@@ -338,7 +323,7 @@ export default function NodesPage() {
                           Configure
                         </ContextMenuItem>
                         <ContextMenuItem
-                          onClick={() => handleEdit(node)}
+                          onClick={() => router.push(`/admin/nodes/${node.id}/edit`)}
                           className="gap-2 cursor-pointer"
                         >
                           <EditIcon className="w-4 h-4" />
@@ -363,18 +348,18 @@ export default function NodesPage() {
         </div>
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Create Modal */}
       <FormModal
         open={isModalOpen}
         onOpenChange={(open) => {
           setIsModalOpen(open);
           if (!open) resetForm();
         }}
-        title={editingNode ? "Edit Node" : "Create Node"}
-        submitLabel={editingNode ? "Update" : "Create"}
+        title="Create Node"
+        submitLabel="Create"
         onSubmit={handleSubmit}
         isDark={isDark}
-        isLoading={create.isPending || update.isPending}
+        isLoading={create.isPending}
         isValid={isFormValid}
       >
         <div className="space-y-4">
@@ -506,25 +491,51 @@ export default function NodesPage() {
         )}>
           <DialogHeader>
             <DialogTitle className={cn(isDark ? "text-zinc-100" : "text-zinc-900")}>
-              Node Token
+              Node Credentials
             </DialogTitle>
             <DialogDescription className={cn(isDark ? "text-zinc-400" : "text-zinc-600")}>
-              Copy this token and use it to configure the daemon. This token will only be shown once.
+              Copy these credentials and use them to configure the daemon. They will only be shown once.
             </DialogDescription>
           </DialogHeader>
-          <div className={cn(
-            "p-3 font-mono text-xs break-all border rounded-lg flex items-center justify-between gap-2",
-            isDark ? "bg-zinc-950 border-zinc-700 text-zinc-300" : "bg-zinc-50 border-zinc-200 text-zinc-700"
-          )}>
-            <span className="flex-1">{showToken}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={copyToken}
-              className={cn("shrink-0", isDark ? "border-zinc-700" : "border-zinc-300")}
-            >
-              {copiedToken ? <CheckIcon className="w-4 h-4 text-green-500" /> : <CopyIcon className="w-4 h-4" />}
-            </Button>
+          <div className="space-y-3">
+            <div>
+              <label className={cn("text-xs uppercase tracking-wider mb-1 block", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                Token ID
+              </label>
+              <div className={cn(
+                "p-3 font-mono text-xs break-all border flex items-center justify-between gap-2",
+                isDark ? "bg-zinc-950 border-zinc-700 text-zinc-300" : "bg-zinc-50 border-zinc-200 text-zinc-700"
+              )}>
+                <span className="flex-1">{showToken?.token_id}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyTokenId}
+                  className={cn("shrink-0", isDark ? "border-zinc-700" : "border-zinc-300")}
+                >
+                  {copiedTokenId ? <CheckIcon className={cn("w-4 h-4", isDark ? "text-zinc-300" : "text-zinc-700")} /> : <CopyIcon className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className={cn("text-xs uppercase tracking-wider mb-1 block", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                Token
+              </label>
+              <div className={cn(
+                "p-3 font-mono text-xs break-all border flex items-center justify-between gap-2",
+                isDark ? "bg-zinc-950 border-zinc-700 text-zinc-300" : "bg-zinc-50 border-zinc-200 text-zinc-700"
+              )}>
+                <span className="flex-1">{showToken?.token}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyToken}
+                  className={cn("shrink-0", isDark ? "border-zinc-700" : "border-zinc-300")}
+                >
+                  {copiedToken ? <CheckIcon className={cn("w-4 h-4", isDark ? "text-zinc-300" : "text-zinc-700")} /> : <CopyIcon className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
           </div>
           <div className="flex justify-end mt-4">
             <Button

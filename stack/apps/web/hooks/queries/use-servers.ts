@@ -17,11 +17,15 @@ export function useServers() {
   });
 }
 
-export function useServer(id: string | undefined) {
+export function useServer(id: string | undefined, options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: serverKeys.detail(id!),
     queryFn: () => servers.get(id!),
     enabled: !!id,
+    // Default to polling every 5 seconds, can be overridden by options
+    refetchInterval: options?.refetchInterval ?? 5000,
+    // Only poll when the window is focused
+    refetchIntervalInBackground: false,
   });
 }
 

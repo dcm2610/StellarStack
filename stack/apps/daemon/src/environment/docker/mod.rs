@@ -2,7 +2,7 @@
 
 mod container;
 mod environment;
-mod power;
+pub mod power;
 mod stats;
 
 pub use environment::DockerEnvironment;

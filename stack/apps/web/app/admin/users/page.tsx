@@ -159,7 +159,7 @@ export default function UsersPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none rounded-lg",
+                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
                   isDark
                     ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -171,7 +171,7 @@ export default function UsersPage() {
           {/* Users Table */}
           <FadeIn delay={0.1}>
             <div className={cn(
-              "border overflow-hidden rounded-lg",
+              "border overflow-hidden",
               isDark ? "border-zinc-700/50" : "border-zinc-200"
             )}>
               <table className="w-full">
@@ -214,10 +214,8 @@ export default function UsersPage() {
                         <td className={cn("p-3", isDark ? "text-zinc-100" : "text-zinc-800")}>
                           <div className="flex items-center gap-3">
                             <div className={cn(
-                              "w-8 h-8 flex items-center justify-center rounded-full",
-                              user.role === "admin"
-                                ? isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-100 text-amber-600"
-                                : isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"
+                              "w-8 h-8 flex items-center justify-center border",
+                              isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400" : "border-zinc-300 bg-zinc-100 text-zinc-600"
                             )}>
                               {user.role === "admin" ? (
                                 <ShieldIcon className="w-4 h-4" />
@@ -238,7 +236,7 @@ export default function UsersPage() {
                         <td className={cn("p-3 text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
                           {user.email}
                           {user.emailVerified && (
-                            <span className={cn("ml-2 text-xs", isDark ? "text-green-400" : "text-green-600")}>
+                            <span className={cn("ml-2 text-xs border px-1 py-0.5", isDark ? "text-zinc-400 border-zinc-600" : "text-zinc-500 border-zinc-400")}>
                               Verified
                             </span>
                           )}
@@ -248,14 +246,10 @@ export default function UsersPage() {
                             onClick={() => toggleRole(user)}
                             disabled={user.id === currentUser?.id || update.isPending}
                             className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-1 text-xs uppercase tracking-wider font-medium transition-colors rounded",
-                              user.role === "admin"
-                                ? isDark
-                                  ? "bg-amber-900/30 text-amber-400 hover:bg-amber-900/50"
-                                  : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                                : isDark
-                                  ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200",
+                              "inline-flex items-center gap-1.5 px-2 py-1 text-xs uppercase tracking-wider font-medium transition-colors border",
+                              isDark
+                                ? "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700"
+                                : "border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200",
                               user.id === currentUser?.id && "opacity-50 cursor-not-allowed"
                             )}
                           >
@@ -369,7 +363,7 @@ export default function UsersPage() {
               <option value="admin">Admin</option>
             </select>
             {editingUser?.id === currentUser?.id && (
-              <p className={cn("text-xs mt-1", isDark ? "text-amber-400" : "text-amber-600")}>
+              <p className={cn("text-xs mt-1", isDark ? "text-zinc-500" : "text-zinc-500")}>
                 You cannot change your own role
               </p>
             )}

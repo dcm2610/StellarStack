@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::api::HttpClient;
 use crate::config::{DockerConfiguration, RedisConfiguration, SystemConfiguration};
@@ -436,7 +436,10 @@ impl Server {
 
                     // Report to panel
                     info!("Server {} state changed to {} - syncing with panel", uuid, status);
-                    let _ = api_client.set_server_status(&uuid, status).await;
+                    match api_client.set_server_status(&uuid, status).await {
+                        Ok(_) => info!("Server {} status synced to panel: {}", uuid, status),
+                        Err(e) => warn!("Failed to sync server {} status to panel: {}", uuid, e),
+                    }
 
                     // If server went offline, we can stop watching
                     if new_state == ProcessState::Offline {
@@ -458,7 +461,10 @@ impl Server {
         self.environment.wait_for_stop(self.ctx.clone(), timeout, true).await?;
 
         // Report status to panel
-        let _ = self.api_client.set_server_status(&self.uuid(), "offline").await;
+        match self.api_client.set_server_status(&self.uuid(), "offline").await {
+            Ok(_) => info!("Server {} status updated to offline on panel", self.uuid()),
+            Err(e) => warn!("Failed to update server {} status to offline on panel: {}", self.uuid(), e),
+        }
 
         Ok(())
     }
@@ -478,7 +484,15 @@ impl Server {
         self.crash_handler.record_start();
         self.environment.start(self.ctx.clone()).await?;
 
-        let _ = self.api_client.set_server_status(&self.uuid(), "running").await;
+        // Start startup detection watcher (same as regular start)
+        self.start_startup_detector();
+
+        // Start state change watcher to sync with panel
+        self.start_state_watcher();
+
+        // Report status to panel as starting (startup detector will update to running)
+        info!("Server {} container restarted, waiting for startup detection", self.uuid());
+        let _ = self.api_client.set_server_status(&self.uuid(), "starting").await;
 
         Ok(())
     }
@@ -490,7 +504,10 @@ impl Server {
         // Brief wait for cleanup
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let _ = self.api_client.set_server_status(&self.uuid(), "offline").await;
+        match self.api_client.set_server_status(&self.uuid(), "offline").await {
+            Ok(_) => info!("Server {} status updated to offline on panel", self.uuid()),
+            Err(e) => warn!("Failed to update server {} status to offline on panel: {}", self.uuid(), e),
+        }
 
         Ok(())
     }
@@ -584,6 +601,65 @@ impl Server {
     /// Update server configuration
     pub fn update_config(&self, new_config: ServerConfig) {
         *self.config.write() = new_config;
+    }
+
+    /// Check the actual container status and sync it with the panel
+    /// This is called on daemon startup to ensure the panel has accurate status
+    pub async fn sync_status_to_panel(&self) -> Result<(), ServerError> {
+        let uuid = self.uuid();
+
+        // Check if the container exists and what state it's in
+        let (exists, is_running) = match (
+            self.environment.exists().await,
+            self.environment.is_running().await,
+        ) {
+            (Ok(exists), Ok(running)) => (exists, running),
+            (Ok(exists), Err(_)) => (exists, false),
+            (Err(_), _) => (false, false),
+        };
+
+        // Determine the status to report
+        let status = if !exists {
+            // Container doesn't exist yet - mark as offline
+            self.environment.set_state(ProcessState::Offline);
+            "offline"
+        } else if is_running {
+            // Container is running - attach to it so console commands work
+            self.environment.set_state(ProcessState::Running);
+
+            // Attach to the running container to enable console input/output
+            info!("Attaching to running container for server {}", uuid);
+            if let Err(e) = self.environment.attach(self.ctx.clone()).await {
+                error!("Failed to attach to running container {}: {}", uuid, e);
+            }
+
+            // Start watching for state changes
+            self.start_state_watcher();
+
+            // Start the exit watcher to detect when container stops
+            let environment = self.environment.clone();
+            let event_bus = self.event_bus.clone();
+            let ctx = self.ctx.clone();
+            tokio::spawn(async move {
+                use crate::environment::docker::power::wait_for_container_exit;
+                let _ = wait_for_container_exit(&environment, ctx).await;
+                event_bus.publish_state(ProcessState::Offline);
+            });
+
+            "running"
+        } else {
+            // Container exists but is not running
+            self.environment.set_state(ProcessState::Offline);
+            "offline"
+        };
+
+        info!("Server {} container status on startup: {} (exists={}, running={})", uuid, status, exists, is_running);
+
+        // Report to panel
+        self.api_client.set_server_status(&uuid, status).await
+            .map_err(|e| ServerError::Api(e.to_string()))?;
+
+        Ok(())
     }
 
     /// Sync configuration with panel

@@ -35,6 +35,9 @@ pub async fn run(config_path: &str) -> Result<()> {
     }
     info!("Loaded {} servers", manager.count());
 
+    // Sync container statuses to panel (important after daemon restart)
+    manager.sync_all_statuses().await;
+
     // Build the HTTP router
     let state = AppState {
         manager: manager.clone(),

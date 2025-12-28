@@ -245,7 +245,7 @@ export default function BlueprintsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none rounded-lg",
+                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
                   isDark
                     ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -263,7 +263,7 @@ export default function BlueprintsPage() {
                 </div>
               ) : filteredBlueprints.length === 0 ? (
                 <div className={cn(
-                  "col-span-full text-center py-12 border rounded-lg",
+                  "col-span-full text-center py-12 border",
                   isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
                 )}>
                   {searchQuery ? "No blueprints match your search." : "No blueprints configured. Add your first blueprint."}
@@ -273,17 +273,17 @@ export default function BlueprintsPage() {
                   <div
                     key={blueprint.id}
                     className={cn(
-                      "relative p-4 border transition-colors rounded-lg",
+                      "relative p-4 border transition-colors",
                       isDark
-                        ? "bg-zinc-900/50 border-zinc-700/50 hover:border-zinc-600"
-                        : "bg-white border-zinc-200 hover:border-zinc-300"
+                        ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 hover:border-zinc-700"
+                        : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 hover:border-zinc-400"
                     )}
                   >
                     <CornerAccents isDark={isDark} size="sm" />
 
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <PackageIcon className={cn("w-6 h-6 mt-0.5", isDark ? "text-purple-400" : "text-purple-600")} />
+                        <PackageIcon className={cn("w-6 h-6 mt-0.5", isDark ? "text-zinc-400" : "text-zinc-600")} />
                         <div>
                           <div className={cn("font-medium flex items-center gap-2", isDark ? "text-zinc-100" : "text-zinc-800")}>
                             {blueprint.name}
@@ -298,8 +298,8 @@ export default function BlueprintsPage() {
                           </div>
                           {blueprint.category && (
                             <div className={cn(
-                              "text-[10px] mt-2 inline-block px-1.5 py-0.5 uppercase tracking-wider rounded",
-                              isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"
+                              "text-[10px] mt-2 inline-block px-1.5 py-0.5 uppercase tracking-wider border",
+                              isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
                             )}>
                               {blueprint.category}
                             </div>
@@ -317,22 +317,22 @@ export default function BlueprintsPage() {
                           )}
                           <div className="flex flex-wrap gap-1 mt-2">
                             {blueprint.dockerImages && Object.keys(blueprint.dockerImages).length > 1 && (
-                              <span className={cn("text-[10px] px-1.5 py-0.5 rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-100 text-zinc-500")}>
+                              <span className={cn("text-[10px] px-1.5 py-0.5 border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                                 {Object.keys(blueprint.dockerImages).length} images
                               </span>
                             )}
                             {blueprint.variables && blueprint.variables.length > 0 && (
-                              <span className={cn("text-[10px] px-1.5 py-0.5 rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-100 text-zinc-500")}>
+                              <span className={cn("text-[10px] px-1.5 py-0.5 border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                                 {blueprint.variables.length} variables
                               </span>
                             )}
                             {blueprint.startup && (
-                              <span className={cn("text-[10px] px-1.5 py-0.5 rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-100 text-zinc-500")}>
+                              <span className={cn("text-[10px] px-1.5 py-0.5 border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                                 startup
                               </span>
                             )}
                             {blueprint.installScript && (
-                              <span className={cn("text-[10px] px-1.5 py-0.5 rounded", isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-100 text-zinc-500")}>
+                              <span className={cn("text-[10px] px-1.5 py-0.5 border", isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")}>
                                 install script
                               </span>
                             )}
@@ -495,7 +495,7 @@ export default function BlueprintsPage() {
             )}
             {!showJsonEditor && (
               <div className={cn(
-                "p-3 text-xs font-mono max-h-32 overflow-auto border rounded-md",
+                "p-3 text-xs font-mono max-h-32 overflow-auto border",
                 isDark ? "bg-zinc-900 border-zinc-700 text-zinc-400" : "bg-zinc-50 border-zinc-200 text-zinc-600"
               )}>
                 <pre>{configJson}</pre>
@@ -511,7 +511,7 @@ export default function BlueprintsPage() {
                 Docker Images
               </label>
               <div className={cn(
-                "p-3 border space-y-2 rounded-md",
+                "p-3 border space-y-2",
                 isDark ? "bg-zinc-900/50 border-zinc-700" : "bg-zinc-50 border-zinc-200"
               )}>
                 {Object.entries(editingBlueprint.dockerImages).map(([label, image]) => (
@@ -536,7 +536,7 @@ export default function BlueprintsPage() {
                 Startup Command
               </label>
               <div className={cn(
-                "p-3 border font-mono text-xs overflow-x-auto rounded-md",
+                "p-3 border font-mono text-xs overflow-x-auto",
                 isDark ? "bg-zinc-900/50 border-zinc-700 text-zinc-400" : "bg-zinc-50 border-zinc-200 text-zinc-600"
               )}>
                 {editingBlueprint.startup}
@@ -552,7 +552,7 @@ export default function BlueprintsPage() {
                 Variables ({editingBlueprint.variables.length})
               </label>
               <div className={cn(
-                "border divide-y max-h-64 overflow-y-auto rounded-md",
+                "border divide-y max-h-64 overflow-y-auto",
                 isDark ? "bg-zinc-900/50 border-zinc-700 divide-zinc-700/50" : "bg-zinc-50 border-zinc-200 divide-zinc-200"
               )}>
                 {editingBlueprint.variables.map((variable) => (
@@ -627,7 +627,7 @@ export default function BlueprintsPage() {
               accept=".json"
               onChange={handleFileImport}
               className={cn(
-                "w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-medium file:rounded-md",
+                "w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-medium",
                 isDark
                   ? "file:bg-zinc-800 file:text-zinc-300 text-zinc-400"
                   : "file:bg-zinc-100 file:text-zinc-700 text-zinc-600"

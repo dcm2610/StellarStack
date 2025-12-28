@@ -131,6 +131,7 @@ fn file_routes() -> Router<AppState> {
         .route("/compress", post(handlers::files::compress_files))
         .route("/decompress", post(handlers::files::decompress_file))
         .route("/chmod", post(handlers::files::chmod_file))
+        .route("/disk-usage", get(handlers::files::disk_usage))
 }
 
 /// Routes for backup operations

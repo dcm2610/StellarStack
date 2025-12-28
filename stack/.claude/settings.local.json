@@ -43,7 +43,8 @@
       "Bash(pnpm exec prisma:*)",
       "Bash(curl:*)",
       "Bash(cargo doc:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []

@@ -116,7 +116,7 @@ export function CodeEditor({
     <div
       ref={containerRef}
       className={cn(
-        "overflow-hidden border rounded-md",
+        "overflow-hidden border",
         isDark
           ? "border-zinc-700 bg-zinc-900"
           : "border-zinc-300 bg-white",

@@ -61,42 +61,126 @@ async function main() {
     console.error("Failed to create admin user");
   }
 
-  // Create a sample blueprint
+  // Create a sample blueprint (Pterodactyl-compatible)
   const blueprint = await prisma.blueprint.upsert({
     where: { id: "minecraft-vanilla" },
-    update: {},
+    update: {
+      imageName: "ghcr.io/ptero-eggs/yolks",
+      imageTag: "java_21",
+      startup: "java -Xms128M -Xmx{{SERVER_MEMORY}}M -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}",
+      stopCommand: "stop",
+      startupDetection: { done: "Done" },
+      installScript: `#!/bin/ash
+# Minecraft Vanilla Server Install Script
+
+cd /mnt/server
+
+# Download vanilla server
+LATEST_VERSION=\${VANILLA_VERSION:-"1.21.4"}
+
+echo "Downloading Minecraft server version \${LATEST_VERSION}..."
+
+# Get version manifest
+MANIFEST_URL="https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+VERSION_URL=$(curl -s $MANIFEST_URL | jq -r ".versions[] | select(.id == \\"$LATEST_VERSION\\") | .url")
+
+if [ -z "$VERSION_URL" ]; then
+  echo "Version $LATEST_VERSION not found, using latest release..."
+  VERSION_URL=$(curl -s $MANIFEST_URL | jq -r '.latest.release as $ver | .versions[] | select(.id == $ver) | .url')
+fi
+
+# Get server download URL
+SERVER_URL=$(curl -s $VERSION_URL | jq -r '.downloads.server.url')
+
+# Download server
+curl -o server.jar $SERVER_URL
+
+echo "Download complete!"
+`,
+      installContainer: "ghcr.io/ptero-eggs/installers:alpine",
+      installEntrypoint: "ash",
+      variables: [
+        {
+          name: "Server Jar File",
+          description: "The name of the server jarfile to run",
+          env_variable: "SERVER_JARFILE",
+          default_value: "server.jar",
+          user_viewable: true,
+          user_editable: true,
+          rules: "required|string|max:50",
+        },
+        {
+          name: "Minecraft Version",
+          description: "The version of Minecraft to install",
+          env_variable: "VANILLA_VERSION",
+          default_value: "1.21.4",
+          user_viewable: true,
+          user_editable: true,
+          rules: "required|string|max:20",
+        },
+      ],
+    },
     create: {
       id: "minecraft-vanilla",
       name: "Minecraft Vanilla",
       description: "Vanilla Minecraft Java Edition server",
       category: "gaming",
-      imageName: "itzg/minecraft-server",
-      imageTag: "latest",
+      imageName: "ghcr.io/ptero-eggs/yolks",
+      imageTag: "java_21",
+      startup: "java -Xms128M -Xmx{{SERVER_MEMORY}}M -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}",
+      stopCommand: "stop",
+      startupDetection: { done: "Done" },
+      installScript: `#!/bin/ash
+# Minecraft Vanilla Server Install Script
+
+cd /mnt/server
+
+# Download vanilla server
+LATEST_VERSION=\${VANILLA_VERSION:-"1.21.4"}
+
+echo "Downloading Minecraft server version \${LATEST_VERSION}..."
+
+# Get version manifest
+MANIFEST_URL="https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+VERSION_URL=$(curl -s $MANIFEST_URL | jq -r ".versions[] | select(.id == \\"$LATEST_VERSION\\") | .url")
+
+if [ -z "$VERSION_URL" ]; then
+  echo "Version $LATEST_VERSION not found, using latest release..."
+  VERSION_URL=$(curl -s $MANIFEST_URL | jq -r '.latest.release as $ver | .versions[] | select(.id == $ver) | .url')
+fi
+
+# Get server download URL
+SERVER_URL=$(curl -s $VERSION_URL | jq -r '.downloads.server.url')
+
+# Download server
+curl -o server.jar $SERVER_URL
+
+echo "Download complete!"
+`,
+      installContainer: "ghcr.io/ptero-eggs/installers:alpine",
+      installEntrypoint: "ash",
+      variables: [
+        {
+          name: "Server Jar File",
+          description: "The name of the server jarfile to run",
+          env_variable: "SERVER_JARFILE",
+          default_value: "server.jar",
+          user_viewable: true,
+          user_editable: true,
+          rules: "required|string|max:50",
+        },
+        {
+          name: "Minecraft Version",
+          description: "The version of Minecraft to install",
+          env_variable: "VANILLA_VERSION",
+          default_value: "1.21.4",
+          user_viewable: true,
+          user_editable: true,
+          rules: "required|string|max:20",
+        },
+      ],
       isPublic: true,
-      config: {
-        environment: {
-          EULA: "TRUE",
-          TYPE: "VANILLA",
-        },
-        ports: [
-          {
-            container_port: 25565,
-            protocol: "tcp",
-          },
-        ],
-        resources: {
-          memory: 2147483648, // 2GB
-          cpus: 1.0,
-        },
-        volumes: [
-          {
-            name: "minecraft-data",
-            target: "/data",
-          },
-        ],
-        stdin_open: true,
-        tty: true,
-      },
+      config: {},
     },
   });
   console.log("Created blueprint:", blueprint.name);

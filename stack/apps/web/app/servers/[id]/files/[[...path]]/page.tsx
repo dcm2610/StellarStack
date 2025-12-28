@@ -34,6 +34,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@workspace/ui/components/context-menu";
 import { AnimatedBackground } from "@workspace/ui/components/shared/AnimatedBackground";
 import { FloatingDots } from "@workspace/ui/components/shared/Animations";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
@@ -103,7 +110,7 @@ const parseDaemonError = (error: unknown): string => {
       // If parsing fails, try simpler extraction
       if (message.includes("Already exists")) {
         const match = message.match(/Already exists:\s*([^"}\]]+)/);
-        if (match) {
+        if (match?.[1]) {
           return `"${match[1].trim()}" already exists`;
         }
         return "File or folder already exists";
@@ -154,7 +161,7 @@ const FilesPage = (): JSX.Element | null => {
 
   // Storage info - total from server allocation, used from actual disk usage
   const storageUsedGB = diskUsage.used / (1024 * 1024 * 1024);
-  const storageTotalGB = server ? server.disk / 1024 : 10; // server.disk is in MB
+  const storageTotalGB = diskUsage.total > 0 ? diskUsage.total / (1024 * 1024 * 1024) : (server ? server.disk / 1024 : 10); // fallback to server.disk (in MB) if no limit set
   const storagePercentage = storageTotalGB > 0 ? (storageUsedGB / storageTotalGB) * 100 : 0;
 
   useEffect(() => {
@@ -172,7 +179,9 @@ const FilesPage = (): JSX.Element | null => {
   const fetchDiskUsage = useCallback(async () => {
     try {
       const usage = await servers.files.diskUsage(serverId);
-      setDiskUsage({ used: usage.used_bytes, total: server?.disk ? server.disk * 1024 * 1024 : 0 });
+      // Use the limit from daemon if available, otherwise fall back to server config
+      const totalBytes = usage.limit_bytes || (server?.disk ? server.disk * 1024 * 1024 : 0);
+      setDiskUsage({ used: usage.used_bytes, total: totalBytes });
     } catch {
       // Silently fail - disk usage is not critical
     }
@@ -1045,32 +1054,97 @@ const FilesPage = (): JSX.Element | null => {
                 ) : (
                   <AnimatePresence mode="popLayout">
                     {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <motion.tr
-                          key={row.original.id}
-                          layout
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 20, scale: 0.95 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
-                          data-state={row.getIsSelected() && "selected"}
-                          className={cn(
-                            "border-b cursor-pointer transition-colors",
-                            isDark
-                              ? "border-zinc-800/50 hover:bg-zinc-800/30 data-[state=selected]:bg-zinc-800/50"
-                              : "border-zinc-100 hover:bg-zinc-100/50 data-[state=selected]:bg-zinc-200/50"
-                          )}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="px-4 py-3">
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
+                      table.getRowModel().rows.map((row) => {
+                        const file = row.original;
+                        return (
+                          <ContextMenu key={row.original.id}>
+                            <ContextMenuTrigger asChild>
+                              <motion.tr
+                                layout
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                data-state={row.getIsSelected() && "selected"}
+                                className={cn(
+                                  "border-b cursor-pointer transition-colors",
+                                  isDark
+                                    ? "border-zinc-800/50 hover:bg-zinc-800/30 data-[state=selected]:bg-zinc-800/50"
+                                    : "border-zinc-100 hover:bg-zinc-100/50 data-[state=selected]:bg-zinc-200/50"
+                                )}
+                              >
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCell key={cell.id} className="px-4 py-3">
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </motion.tr>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent
+                              className={cn(
+                                "min-w-[160px]",
+                                isDark ? "bg-zinc-900 border-zinc-700" : "bg-white border-zinc-200"
                               )}
-                            </TableCell>
-                          ))}
-                        </motion.tr>
-                      ))
+                            >
+                              <ContextMenuItem
+                                onClick={() => handleRename(file)}
+                                className={cn(
+                                  "gap-2 text-xs uppercase tracking-wider cursor-pointer",
+                                  isDark ? "text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100" : "text-zinc-700 focus:bg-zinc-100"
+                                )}
+                              >
+                                <BsPencil className="w-3 h-3" />
+                                Rename
+                              </ContextMenuItem>
+                              {file.type === "file" && isEditable(file.name) && (
+                                <ContextMenuItem
+                                  onClick={() => handleEdit(file)}
+                                  className={cn(
+                                    "gap-2 text-xs uppercase tracking-wider cursor-pointer",
+                                    isDark ? "text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100" : "text-zinc-700 focus:bg-zinc-100"
+                                  )}
+                                >
+                                  <BsFileText className="w-3 h-3" />
+                                  Edit
+                                </ContextMenuItem>
+                              )}
+                              {file.type === "file" && (
+                                <ContextMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      const { downloadUrl } = await servers.files.getDownloadToken(serverId, file.path);
+                                      window.open(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`, "_blank");
+                                    } catch (error) {
+                                      toast.error("Failed to generate download link");
+                                    }
+                                  }}
+                                  className={cn(
+                                    "gap-2 text-xs uppercase tracking-wider cursor-pointer",
+                                    isDark ? "text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100" : "text-zinc-700 focus:bg-zinc-100"
+                                  )}
+                                >
+                                  <BsDownload className="w-3 h-3" />
+                                  Download
+                                </ContextMenuItem>
+                              )}
+                              <ContextMenuSeparator className={isDark ? "bg-zinc-700" : "bg-zinc-200"} />
+                              <ContextMenuItem
+                                onClick={() => handleDelete(file)}
+                                className={cn(
+                                  "gap-2 text-xs uppercase tracking-wider cursor-pointer",
+                                  isDark ? "text-red-400 focus:bg-red-950/50 focus:text-red-300" : "text-red-600 focus:bg-red-50"
+                                )}
+                              >
+                                <BsTrash className="w-3 h-3" />
+                                Delete
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        );
+                      })
                     ) : (
                       <TableRow>
                         <TableCell
@@ -1124,7 +1198,7 @@ const FilesPage = (): JSX.Element | null => {
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "relative border-4 border-dashed rounded-lg p-16 text-center",
+                "relative border-4 border-dashed p-16 text-center",
                 isDark
                   ? "border-zinc-500 bg-zinc-900/90"
                   : "border-zinc-400 bg-white/90"

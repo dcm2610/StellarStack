@@ -232,7 +232,7 @@ export default function EditServerPage() {
           <FadeIn delay={0.1}>
             <form onSubmit={handleSubmit}>
               <div className={cn(
-                "relative p-6 border rounded-lg",
+                "relative p-6 border",
                 isDark
                   ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20"
                   : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20"
@@ -621,14 +621,15 @@ export default function EditServerPage() {
 
       {/* Reinstall Confirmation Modal */}
       <ConfirmationModal
-        isOpen={reinstallModalOpen}
-        onClose={() => setReinstallModalOpen(false)}
+        open={reinstallModalOpen}
+        onOpenChange={setReinstallModalOpen}
         onConfirm={handleReinstall}
         isDark={isDark}
         title="Reinstall Server"
         description="This will completely wipe the server's files and run the installation script again. All data will be lost. This action cannot be undone."
-        confirmText={isReinstalling ? "Reinstalling..." : "Reinstall"}
-        isDestructive={true}
+        confirmLabel={isReinstalling ? "Reinstalling..." : "Reinstall"}
+        variant="danger"
+        isLoading={isReinstalling}
       />
     </div>
   );

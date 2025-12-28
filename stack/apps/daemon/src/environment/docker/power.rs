@@ -146,6 +146,8 @@ fn start_stats_poller(env: &DockerEnvironment) {
                 Err(e) => {
                     // Container might have stopped - check various error conditions
                     let error_str = e.to_string();
+
+                    // Check for known "container stopped" errors
                     let is_stopped = matches!(
                         &e,
                         bollard::errors::Error::DockerResponseServerError { status_code: 404, .. } |
@@ -154,8 +156,14 @@ fn start_stats_poller(env: &DockerEnvironment) {
                       || error_str.contains("not running")
                       || error_str.contains("No such container");
 
-                    if is_stopped {
-                        debug!("Container {} stopped, ending stats poller", container_name);
+                    // JSON deserialization errors typically happen when Docker sends incomplete
+                    // stats as the container is exiting - treat these as normal stop conditions
+                    let is_json_error = matches!(&e, bollard::errors::Error::JsonDataError { .. })
+                        || error_str.contains("missing field")
+                        || error_str.contains("Failed to deserialize");
+
+                    if is_stopped || is_json_error {
+                        debug!("Container {} stopped or sent incomplete stats, ending stats poller", container_name);
                         break;
                     }
                     warn!("Stats error for {}: {}", container_name, e);
@@ -283,7 +291,7 @@ pub async fn wait_for_stop(
 
     // Wait for container with timeout
     let wait_result = tokio::select! {
-        result = wait_for_container_exit(env) => {
+        result = wait_for_container_exit(env, ctx.clone()) => {
             match result {
                 Ok(_) => {
                     debug!("Container {} exited normally", container_name);
@@ -322,7 +330,7 @@ pub async fn wait_for_stop(
 }
 
 /// Wait for container to exit
-async fn wait_for_container_exit(env: &DockerEnvironment) -> EnvironmentResult<()> {
+pub async fn wait_for_container_exit(env: &DockerEnvironment, _ctx: CancellationToken) -> EnvironmentResult<()> {
     let container_name = env.container_name();
 
     let options = WaitContainerOptions {

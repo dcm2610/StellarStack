@@ -109,6 +109,43 @@ pub struct CreateServerRequest {
     pub egg: EggConfigRequest,
     #[serde(default)]
     pub mounts: Vec<MountConfigRequest>,
+    #[serde(default)]
+    pub process_configuration: Option<ProcessConfigRequest>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ProcessConfigRequest {
+    #[serde(default)]
+    pub startup: StartupConfigRequest,
+    #[serde(default)]
+    pub stop: StopConfigRequest,
+    #[serde(default)]
+    pub configs: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct StartupConfigRequest {
+    #[serde(default)]
+    pub done: Vec<String>,
+    #[serde(default)]
+    pub user_interaction: Vec<String>,
+    #[serde(default)]
+    pub strip_ansi: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum StopConfigRequest {
+    Signal { value: String },
+    Command { value: String },
+    #[serde(other)]
+    None,
+}
+
+impl Default for StopConfigRequest {
+    fn default() -> Self {
+        StopConfigRequest::Signal { value: "SIGTERM".to_string() }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -161,6 +198,17 @@ pub async fn create_server(
     State(state): State<AppState>,
     Json(request): Json<CreateServerRequest>,
 ) -> Result<Json<ServerResponse>, ApiError> {
+    // Build environment variables first (before values are moved)
+    let environment = {
+        let mut env = std::collections::HashMap::new();
+        // Set standard environment variables required by Pterodactyl-compatible images
+        env.insert("STARTUP".to_string(), request.invocation.clone());
+        env.insert("SERVER_IP".to_string(), request.allocations.default.ip.clone());
+        env.insert("SERVER_PORT".to_string(), request.allocations.default.port.to_string());
+        env.insert("P_SERVER_UUID".to_string(), request.uuid.clone());
+        env
+    };
+
     // Build server config
     let config = ServerConfig {
         uuid: request.uuid,
@@ -199,8 +247,23 @@ pub async fn create_server(
             target: m.target,
             read_only: m.read_only,
         }).collect(),
-        process: crate::server::ProcessConfig::default(),
-        environment: std::collections::HashMap::new(),
+        process: match request.process_configuration {
+            Some(pc) => crate::server::ProcessConfig {
+                startup: crate::server::StartupConfig {
+                    done: pc.startup.done,
+                    user_interaction: pc.startup.user_interaction,
+                    strip_ansi: pc.startup.strip_ansi,
+                },
+                stop: match pc.stop {
+                    StopConfigRequest::Signal { value } => crate::server::StopConfig::Signal { value },
+                    StopConfigRequest::Command { value } => crate::server::StopConfig::Command { value },
+                    StopConfigRequest::None => crate::server::StopConfig::None,
+                },
+                configs: Vec::new(),
+            },
+            None => crate::server::ProcessConfig::default(),
+        },
+        environment,
     };
 
     let server = state.manager.add(config).await

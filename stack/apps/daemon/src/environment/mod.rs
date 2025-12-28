@@ -3,7 +3,7 @@
 //! Provides a trait-based abstraction over container runtimes (Docker),
 //! enabling server lifecycle management, resource monitoring, and I/O handling.
 
-mod docker;
+pub mod docker;
 mod traits;
 
 pub use docker::DockerEnvironment;

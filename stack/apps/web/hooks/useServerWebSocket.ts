@@ -88,6 +88,7 @@ export function useServerWebSocket({
   const prevNetworkRef = useRef<{ rx: number; tx: number; timestamp: number } | null>(null);
   const connectingRef = useRef(false);
   const lastConnectionUrlRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
   const maxReconnectAttempts = 5;
 
   const addLine = useCallback((line: ConsoleLine) => {
@@ -105,7 +106,7 @@ export function useServerWebSocket({
   }, []);
 
   const connect = useCallback(() => {
-    if (!consoleInfo || !enabled) return;
+    if (!consoleInfo || !enabled || !mountedRef.current) return;
 
     // Build URL to compare
     const url = new URL(consoleInfo.websocketUrl);
@@ -139,6 +140,10 @@ export function useServerWebSocket({
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (!mountedRef.current) {
+          ws.close();
+          return;
+        }
         connectingRef.current = false;
         setIsConnecting(false);
         reconnectAttemptsRef.current = 0;
@@ -305,28 +310,38 @@ export function useServerWebSocket({
 
       ws.onclose = () => {
         connectingRef.current = false;
+        wsRef.current = null;
+
+        // Only update state if component is still mounted
+        if (!mountedRef.current) return;
+
         setIsConnected(false);
         setIsConnecting(false);
-        wsRef.current = null;
         onDisconnect?.();
 
-        // Attempt reconnection (don't clear console - may be temporary disconnect)
-        if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
+        // Attempt reconnection only if still mounted and enabled
+        if (mountedRef.current && enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
+            if (mountedRef.current) {
+              connect();
+            }
           }, delay);
         }
       };
 
       ws.onerror = () => {
         connectingRef.current = false;
-        setIsConnecting(false);
+        if (mountedRef.current) {
+          setIsConnecting(false);
+        }
       };
     } catch (err) {
       connectingRef.current = false;
-      setIsConnecting(false);
+      if (mountedRef.current) {
+        setIsConnecting(false);
+      }
       console.error("WebSocket connection failed:", err);
     }
   }, [consoleInfo, enabled, addLine, onConnect, onDisconnect, onStatusChange]);
@@ -379,14 +394,35 @@ export function useServerWebSocket({
 
   // Connect when consoleInfo becomes available
   useEffect(() => {
+    mountedRef.current = true;
+
     if (consoleInfo && enabled) {
       connect();
     }
 
     return () => {
-      disconnect();
+      // Mark as unmounted first to prevent any state updates
+      mountedRef.current = false;
+
+      // Clear any pending reconnect timers
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Close the WebSocket connection
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
+      // Reset connection state
+      connectingRef.current = false;
+      lastConnectionUrlRef.current = null;
+      reconnectAttemptsRef.current = maxReconnectAttempts; // Prevent reconnection attempts
     };
-  }, [consoleInfo, enabled, connect, disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect is stable via refs, we only want to reconnect on URL/token/enabled changes
+  }, [consoleInfo?.websocketUrl, consoleInfo?.token, enabled]);
 
   // Reset state when disabled
   useEffect(() => {
