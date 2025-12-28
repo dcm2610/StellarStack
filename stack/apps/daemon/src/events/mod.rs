@@ -5,6 +5,8 @@
 
 mod bus;
 mod redis;
+mod state_store;
 
 pub use bus::{EventBus, Event, ProcessState, Stats, NetworkStats};
 pub use redis::RedisPublisher;
+pub use state_store::{RedisStateStore, CachedServerState};

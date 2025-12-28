@@ -88,9 +88,9 @@ impl InstallationProcess {
         tmp_dir: PathBuf,
         event_bus: EventBus,
         install_sink: SinkPool,
+        docker_socket: &str,
     ) -> InstallResult<Self> {
-        let docker = Docker::connect_with_local_defaults()
-            .map_err(InstallError::Docker)?;
+        let docker = Self::connect_docker(docker_socket)?;
 
         let install_dir = tmp_dir.join(&server_uuid).join("install");
 
@@ -105,6 +105,44 @@ impl InstallationProcess {
             memory_limit: 1024 * 1024 * 1024, // 1GB
             cpu_limit: 100,                   // 100% of one core
         })
+    }
+
+    /// Connect to Docker using the configured socket path
+    fn connect_docker(socket: &str) -> InstallResult<Docker> {
+        if socket.is_empty() {
+            return Docker::connect_with_local_defaults()
+                .map_err(InstallError::Docker);
+        }
+
+        // Parse socket URI based on protocol
+        if let Some(path) = socket.strip_prefix("unix://") {
+            // Unix socket (Linux/macOS)
+            Docker::connect_with_socket(path, 120, bollard::API_DEFAULT_VERSION)
+                .map_err(InstallError::Docker)
+        } else if socket.starts_with("npipe://") {
+            // Windows named pipe
+            #[cfg(target_os = "windows")]
+            {
+                Docker::connect_with_named_pipe(socket, 120, bollard::API_DEFAULT_VERSION)
+                    .map_err(InstallError::Docker)
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                Err(InstallError::Other("Named pipes are only supported on Windows".into()))
+            }
+        } else if socket.starts_with("http://") || socket.starts_with("https://") || socket.starts_with("tcp://") {
+            // HTTP/TCP connection
+            Docker::connect_with_http(socket, 120, bollard::API_DEFAULT_VERSION)
+                .map_err(InstallError::Docker)
+        } else if socket.starts_with('/') || socket.starts_with('.') {
+            // Bare Unix socket path
+            Docker::connect_with_socket(socket, 120, bollard::API_DEFAULT_VERSION)
+                .map_err(InstallError::Docker)
+        } else {
+            // Try local defaults as fallback
+            Docker::connect_with_local_defaults()
+                .map_err(InstallError::Docker)
+        }
     }
 
     /// Set resource limits for installer container

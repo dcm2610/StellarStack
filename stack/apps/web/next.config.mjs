@@ -10,6 +10,7 @@ const getGitCommitHash = () => {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false, // Disable to prevent double WebSocket connections in dev
   transpilePackages: ["@workspace/ui"],
   env: {
     NEXT_PUBLIC_GIT_COMMIT_HASH: getGitCommitHash(),

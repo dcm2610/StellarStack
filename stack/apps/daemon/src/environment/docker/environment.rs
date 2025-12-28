@@ -57,8 +57,7 @@ pub struct DockerEnvironment {
 impl DockerEnvironment {
     /// Create a new Docker environment
     pub fn new(config: EnvironmentConfiguration) -> EnvironmentResult<Self> {
-        let client = Docker::connect_with_local_defaults()
-            .map_err(EnvironmentError::Docker)?;
+        let client = Self::connect_docker(&config.docker_socket)?;
 
         let container_name = format!("{}_server", &config.id);
 
@@ -73,6 +72,44 @@ impl DockerEnvironment {
             command_tx: RwLock::new(None),
             attached: RwLock::new(false),
         })
+    }
+
+    /// Connect to Docker using the configured socket path
+    fn connect_docker(socket: &str) -> EnvironmentResult<Docker> {
+        if socket.is_empty() {
+            return Docker::connect_with_local_defaults()
+                .map_err(EnvironmentError::Docker);
+        }
+
+        // Parse socket URI based on protocol
+        if let Some(path) = socket.strip_prefix("unix://") {
+            // Unix socket (Linux/macOS)
+            Docker::connect_with_socket(path, 120, bollard::API_DEFAULT_VERSION)
+                .map_err(EnvironmentError::Docker)
+        } else if socket.starts_with("npipe://") {
+            // Windows named pipe - use local defaults which handles named pipes
+            #[cfg(target_os = "windows")]
+            {
+                Docker::connect_with_named_pipe(socket, 120, bollard::API_DEFAULT_VERSION)
+                    .map_err(EnvironmentError::Docker)
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                Err(EnvironmentError::Other("Named pipes are only supported on Windows".into()))
+            }
+        } else if socket.starts_with("http://") || socket.starts_with("https://") || socket.starts_with("tcp://") {
+            // HTTP/TCP connection
+            Docker::connect_with_http(socket, 120, bollard::API_DEFAULT_VERSION)
+                .map_err(EnvironmentError::Docker)
+        } else if socket.starts_with('/') || socket.starts_with('.') {
+            // Bare Unix socket path
+            Docker::connect_with_socket(socket, 120, bollard::API_DEFAULT_VERSION)
+                .map_err(EnvironmentError::Docker)
+        } else {
+            // Try local defaults as fallback
+            Docker::connect_with_local_defaults()
+                .map_err(EnvironmentError::Docker)
+        }
     }
 
     /// Create from existing configuration with custom Docker client
@@ -188,8 +225,10 @@ impl ProcessEnvironment for DockerEnvironment {
         let old = Self::u8_to_state(old_state);
 
         if old != state {
-            debug!("State change: {} -> {}", old, state);
+            info!("Container {} state change: {} -> {} (publishing event)", self.container_name, old, state);
             self.event_bus.publish_state(state);
+        } else {
+            debug!("Container {} state unchanged: {} (not publishing)", self.container_name, state);
         }
     }
 
@@ -340,11 +379,24 @@ impl ProcessEnvironment for DockerEnvironment {
             tx.as_ref().cloned()
         };
 
+        let is_attached = self.is_attached();
+        debug!("send_command called for container {}: cmd='{}', attached={}, has_sender={}",
+            self.container_name, cmd, is_attached, sender.is_some());
+
         if let Some(sender) = sender {
-            sender.send(format!("{}\n", cmd)).await
-                .map_err(|_| EnvironmentError::NotRunning)?;
-            Ok(())
+            match sender.send(format!("{}\n", cmd)).await {
+                Ok(_) => {
+                    info!("Command sent to container {}: {}", self.container_name, cmd);
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Failed to send command to container {}: {}", self.container_name, e);
+                    Err(EnvironmentError::NotRunning)
+                }
+            }
         } else {
+            warn!("Cannot send command to container {} - not attached (attached={}, command_tx=None)",
+                self.container_name, is_attached);
             Err(EnvironmentError::NotRunning)
         }
     }

@@ -44,7 +44,9 @@
       "Bash(curl:*)",
       "Bash(cargo doc:*)",
       "Bash(grep:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(chmod:*)",
+      "Bash(bash -n:*)"
     ],
     "deny": [],
     "ask": []

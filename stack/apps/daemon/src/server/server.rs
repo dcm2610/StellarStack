@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::api::HttpClient;
 use crate::config::{DockerConfiguration, RedisConfiguration, SystemConfiguration};
@@ -50,6 +50,10 @@ pub struct Server {
     /// Cancellation token for server operations
     ctx: CancellationToken,
 
+    /// Cancellation token for background watchers (forwarder, state watcher, etc.)
+    /// This is cancelled when the server stops to prevent duplicate watchers on restart
+    watcher_ctx: RwLock<CancellationToken>,
+
     /// Server data directory
     data_dir: PathBuf,
 
@@ -61,6 +65,12 @@ pub struct Server {
 
     /// Redis publisher for event broadcasting
     redis_publisher: Option<RedisPublisher>,
+
+    /// Docker socket path
+    docker_socket: String,
+
+    /// Redis state store for persistence
+    state_store: Option<Arc<crate::events::RedisStateStore>>,
 }
 
 impl Server {
@@ -71,6 +81,7 @@ impl Server {
         docker_config: &DockerConfiguration,
         api_client: Arc<HttpClient>,
         redis_config: Option<&RedisConfiguration>,
+        state_store: Option<Arc<crate::events::RedisStateStore>>,
     ) -> Result<Self, ServerError> {
         let uuid = config.uuid.clone();
         let data_dir = system_config.data_directory.join(&uuid);
@@ -104,10 +115,13 @@ impl Server {
             console_sink: SinkPool::new(),
             install_sink: SinkPool::new(),
             ctx: CancellationToken::new(),
+            watcher_ctx: RwLock::new(CancellationToken::new()),
             data_dir,
             tmp_dir,
             api_client,
             redis_publisher,
+            docker_socket: docker_config.socket.clone(),
+            state_store,
         })
     }
 
@@ -156,6 +170,7 @@ impl Server {
             network: docker_config.network.name.clone(),
             tmpfs_size: docker_config.tmpfs_size,
             oom_disabled: config.build.oom_disabled || config.container.oom_disabled,
+            docker_socket: docker_config.socket.clone(),
         };
 
         // Add additional mounts
@@ -351,15 +366,34 @@ impl Server {
         // Record start for crash detection
         self.crash_handler.record_start();
 
+        // Cancel any existing watchers from previous runs and create new token
+        {
+            let old_ctx = self.watcher_ctx.read().clone();
+            old_ctx.cancel();
+        }
+        {
+            let mut watcher_ctx = self.watcher_ctx.write();
+            *watcher_ctx = CancellationToken::new();
+        }
+        let watcher_token = self.watcher_ctx.read().clone();
+
+        // Clear console buffer for fresh start (before starting watchers)
+        self.console_sink.clear_buffer();
+
+        // IMPORTANT: Start watchers BEFORE starting container
+        // This prevents race condition where "done" message is printed before we subscribe
+        self.start_startup_detector(watcher_token.clone());
+        self.start_state_watcher(watcher_token.clone());
+        self.start_console_forwarder(watcher_token);
+
+        // Clear Redis console logs for fresh start
+        if let Some(ref store) = self.state_store {
+            store.clear_console_logs(&self.uuid()).await;
+        }
+
         // Start environment (state will be Starting)
         info!("Starting container for {}", self.uuid());
         self.environment.start(self.ctx.clone()).await?;
-
-        // Start startup detection watcher
-        self.start_startup_detector();
-
-        // Start state change watcher to sync with panel
-        self.start_state_watcher();
 
         // Report status to panel as starting
         info!("Server {} container started, waiting for startup detection", self.uuid());
@@ -369,8 +403,9 @@ impl Server {
     }
 
     /// Start watching console output for startup completion
-    fn start_startup_detector(&self) {
+    fn start_startup_detector(&self, cancel_token: CancellationToken) {
         let done_patterns = self.config.read().process.startup.done.clone();
+        let strip_ansi = self.config.read().process.startup.strip_ansi;
 
         // If no patterns, immediately mark as running
         if done_patterns.is_empty() {
@@ -384,67 +419,207 @@ impl Server {
             return;
         }
 
+        // Log the raw patterns for debugging - show full details
+        info!("=== Startup detection patterns for server {} ===", self.uuid());
+        info!("Number of patterns: {}", done_patterns.len());
+        info!("Strip ANSI codes: {}", strip_ansi);
+        for (i, pattern) in done_patterns.iter().enumerate() {
+            // Log with debug representation to see escape sequences
+            info!("  Pattern {}: {:?}", i, pattern);
+            // Also log the actual string length
+            info!("  Pattern {} length: {} chars", i, pattern.len());
+        }
+        info!("=== End of startup patterns ===");
+
+        // Compile regex patterns
+        let compiled_patterns: Vec<(String, Option<regex::Regex>)> = done_patterns
+            .iter()
+            .map(|p| {
+                match regex::Regex::new(p) {
+                    Ok(regex) => {
+                        info!("Successfully compiled startup regex: {:?}", p);
+                        (p.clone(), Some(regex))
+                    }
+                    Err(e) => {
+                        warn!("Invalid startup regex pattern {:?}: {} - will use literal match", p, e);
+                        (p.clone(), None)
+                    }
+                }
+            })
+            .collect();
+
+        info!("Startup detector initialized with {} patterns ({} compiled as regex) for server {}",
+            compiled_patterns.len(),
+            compiled_patterns.iter().filter(|(_, r)| r.is_some()).count(),
+            self.uuid());
+
         let mut events_rx = self.event_bus.subscribe();
         let environment = self.environment.clone();
         let api_client = self.api_client.clone();
         let uuid = self.uuid();
 
         tokio::spawn(async move {
-            while let Ok(event) = events_rx.recv().await {
-                if let Event::ConsoleOutput(data) = event {
-                    let line = String::from_utf8_lossy(&data);
+            let mut line_count = 0u64;
+            info!("Startup detector now listening for console output on server {}", uuid);
 
-                    // Check if any "done" pattern matches
-                    for pattern in &done_patterns {
-                        if line.contains(pattern) {
-                            info!("Startup detection matched pattern '{}' for server {}", pattern, uuid);
-                            environment.set_state(crate::events::ProcessState::Running);
-                            let _ = api_client.set_server_status(&uuid, "running").await;
-                            return;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        info!("Startup detector cancelled for server {}", uuid);
+                        return;
+                    }
+                    result = events_rx.recv() => {
+                        match result {
+                            Ok(Event::ConsoleOutput(data)) => {
+                                line_count += 1;
+                                let mut line = String::from_utf8_lossy(&data).to_string();
+
+                                // Strip ANSI codes if configured
+                                if strip_ansi {
+                                    line = strip_ansi_codes(&line);
+                                }
+
+                                // Log first few lines and then periodically
+                                if line_count <= 5 || line_count % 20 == 0 {
+                                    let preview: String = line.chars().take(100).collect();
+                                    debug!("Startup detector [{}] checking line {}: {:?}", uuid, line_count, preview);
+                                }
+
+                                // Check if any "done" pattern matches
+                                for (pattern_str, compiled) in &compiled_patterns {
+                                    let matched = if let Some(regex) = compiled {
+                                        regex.is_match(&line)
+                                    } else {
+                                        // Fallback to literal match if regex failed to compile
+                                        line.contains(pattern_str)
+                                    };
+
+                                    if matched {
+                                        info!("Startup detection MATCHED pattern {:?} for server {} on line {}", pattern_str, uuid, line_count);
+                                        info!("Matched line content: {:?}", line);
+                                        environment.set_state(crate::events::ProcessState::Running);
+                                        let _ = api_client.set_server_status(&uuid, "running").await;
+                                        return;
+                                    }
+                                }
+
+                                // Stop watching if server is no longer starting
+                                if environment.state() != crate::events::ProcessState::Starting {
+                                    debug!("Server {} no longer in starting state after {} lines, stopping startup detector", uuid, line_count);
+                                    return;
+                                }
+                            }
+                            Ok(_) => {} // Ignore other events
+                            Err(_) => {
+                                info!("Startup detector ended (event bus closed) for server {} after {} lines", uuid, line_count);
+                                return;
+                            }
                         }
                     }
-                }
-
-                // Stop watching if server is no longer starting
-                if environment.state() != crate::events::ProcessState::Starting {
-                    return;
                 }
             }
         });
     }
 
-    /// Start watching for state changes to sync with panel
-    fn start_state_watcher(&self) {
+    /// Start watching for state changes to sync with panel and Redis
+    fn start_state_watcher(&self, cancel_token: CancellationToken) {
         let mut events_rx = self.event_bus.subscribe();
         let environment = self.environment.clone();
         let api_client = self.api_client.clone();
+        let state_store = self.state_store.clone();
         let uuid = self.uuid();
 
         tokio::spawn(async move {
-            while let Ok(event) = events_rx.recv().await {
-                if let Event::StateChange(new_state) = event {
-                    // Update the environment's internal state
-                    environment.set_state(new_state);
-
-                    // Map state to API status string
-                    let status = match new_state {
-                        ProcessState::Offline => "offline",
-                        ProcessState::Starting => "starting",
-                        ProcessState::Running => "running",
-                        ProcessState::Stopping => "stopping",
-                    };
-
-                    // Report to panel
-                    info!("Server {} state changed to {} - syncing with panel", uuid, status);
-                    match api_client.set_server_status(&uuid, status).await {
-                        Ok(_) => info!("Server {} status synced to panel: {}", uuid, status),
-                        Err(e) => warn!("Failed to sync server {} status to panel: {}", uuid, e),
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        info!("State watcher cancelled for server {}", uuid);
+                        return;
                     }
+                    result = events_rx.recv() => {
+                        match result {
+                            Ok(Event::StateChange(new_state)) => {
+                                // Update the environment's internal state
+                                environment.set_state(new_state);
 
-                    // If server went offline, we can stop watching
-                    if new_state == ProcessState::Offline {
-                        info!("Server {} is offline, stopping state watcher", uuid);
-                        break;
+                                // Map state to API status string
+                                let status = match new_state {
+                                    ProcessState::Offline => "offline",
+                                    ProcessState::Starting => "starting",
+                                    ProcessState::Running => "running",
+                                    ProcessState::Stopping => "stopping",
+                                };
+
+                                // Report to panel
+                                info!("Server {} state changed to {} - syncing with panel", uuid, status);
+                                match api_client.set_server_status(&uuid, status).await {
+                                    Ok(_) => info!("Server {} status synced to panel: {}", uuid, status),
+                                    Err(e) => warn!("Failed to sync server {} status to panel: {}", uuid, e),
+                                }
+
+                                // Save state to Redis for persistence
+                                if let Some(ref store) = state_store {
+                                    store.save_server_state(&uuid, new_state, false).await;
+                                }
+
+                                // If server went offline, we can stop watching
+                                if new_state == ProcessState::Offline {
+                                    info!("Server {} is offline, stopping state watcher", uuid);
+                                    return;
+                                }
+                            }
+                            Ok(_) => {} // Ignore other events
+                            Err(_) => return, // Channel closed
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /// Start forwarding console output to the console_sink for buffering
+    fn start_console_forwarder(&self, cancel_token: CancellationToken) {
+        let mut events_rx = self.event_bus.subscribe();
+        let console_sink = self.console_sink.clone();
+        let state_store = self.state_store.clone();
+        let uuid = self.uuid();
+
+        tokio::spawn(async move {
+            info!("Console forwarder started for server {}", uuid);
+            let mut line_count = 0u64;
+
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        info!("Console forwarder cancelled for server {} after {} lines", uuid, line_count);
+                        return;
+                    }
+                    result = events_rx.recv() => {
+                        match result {
+                            Ok(Event::ConsoleOutput(data)) => {
+                                line_count += 1;
+                                // Push to console_sink for buffering (WebSocket clients can get history)
+                                console_sink.push(data.clone());
+
+                                // Log every 10th line to avoid spam but confirm data is flowing
+                                if line_count <= 3 || line_count % 10 == 0 {
+                                    let preview = String::from_utf8_lossy(&data);
+                                    let preview_short: String = preview.chars().take(80).collect();
+                                    debug!("Console forwarder [{}] line {}: {}", uuid, line_count, preview_short);
+                                }
+
+                                // Save to Redis for persistence across daemon restarts
+                                if let Some(ref store) = state_store {
+                                    let line = String::from_utf8_lossy(&data).to_string();
+                                    store.append_console_log(&uuid, &line).await;
+                                }
+                            }
+                            Ok(_) => {} // Ignore other events
+                            Err(_) => {
+                                info!("Console forwarder stopped for server {} after {} lines (channel closed)", uuid, line_count);
+                                return;
+                            }
+                        }
                     }
                 }
             }
@@ -480,15 +655,33 @@ impl Server {
         // Pre-boot checks
         self.on_before_start().await?;
 
-        // Start
+        // Cancel any existing watchers and create new token
+        {
+            let old_ctx = self.watcher_ctx.read().clone();
+            old_ctx.cancel();
+        }
+        {
+            let mut watcher_ctx = self.watcher_ctx.write();
+            *watcher_ctx = CancellationToken::new();
+        }
+        let watcher_token = self.watcher_ctx.read().clone();
+
+        // Clear console buffer for fresh restart (before starting watchers)
+        self.console_sink.clear_buffer();
+
+        // IMPORTANT: Start watchers BEFORE starting container to avoid race condition
         self.crash_handler.record_start();
+        self.start_startup_detector(watcher_token.clone());
+        self.start_state_watcher(watcher_token.clone());
+        self.start_console_forwarder(watcher_token);
+
+        // Clear Redis console logs for fresh restart
+        if let Some(ref store) = self.state_store {
+            store.clear_console_logs(&self.uuid()).await;
+        }
+
+        // Start the container
         self.environment.start(self.ctx.clone()).await?;
-
-        // Start startup detection watcher (same as regular start)
-        self.start_startup_detector();
-
-        // Start state change watcher to sync with panel
-        self.start_state_watcher();
 
         // Report status to panel as starting (startup detector will update to running)
         info!("Server {} container restarted, waiting for startup detection", self.uuid());
@@ -581,6 +774,7 @@ impl Server {
             self.tmp_dir.clone(),
             self.event_bus.clone(),
             self.install_sink.clone(),
+            &self.docker_socket,
         )?;
 
         let result = process.run().await;
@@ -633,8 +827,31 @@ impl Server {
                 error!("Failed to attach to running container {}: {}", uuid, e);
             }
 
-            // Start watching for state changes
-            self.start_state_watcher();
+            // Restore cached console logs from Redis
+            if let Some(ref store) = self.state_store {
+                let cached_logs = store.get_console_logs(&uuid).await;
+                if !cached_logs.is_empty() {
+                    info!("Restoring {} cached console lines for server {}", cached_logs.len(), uuid);
+                    for line in cached_logs {
+                        self.console_sink.push(line.into_bytes());
+                    }
+                }
+            }
+
+            // Cancel any existing watchers and create new token for this running server
+            {
+                let old_ctx = self.watcher_ctx.read().clone();
+                old_ctx.cancel();
+            }
+            let watcher_token = {
+                let mut watcher_ctx = self.watcher_ctx.write();
+                *watcher_ctx = CancellationToken::new();
+                watcher_ctx.clone()
+            };
+
+            // Start watching for state changes and forwarding console output
+            self.start_state_watcher(watcher_token.clone());
+            self.start_console_forwarder(watcher_token);
 
             // Start the exit watcher to detect when container stops
             let environment = self.environment.clone();
@@ -656,6 +873,36 @@ impl Server {
         info!("Server {} container status on startup: {} (exists={}, running={})", uuid, status, exists, is_running);
 
         // Report to panel
+        self.api_client.set_server_status(&uuid, status).await
+            .map_err(|e| ServerError::Api(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Report current container status to panel (lightweight, for periodic sync)
+    /// Unlike sync_status_to_panel, this doesn't attach to containers or start watchers
+    pub async fn report_status(&self) -> Result<(), ServerError> {
+        let uuid = self.uuid();
+
+        // Get current state from Docker
+        let is_running = self.environment.is_running().await.unwrap_or(false);
+        let current_state = self.environment.state();
+
+        // Determine the status based on Docker state
+        let status = if is_running {
+            // If Docker says running, trust that
+            "running"
+        } else {
+            // Map internal state to API status
+            match current_state {
+                ProcessState::Starting => "starting",
+                ProcessState::Stopping => "stopping",
+                _ => "offline",
+            }
+        };
+
+        // Only report if status differs from what we expect
+        // to avoid spamming the panel with unchanged statuses
         self.api_client.set_server_status(&uuid, status).await
             .map_err(|e| ServerError::Api(e.to_string()))?;
 
@@ -726,4 +973,14 @@ impl DockerConfigExt for DockerConfiguration {
     fn system_user_gid(&self) -> u32 {
         1000 // Default
     }
+}
+
+/// Strip ANSI escape codes from a string
+fn strip_ansi_codes(input: &str) -> String {
+    // Matches ANSI escape sequences: ESC [ ... m (color codes) and other control sequences
+    static ANSI_REGEX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let regex = ANSI_REGEX.get_or_init(|| {
+        regex::Regex::new(r"\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07").unwrap()
+    });
+    regex.replace_all(input, "").to_string()
 }

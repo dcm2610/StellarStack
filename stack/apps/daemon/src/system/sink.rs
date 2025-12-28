@@ -3,16 +3,29 @@
 //! Provides a pub/sub mechanism for streaming console output and logs
 //! to multiple subscribers (e.g., WebSocket connections).
 
+use std::collections::VecDeque;
+use std::sync::Arc;
 use parking_lot::RwLock;
 use tokio::sync::broadcast;
+
+/// Default number of log lines to buffer
+const DEFAULT_BUFFER_SIZE: usize = 500;
 
 /// A pool of sinks for broadcasting data to multiple subscribers.
 ///
 /// This is used to stream console output to multiple WebSocket connections.
+/// Includes a ring buffer to keep recent messages for new subscribers.
+///
+/// Note: Cloning a SinkPool shares the same underlying broadcast channel AND buffer,
+/// so all clones see the same history and can push to the same buffer.
 pub struct SinkPool {
     sender: broadcast::Sender<Vec<u8>>,
     // Keep a receiver to prevent the channel from closing
     _receiver: broadcast::Receiver<Vec<u8>>,
+    // Ring buffer for recent messages (shared across clones via Arc)
+    buffer: Arc<RwLock<VecDeque<Vec<u8>>>>,
+    // Maximum buffer size
+    buffer_size: usize,
 }
 
 impl SinkPool {
@@ -24,7 +37,23 @@ impl SinkPool {
     /// Create a new sink pool with custom capacity
     pub fn with_capacity(capacity: usize) -> Self {
         let (sender, _receiver) = broadcast::channel(capacity);
-        Self { sender, _receiver }
+        Self {
+            sender,
+            _receiver,
+            buffer: Arc::new(RwLock::new(VecDeque::with_capacity(DEFAULT_BUFFER_SIZE))),
+            buffer_size: DEFAULT_BUFFER_SIZE,
+        }
+    }
+
+    /// Create a new sink pool with custom buffer size for history
+    pub fn with_buffer_size(channel_capacity: usize, buffer_size: usize) -> Self {
+        let (sender, _receiver) = broadcast::channel(channel_capacity);
+        Self {
+            sender,
+            _receiver,
+            buffer: Arc::new(RwLock::new(VecDeque::with_capacity(buffer_size))),
+            buffer_size,
+        }
     }
 
     /// Subscribe to the sink pool
@@ -34,11 +63,41 @@ impl SinkPool {
         self.sender.subscribe()
     }
 
-    /// Push data to all subscribers
+    /// Get buffered history of recent messages
     ///
-    /// If there are no subscribers, the data is silently dropped.
+    /// Returns a copy of the ring buffer contents (oldest to newest)
+    pub fn get_history(&self) -> Vec<Vec<u8>> {
+        self.buffer.read().iter().cloned().collect()
+    }
+
+    /// Get buffered history as strings (for console output)
+    pub fn get_history_strings(&self) -> Vec<String> {
+        self.buffer
+            .read()
+            .iter()
+            .map(|data| String::from_utf8_lossy(data).to_string())
+            .collect()
+    }
+
+    /// Clear the buffer (e.g., when server stops or restarts)
+    pub fn clear_buffer(&self) {
+        self.buffer.write().clear();
+    }
+
+    /// Push data to all subscribers and buffer
+    ///
+    /// If there are no subscribers, the data is still buffered.
     pub fn push(&self, data: Vec<u8>) {
-        // Ignore send errors (no receivers)
+        // Add to ring buffer
+        {
+            let mut buffer = self.buffer.write();
+            if buffer.len() >= self.buffer_size {
+                buffer.pop_front();
+            }
+            buffer.push_back(data.clone());
+        }
+
+        // Broadcast to subscribers (ignore send errors - no receivers)
         let _ = self.sender.send(data);
     }
 
@@ -51,6 +110,11 @@ impl SinkPool {
     pub fn subscriber_count(&self) -> usize {
         self.sender.receiver_count()
     }
+
+    /// Get current buffer length
+    pub fn buffer_len(&self) -> usize {
+        self.buffer.read().len()
+    }
 }
 
 impl Default for SinkPool {
@@ -61,9 +125,13 @@ impl Default for SinkPool {
 
 impl Clone for SinkPool {
     fn clone(&self) -> Self {
+        // Clone shares the same broadcast channel AND buffer (via Arc)
+        // This is intentional - all clones should see the same history and be able to push to it
         Self {
             sender: self.sender.clone(),
             _receiver: self.sender.subscribe(),
+            buffer: Arc::clone(&self.buffer),
+            buffer_size: self.buffer_size,
         }
     }
 }

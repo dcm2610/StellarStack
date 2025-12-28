@@ -95,6 +95,9 @@ pub struct EnvironmentConfiguration {
 
     /// Whether OOM killer is disabled
     pub oom_disabled: bool,
+
+    /// Docker socket path (e.g., "unix:///var/run/docker.sock")
+    pub docker_socket: String,
 }
 
 impl Default for EnvironmentConfiguration {
@@ -115,6 +118,7 @@ impl Default for EnvironmentConfiguration {
             network: "stellar".to_string(),
             tmpfs_size: 100,
             oom_disabled: false,
+            docker_socket: String::new(),
         }
     }
 }

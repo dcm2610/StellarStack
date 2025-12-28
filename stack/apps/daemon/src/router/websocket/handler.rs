@@ -103,15 +103,15 @@ async fn handle_socket(socket: WebSocket, state: AppState, server: Arc<Server>, 
         WsOutgoing::new("auth success", json!({})).to_json()
     )).await;
 
-    // Subscribe to events
-    // Note: Console output comes via events, not console_sink
+    // Subscribe to events BEFORE sending history to avoid missing any new output
+    let mut console_rx = server.console_sink().subscribe();
     let mut install_rx = server.install_sink().subscribe();
     let mut events_rx = server.events().subscribe();
 
     // Create handler
     let handler = WebsocketHandler {
         server: server.clone(),
-        claims,
+        claims: claims.clone(),
     };
 
     // Send initial status
@@ -120,6 +120,26 @@ async fn handle_socket(socket: WebSocket, state: AppState, server: Arc<Server>, 
             "state": server.process_state().to_string()
         })).to_json()
     )).await;
+
+    // Send buffered console history (so client sees recent logs)
+    let console_history = server.console_sink().get_history_strings();
+    if !console_history.is_empty() {
+        debug!("Sending {} buffered console lines to WebSocket for {}", console_history.len(), server.uuid());
+        let _ = sender.send(Message::Text(
+            WsOutgoing::new("console history", json!({ "lines": console_history })).to_json()
+        )).await;
+    }
+
+    // Send buffered install history if installation is in progress
+    if claims.has_permission("admin.websocket.install") {
+        let install_history = server.install_sink().get_history_strings();
+        if !install_history.is_empty() {
+            debug!("Sending {} buffered install lines to WebSocket for {}", install_history.len(), server.uuid());
+            let _ = sender.send(Message::Text(
+                WsOutgoing::new("install history", json!({ "lines": install_history })).to_json()
+            )).await;
+        }
+    }
 
     // Main loop
     loop {
@@ -149,6 +169,14 @@ async fn handle_socket(socket: WebSocket, state: AppState, server: Arc<Server>, 
                 }
             }
 
+            // Forward console output from console_sink (buffered)
+            Ok(data) = console_rx.recv() => {
+                let line = String::from_utf8_lossy(&data).to_string();
+                debug!("WebSocket forwarding console line for {}: {} chars", server.uuid(), line.len());
+                let msg = WsOutgoing::new("console output", json!({ "line": line }));
+                let _ = sender.send(Message::Text(msg.to_json())).await;
+            }
+
             // Forward install output (if permitted)
             Ok(data) = install_rx.recv() => {
                 if handler.claims.has_permission("admin.websocket.install") {
@@ -158,10 +186,17 @@ async fn handle_socket(socket: WebSocket, state: AppState, server: Arc<Server>, 
                 }
             }
 
-            // Forward server events
+            // Forward server events (state changes, stats, etc. - NOT console output)
             Ok(event) = events_rx.recv() => {
-                if let Some(msg) = handler.handle_event(event) {
-                    let _ = sender.send(Message::Text(msg.to_json())).await;
+                // Skip ConsoleOutput since we handle it via console_rx above
+                if !matches!(event, Event::ConsoleOutput(_)) {
+                    // Log state changes specifically
+                    if let Event::StateChange(ref state) = event {
+                        info!("WebSocket sending state change to client for {}: {}", server.uuid(), state);
+                    }
+                    if let Some(msg) = handler.handle_event(event) {
+                        let _ = sender.send(Message::Text(msg.to_json())).await;
+                    }
                 }
             }
         }
@@ -249,25 +284,22 @@ impl WebsocketHandler {
         None
     }
 
-    /// Handle send logs request - returns recent container logs
+    /// Handle send logs request - returns buffered console logs
     async fn handle_send_logs(&self) -> Option<WsOutgoing> {
-        use crate::events::ProcessState;
+        // Return buffered console history from the sink
+        let lines = self.server.console_sink().get_history_strings();
 
-        // Only return logs if server is running or starting
-        let state = self.server.process_state();
-        if state == ProcessState::Offline || state == ProcessState::Stopping {
-            return None;
-        }
-
-        match self.server.read_logs(100).await {
-            Ok(lines) => {
-                Some(WsOutgoing::new("console history", json!({ "lines": lines })))
-            }
-            Err(e) => {
-                debug!("Failed to read logs: {}", e);
-                None
+        if lines.is_empty() {
+            // If no buffered logs, try to read from Docker logs as fallback
+            match self.server.read_logs(100).await {
+                Ok(docker_lines) if !docker_lines.is_empty() => {
+                    return Some(WsOutgoing::new("console history", json!({ "lines": docker_lines })));
+                }
+                _ => return None,
             }
         }
+
+        Some(WsOutgoing::new("console history", json!({ "lines": lines })))
     }
 
     /// Convert a server event to WebSocket message

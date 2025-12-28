@@ -129,7 +129,7 @@ echo "Download complete!"
       imageTag: "java_21",
       startup: "java -Xms128M -Xmx{{SERVER_MEMORY}}M -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}",
       stopCommand: "stop",
-      startupDetection: { done: "Done" },
+      startupDetection: { done: `{\\r\\n    \\"done\\": \\")! For help, type \\"\\r\\n}` },
       installScript: `#!/bin/ash
 # Minecraft Vanilla Server Install Script
 

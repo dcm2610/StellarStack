@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+use tracing::{debug, info};
 
 /// Process state enum matching Wings patterns
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -180,7 +181,9 @@ impl EventBus {
 
     /// Publish a state change event
     pub fn publish_state(&self, state: ProcessState) -> usize {
-        self.publish(Event::StateChange(state))
+        let receivers = self.publish(Event::StateChange(state));
+        info!("Published StateChange({}) to {} receivers", state, receivers);
+        receivers
     }
 
     /// Publish stats update

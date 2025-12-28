@@ -3,7 +3,7 @@
 use std::time::Duration;
 use reqwest::{Client, Method, RequestBuilder, Response, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 use super::errors::{ApiError, ApiResult};
 use super::types::*;
@@ -252,13 +252,25 @@ impl HttpClient {
 
     /// Update server status on the Panel
     pub async fn set_server_status(&self, uuid: &str, status: &str) -> ApiResult<()> {
-        self.request::<serde_json::Value>(
-            Method::POST,
-            &format!("servers/{}/status", uuid),
-            Some(serde_json::json!({ "status": status })),
-        )
-        .await?;
+        let path = format!("servers/{}/status", uuid);
+        let url = self.url(&path);
+        let body = serde_json::json!({ "status": status });
 
+        info!("Sending status update to Panel: POST {} with body {:?}", url, body);
+
+        let result = self.request::<serde_json::Value>(
+            Method::POST,
+            &path,
+            Some(body),
+        )
+        .await;
+
+        match &result {
+            Ok(response) => info!("Status update response from Panel: {:?}", response),
+            Err(e) => warn!("Status update to Panel failed: {:?}", e),
+        }
+
+        result?;
         Ok(())
     }
 

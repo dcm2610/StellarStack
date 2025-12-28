@@ -35,13 +35,25 @@ pub struct Configuration {
 impl Configuration {
     /// Load configuration from a TOML file
     pub fn load(path: &str) -> Result<Self> {
-        let content = std::fs::read_to_string(path)
+        let config_path = std::path::Path::new(path);
+        let content = std::fs::read_to_string(config_path)
             .with_context(|| format!("Failed to read config file: {}", path))?;
 
-        let config: Configuration = toml::from_str(&content)
+        let mut config: Configuration = toml::from_str(&content)
             .with_context(|| "Failed to parse configuration")?;
 
+        // Resolve relative paths based on the config file's parent directory
+        // or current working directory if config file has no parent
+        let base_dir = config_path
+            .parent()
+            .and_then(|p| if p.as_os_str().is_empty() { None } else { Some(p) })
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+        config.system.resolve_paths(&base_dir);
+
         // Ensure directories exist
+        std::fs::create_dir_all(&config.system.root_directory)?;
         std::fs::create_dir_all(&config.system.data_directory)?;
         std::fs::create_dir_all(&config.system.backup_directory)?;
         std::fs::create_dir_all(&config.system.archive_directory)?;
@@ -148,28 +160,72 @@ pub struct SystemConfiguration {
     pub user: UserConfiguration,
 }
 
+impl SystemConfiguration {
+    /// Resolve all relative paths to absolute paths based on the given base directory.
+    /// If a path starts with "." or doesn't start with "/" (Unix) or a drive letter (Windows),
+    /// it's considered relative and will be resolved against the base directory.
+    pub fn resolve_paths(&mut self, base_dir: &std::path::Path) {
+        self.root_directory = Self::resolve_path(&self.root_directory, base_dir);
+        self.data_directory = Self::resolve_path(&self.data_directory, base_dir);
+        self.backup_directory = Self::resolve_path(&self.backup_directory, base_dir);
+        self.archive_directory = Self::resolve_path(&self.archive_directory, base_dir);
+        self.tmp_directory = Self::resolve_path(&self.tmp_directory, base_dir);
+        self.log_directory = Self::resolve_path(&self.log_directory, base_dir);
+    }
+
+    /// Resolve a single path. If relative, join with base_dir. If absolute, return as-is.
+    fn resolve_path(path: &std::path::Path, base_dir: &std::path::Path) -> PathBuf {
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            // Relative path - resolve against base directory
+            let resolved = base_dir.join(path);
+            // Canonicalize if the path exists, otherwise just normalize
+            resolved.canonicalize().unwrap_or_else(|_| {
+                // Path doesn't exist yet, just clean it up
+                Self::normalize_path(&resolved)
+            })
+        }
+    }
+
+    /// Normalize a path by resolving `.` and `..` components without requiring the path to exist
+    fn normalize_path(path: &std::path::Path) -> PathBuf {
+        let mut components = Vec::new();
+        for component in path.components() {
+            match component {
+                std::path::Component::ParentDir => {
+                    components.pop();
+                }
+                std::path::Component::CurDir => {}
+                c => components.push(c),
+            }
+        }
+        components.iter().collect()
+    }
+}
+
 fn default_root_directory() -> PathBuf {
-    PathBuf::from("/var/lib/stellar")
+    PathBuf::from(".stellar")
 }
 
 fn default_data_directory() -> PathBuf {
-    PathBuf::from("/var/lib/stellar/volumes")
+    PathBuf::from(".stellar/volumes")
 }
 
 fn default_backup_directory() -> PathBuf {
-    PathBuf::from("/var/lib/stellar/backups")
+    PathBuf::from(".stellar/backups")
 }
 
 fn default_archive_directory() -> PathBuf {
-    PathBuf::from("/var/lib/stellar/archives")
+    PathBuf::from(".stellar/archives")
 }
 
 fn default_tmp_directory() -> PathBuf {
-    PathBuf::from("/tmp/stellar")
+    PathBuf::from(".stellar/tmp")
 }
 
 fn default_log_directory() -> PathBuf {
-    PathBuf::from("/var/log/stellar")
+    PathBuf::from(".stellar/logs")
 }
 
 fn default_username() -> String {
@@ -237,7 +293,33 @@ pub struct DockerConfiguration {
 }
 
 fn default_docker_socket() -> String {
-    "/var/run/docker.sock".into()
+    #[cfg(target_os = "windows")]
+    {
+        // Windows Docker Desktop uses named pipe
+        "npipe:////./pipe/docker_engine".into()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Unix-like systems (Linux, macOS)
+        // Check for user-specific socket first (rootless Docker / Colima)
+        if let Some(home) = std::env::var_os("HOME") {
+            let user_socket = std::path::Path::new(&home)
+                .join(".colima/default/docker.sock");
+            if user_socket.exists() {
+                return format!("unix://{}", user_socket.display());
+            }
+
+            // Check for Docker Desktop on macOS
+            let docker_desktop = std::path::Path::new(&home)
+                .join(".docker/run/docker.sock");
+            if docker_desktop.exists() {
+                return format!("unix://{}", docker_desktop.display());
+            }
+        }
+
+        // Fall back to system socket
+        "/var/run/docker.sock".into()
+    }
 }
 
 fn default_tmpfs_size() -> u64 {

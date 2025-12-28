@@ -15,10 +15,15 @@ use super::ApiError;
 use crate::filesystem::Filesystem;
 
 /// Download file query parameters
+/// Supports both JWT token auth and direct server/file params (when called from Panel API)
 #[derive(Debug, Deserialize)]
 pub struct DownloadFileQuery {
-    /// JWT token for authentication
-    pub token: String,
+    /// JWT token for authentication (legacy/direct downloads)
+    pub token: Option<String>,
+    /// Server UUID (when called from Panel API with Bearer auth)
+    pub server: Option<String>,
+    /// File path (when called from Panel API with Bearer auth)
+    pub file: Option<String>,
 }
 
 /// Download file claims
@@ -34,12 +39,21 @@ pub async fn download_file(
     State(state): State<AppState>,
     Query(query): Query<DownloadFileQuery>,
 ) -> Result<Response, ApiError> {
-    // Validate JWT token
-    let claims = validate_download_token(&query.token, &state.config.remote.token)
-        .map_err(|e| ApiError::forbidden(e))?;
+    // Determine server_uuid and file_path from either token or direct params
+    let (server_uuid, file_path) = if let Some(ref token) = query.token {
+        // JWT token auth
+        let claims = validate_download_token(token, &state.config.remote.token)
+            .map_err(|e| ApiError::forbidden(e))?;
+        (claims.server_uuid, claims.file_path)
+    } else if let (Some(server), Some(file)) = (query.server, query.file) {
+        // Direct params (Panel API already authenticated via Bearer token)
+        (server, file)
+    } else {
+        return Err(ApiError::bad_request("Either 'token' or 'server' and 'file' parameters required"));
+    };
 
     // Get server
-    let server = state.manager.get(&claims.server_uuid)
+    let server = state.manager.get(&server_uuid)
         .ok_or_else(|| ApiError::not_found("Server not found"))?;
 
     // Get filesystem
@@ -51,7 +65,7 @@ pub async fn download_file(
     ).map_err(|e| ApiError::internal(e.to_string()))?;
 
     // Resolve path safely
-    let safe_path = fs.safe_path(&claims.file_path)?;
+    let safe_path = fs.safe_path(&file_path)?;
 
     if !safe_path.exists() {
         return Err(ApiError::not_found("File not found"));
@@ -72,7 +86,7 @@ pub async fn download_file(
     let filename = safe_path.file_name().unwrap_or("download");
 
     // Determine content type
-    let content_type = mime_guess::from_path(&claims.file_path)
+    let content_type = mime_guess::from_path(&file_path)
         .first_or_octet_stream()
         .to_string();
 
@@ -95,10 +109,15 @@ pub async fn download_file(
 }
 
 /// Download backup query parameters
+/// Supports both JWT token auth and direct server/backup params (when called from Panel API)
 #[derive(Debug, Deserialize)]
 pub struct DownloadBackupQuery {
-    /// JWT token for authentication
-    pub token: String,
+    /// JWT token for authentication (legacy/direct downloads)
+    pub token: Option<String>,
+    /// Server UUID (when called from Panel API with Bearer auth)
+    pub server: Option<String>,
+    /// Backup UUID (when called from Panel API with Bearer auth)
+    pub backup: Option<String>,
 }
 
 /// Download backup claims
@@ -114,14 +133,23 @@ pub async fn download_backup(
     State(state): State<AppState>,
     Query(query): Query<DownloadBackupQuery>,
 ) -> Result<Response, ApiError> {
-    // Validate JWT token
-    let claims = validate_backup_token(&query.token, &state.config.remote.token)
-        .map_err(|e| ApiError::forbidden(e))?;
+    // Determine server_uuid and backup_uuid from either token or direct params
+    let (server_uuid, backup_uuid) = if let Some(ref token) = query.token {
+        // JWT token auth
+        let claims = validate_backup_token(token, &state.config.remote.token)
+            .map_err(|e| ApiError::forbidden(e))?;
+        (claims.server_uuid, claims.backup_uuid)
+    } else if let (Some(server), Some(backup)) = (query.server, query.backup) {
+        // Direct params (Panel API already authenticated via Bearer token)
+        (server, backup)
+    } else {
+        return Err(ApiError::bad_request("Either 'token' or 'server' and 'backup' parameters required"));
+    };
 
     // Get backup file path
     let backup_path = state.config.system.backup_directory
-        .join(&claims.server_uuid)
-        .join(format!("{}.tar.gz", claims.backup_uuid));
+        .join(&server_uuid)
+        .join(format!("{}.tar.gz", backup_uuid));
 
     if !backup_path.exists() {
         return Err(ApiError::not_found("Backup not found"));
@@ -144,7 +172,7 @@ pub async fn download_backup(
             (header::CONTENT_LENGTH, metadata.len().to_string()),
             (
                 header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{}.tar.gz\"", claims.backup_uuid),
+                format!("attachment; filename=\"{}.tar.gz\"", backup_uuid),
             ),
         ],
         body,

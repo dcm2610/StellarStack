@@ -1,8 +1,10 @@
 //! Main daemon command - starts the daemon server
 
 use std::sync::Arc;
+use std::time::Duration;
 use anyhow::Result;
-use tracing::{info, warn, error};
+use tracing::{info, warn, error, debug};
+use tokio_util::sync::CancellationToken;
 
 use stellar_daemon::config::Configuration;
 use stellar_daemon::api::HttpClient;
@@ -46,6 +48,33 @@ pub async fn run(config_path: &str) -> Result<()> {
     };
     let app = router::build_router(state);
 
+    // Create shutdown token for background tasks
+    let shutdown_token = CancellationToken::new();
+
+    // Start periodic status sync task (every 30 seconds)
+    let sync_manager = manager.clone();
+    let sync_token = shutdown_token.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(30));
+        interval.tick().await; // Skip first immediate tick
+
+        loop {
+            tokio::select! {
+                _ = sync_token.cancelled() => {
+                    debug!("Periodic status sync task stopped");
+                    return;
+                }
+                _ = interval.tick() => {
+                    debug!("Running periodic status sync...");
+                    // Use lightweight report_all_statuses instead of sync_all_statuses
+                    // to avoid re-attaching to containers on every tick
+                    sync_manager.report_all_statuses().await;
+                }
+            }
+        }
+    });
+    info!("Started periodic status sync (every 30s)");
+
     // TODO: Start the SFTP server if enabled
     // if config.sftp.enabled {
     //     let sftp_config = config.sftp.clone();
@@ -71,6 +100,9 @@ pub async fn run(config_path: &str) -> Result<()> {
             .await
             .expect("Failed to install CTRL+C handler");
         warn!("Received shutdown signal, stopping servers...");
+
+        // Cancel background tasks
+        shutdown_token.cancel();
 
         // Gracefully stop all servers
         manager_shutdown.shutdown().await;

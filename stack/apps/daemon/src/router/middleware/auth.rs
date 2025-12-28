@@ -95,7 +95,7 @@ pub fn validate_websocket_token(token: &str, jwt_secret: &str) -> Result<Websock
 }
 
 /// JWT claims for WebSocket connections
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct WebsocketClaims {
     /// Server UUID
     pub server_uuid: String,

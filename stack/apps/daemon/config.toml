@@ -14,12 +14,13 @@ cert = ""
 key = ""
 
 [system]
-root_directory = "C:/Users/marqu/StellarStack-REPO/stack/.stellar"
-data_directory = "C:/Users/marqu/StellarStack-REPO/stack/.stellar/volumes"
-backup_directory = "C:/Users/marqu/StellarStack-REPO/stack/.stellar/backups"
-archive_directory = "C:/Users/marqu/StellarStack-REPO/stack/.stellar/archives"
-tmp_directory = "C:/Users/marqu/StellarStack-REPO/stack/.stellar/tmp"
-log_directory = "C:/Users/marqu/StellarStack-REPO/stack/.stellar/logs"
+# Paths can be relative (resolved from config file directory) or absolute
+root_directory = "../.stellar"
+data_directory = "../.stellar/volumes"
+backup_directory = "../.stellar/backups"
+archive_directory = "../.stellar/archives"
+tmp_directory = "../.stellar/tmp"
+log_directory = "../.stellar/logs"
 username = "stellar"
 timezone = "UTC"
 disk_check_interval = 60
@@ -29,7 +30,12 @@ uid = 1000
 gid = 1000
 
 [docker]
-socket = "npipe:////./pipe/docker_engine"  # Windows Docker Desktop
+# Socket is auto-detected based on OS:
+# - Linux: /var/run/docker.sock
+# - macOS: ~/.colima/default/docker.sock or ~/.docker/run/docker.sock
+# - Windows: npipe:////./pipe/docker_engine
+# Uncomment to override:
+# socket = "unix:///var/run/docker.sock"
 tmpfs_size = 100  # MB
 container_pid_limit = 512
 dns = ["1.1.1.1", "1.0.0.1"]
@@ -49,13 +55,18 @@ default = 0
 
 [remote]
 url = "http://localhost:3001"
-token_id = "cmjq01c7x0003ll3sh9xnubv0"
-token = "60834de4d4a2fb7e9ebb869cd8fad81098a6e09fa03f259105bb259a795236a1076b359fff58eeb4c0aba19c36fd226a"
+token_id = "cmjq3vs170001qiswrkrwx0oz"
+token = "0b2b0906b7db74d17efada6dd6c09faf757309b23df84f9edd559026d12114d0385b1f77ea03832e4467f87fc87c5dc1"
 timeout = 30
 boot_servers_per_page = 50
 
+[redis]
+enabled = true
+url = "redis://127.0.0.1:6379"
+prefix = "stellar"
+
 [sftp]
-enabled = false
+enabled = true
 bind_address = "0.0.0.0"
 bind_port = 2022
 read_only = false

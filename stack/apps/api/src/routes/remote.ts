@@ -20,6 +20,10 @@ import type { Variables } from "../types";
 const remote = new Hono<{ Variables: Variables }>();
 
 // All remote routes require daemon authentication
+remote.use("*", async (c, next) => {
+  console.log(`[Remote] Incoming request: ${c.req.method} ${c.req.path}`);
+  return next();
+});
 remote.use("*", requireDaemon);
 
 // Helper to serialize BigInt fields

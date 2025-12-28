@@ -8,6 +8,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::api::HttpClient;
 use crate::config::Configuration;
+use crate::events::RedisStateStore;
 
 use super::configuration::ServerConfig;
 use super::server::Server;
@@ -22,21 +23,44 @@ pub struct Manager {
 
     /// Global configuration
     config: Arc<Configuration>,
+
+    /// Redis state store for persistence
+    state_store: Arc<RedisStateStore>,
 }
 
 impl Manager {
     /// Create a new server manager
     pub fn new(api_client: Arc<HttpClient>, config: Arc<Configuration>) -> Self {
+        let state_store = Arc::new(RedisStateStore::new(
+            config.redis.prefix.clone(),
+            config.redis.enabled,
+        ));
+
         Self {
             servers: DashMap::new(),
             api_client,
             config,
+            state_store,
         }
+    }
+
+    /// Get the state store
+    pub fn state_store(&self) -> Arc<RedisStateStore> {
+        self.state_store.clone()
     }
 
     /// Initialize the manager by loading servers from the panel
     pub async fn initialize(&self) -> Result<(), ManagerError> {
         info!("Initializing server manager...");
+
+        // Connect state store to Redis
+        if self.config.redis.enabled {
+            if let Err(e) = self.state_store.connect(&self.config.redis.url).await {
+                warn!("Failed to connect Redis state store: {}. State persistence disabled.", e);
+            } else {
+                info!("Redis state store connected");
+            }
+        }
 
         // Fetch servers from panel
         let server_data = self.api_client
@@ -56,6 +80,7 @@ impl Manager {
 
             let api_client = self.api_client.clone();
             let config = self.config.clone();
+            let state_store = self.state_store.clone();
 
             handles.push(tokio::spawn(async move {
                 let _permit = permit;
@@ -69,6 +94,7 @@ impl Manager {
                     &config.docker,
                     api_client,
                     Some(&config.redis),
+                    Some(state_store),
                 ) {
                     Ok(server) => {
                         debug!("Initialized server {}", uuid);
@@ -134,6 +160,7 @@ impl Manager {
             &self.config.docker,
             self.api_client.clone(),
             Some(&self.config.redis),
+            Some(self.state_store.clone()),
         ).map_err(|e| ManagerError::Server(e.to_string()))?;
 
         let server = Arc::new(server);
@@ -169,6 +196,7 @@ impl Manager {
 
     /// Sync all container statuses to the panel on startup
     /// This ensures the panel has accurate status information after daemon restart
+    /// This is the heavy version that attaches to running containers
     pub async fn sync_all_statuses(&self) {
         info!("Syncing container statuses to panel...");
         let mut synced = 0;
@@ -185,6 +213,16 @@ impl Manager {
         }
 
         info!("Status sync complete: {} synced, {} failed", synced, failed);
+    }
+
+    /// Report all server statuses to the panel (lightweight, for periodic sync)
+    /// This only checks Docker state and reports, without attaching or starting watchers
+    pub async fn report_all_statuses(&self) {
+        for server in self.all() {
+            if let Err(e) = server.report_status().await {
+                warn!("Failed to report status for server {}: {}", server.uuid(), e);
+            }
+        }
     }
 
     /// Start Redis publishers for all servers
