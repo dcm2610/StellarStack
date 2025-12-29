@@ -43,6 +43,9 @@ install_git="n"
 install_rust="n"
 install_certbot="n"
 
+# Upgrade mode (keeps existing config)
+upgrade_mode="n"
+
 # Print functions
 print_step() {
     echo ""
@@ -73,6 +76,72 @@ print_task() {
 
 print_task_done() {
     echo -e "\r  ${PRIMARY}[■]${NC} ${PRIMARY}$1${NC}    "
+}
+
+# Show spinner while a command runs
+run_with_spinner() {
+    local pid
+    local spin_chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local msg="$1"
+    shift
+
+    # Run command in background
+    "$@" &
+    pid=$!
+
+    # Show spinner
+    local i=0
+    while kill -0 $pid 2>/dev/null; do
+        local char="${spin_chars:$i:1}"
+        echo -ne "\r  ${PRIMARY}[${char}]${NC} ${MUTED}${msg}...${NC}"
+        sleep 0.1
+        i=$(( (i + 1) % ${#spin_chars} ))
+    done
+
+    # Wait for command to finish and get exit code
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        echo -e "\r  ${PRIMARY}[■]${NC} ${PRIMARY}${msg}${NC}    "
+    else
+        echo -e "\r  ${ERROR}[✗]${NC} ${ERROR}${msg} (failed)${NC}    "
+    fi
+
+    return $exit_code
+}
+
+# Show progress bar for cargo build
+build_with_progress() {
+    local build_dir="$1"
+    local log_file="/tmp/stellar-build.log"
+
+    cd "$build_dir"
+    export PATH="$HOME/.cargo/bin:$PATH"
+
+    echo -e "  ${MUTED}[ ]${NC} ${MUTED}Building daemon...${NC}"
+    echo ""
+
+    # Run cargo build and capture output
+    cargo build --release 2>&1 | while IFS= read -r line; do
+        # Extract progress from cargo output (Compiling X/Y)
+        if [[ "$line" =~ Compiling ]]; then
+            # Extract crate name
+            local crate=$(echo "$line" | sed -n 's/.*Compiling \([^ ]*\).*/\1/p')
+            echo -ne "\r  ${PRIMARY}[▸]${NC} ${MUTED}Compiling: ${crate}${NC}                              "
+        elif [[ "$line" =~ Finished ]]; then
+            echo -ne "\r  ${PRIMARY}[■]${NC} ${PRIMARY}Build complete${NC}                                        "
+            echo ""
+        fi
+    done
+
+    # Check if build succeeded
+    if [ -f "target/release/stellar-daemon" ]; then
+        return 0
+    else
+        echo -e "\r  ${ERROR}[✗]${NC} ${ERROR}Build failed${NC}"
+        return 1
+    fi
 }
 
 # Wait for user to press enter
@@ -171,27 +240,61 @@ check_existing_installation() {
         print_warning "Existing systemd service found"
     fi
 
+    # Check if config exists
+    local config_exists=false
+    if [ -f "${DAEMON_INSTALL_DIR}/config.toml" ]; then
+        config_exists=true
+        print_info "Existing configuration found"
+    fi
+
     if [ "$existing" = true ]; then
         echo ""
         echo -e "${SECONDARY}  An existing StellarStack Daemon installation was detected.${NC}"
-        echo -e "${SECONDARY}  The installer will stop the current daemon and upgrade it.${NC}"
         echo ""
 
-        if ask_yes_no "Continue with upgrade?" "y"; then
+        if [ "$config_exists" = true ]; then
+            echo -e "${SECONDARY}  Would you like to keep your existing configuration?${NC}"
+            echo -e "${MUTED}  (This will only update the daemon binary)${NC}"
             echo ""
-            print_task "Stopping existing daemon"
-            systemctl stop stellar-daemon 2>/dev/null || true
-            print_task_done "Stopping existing daemon"
 
-            print_task "Disabling existing daemon"
-            systemctl disable stellar-daemon 2>/dev/null || true
-            print_task_done "Disabling existing daemon"
+            if ask_yes_no "Keep existing configuration?" "y"; then
+                upgrade_mode="y"
+                echo ""
+                print_info "Upgrade mode enabled - existing config will be preserved"
+                echo ""
+                print_task "Stopping existing daemon"
+                systemctl stop stellar-daemon 2>/dev/null || true
+                print_task_done "Stopping existing daemon"
+            else
+                echo ""
+                print_info "Full installation mode - configuration will be recollected"
+                echo ""
+                print_task "Stopping existing daemon"
+                systemctl stop stellar-daemon 2>/dev/null || true
+                print_task_done "Stopping existing daemon"
 
-            print_info "Existing daemon stopped. Configuration will be recollected."
+                print_task "Disabling existing daemon"
+                systemctl disable stellar-daemon 2>/dev/null || true
+                print_task_done "Disabling existing daemon"
+            fi
         else
+            echo -e "${SECONDARY}  The installer will stop the current daemon and reinstall it.${NC}"
             echo ""
-            print_info "Installation cancelled."
-            exit 0
+
+            if ask_yes_no "Continue with installation?" "y"; then
+                echo ""
+                print_task "Stopping existing daemon"
+                systemctl stop stellar-daemon 2>/dev/null || true
+                print_task_done "Stopping existing daemon"
+
+                print_task "Disabling existing daemon"
+                systemctl disable stellar-daemon 2>/dev/null || true
+                print_task_done "Disabling existing daemon"
+            else
+                echo ""
+                print_info "Installation cancelled."
+                exit 0
+            fi
         fi
     else
         print_success "No existing installation detected"
@@ -521,26 +624,61 @@ install_dependencies() {
     fi
 }
 
+# Upgrade daemon only (keep existing config)
+upgrade_daemon() {
+    print_step "UPGRADING STELLAR DAEMON"
+
+    BUILD_DIR="/tmp/stellar-daemon-build"
+    rm -rf "${BUILD_DIR}"
+
+    run_with_spinner "Cloning repository" git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "${BUILD_DIR}"
+
+    echo ""
+    echo -e "  ${SECONDARY}Building daemon (this may take several minutes)...${NC}"
+    echo ""
+
+    if ! build_with_progress "${BUILD_DIR}/stack/apps/daemon"; then
+        print_error "Failed to build daemon"
+        exit 1
+    fi
+
+    print_task "Backing up existing daemon"
+    if [ -f "${DAEMON_INSTALL_DIR}/stellar-daemon" ]; then
+        cp "${DAEMON_INSTALL_DIR}/stellar-daemon" "${DAEMON_INSTALL_DIR}/stellar-daemon.bak"
+    fi
+    print_task_done "Backing up existing daemon"
+
+    print_task "Installing new daemon"
+    cp "${BUILD_DIR}/stack/apps/daemon/target/release/stellar-daemon" "${DAEMON_INSTALL_DIR}/stellar-daemon"
+    chmod +x "${DAEMON_INSTALL_DIR}/stellar-daemon"
+    print_task_done "Installing new daemon"
+
+    # Cleanup
+    cd /
+    rm -rf "${BUILD_DIR}"
+}
+
 # Install daemon
 install_daemon() {
     print_step "INSTALLING STELLAR DAEMON"
 
     BUILD_DIR="/tmp/stellar-daemon-build"
-
-    print_task "Cloning repository"
     rm -rf "${BUILD_DIR}"
-    git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "${BUILD_DIR}" > /dev/null 2>&1
-    print_task_done "Cloning repository"
 
-    print_task "Building daemon (this may take a few minutes)"
-    cd "${BUILD_DIR}/stack/apps/daemon"
-    export PATH="$HOME/.cargo/bin:$PATH"
-    cargo build --release > /dev/null 2>&1
-    print_task_done "Building daemon"
+    run_with_spinner "Cloning repository" git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "${BUILD_DIR}"
+
+    echo ""
+    echo -e "  ${SECONDARY}Building daemon (this may take several minutes)...${NC}"
+    echo ""
+
+    if ! build_with_progress "${BUILD_DIR}/stack/apps/daemon"; then
+        print_error "Failed to build daemon"
+        exit 1
+    fi
 
     print_task "Installing daemon"
     mkdir -p "${DAEMON_INSTALL_DIR}"/{volumes,backups,archives,tmp,logs}
-    cp "target/release/stellar-daemon" "${DAEMON_INSTALL_DIR}/stellar-daemon"
+    cp "${BUILD_DIR}/stack/apps/daemon/target/release/stellar-daemon" "${DAEMON_INSTALL_DIR}/stellar-daemon"
     chmod +x "${DAEMON_INSTALL_DIR}/stellar-daemon"
     print_task_done "Installing daemon"
 
@@ -677,6 +815,41 @@ EOF
     rm -rf "${BUILD_DIR}"
 }
 
+# Show upgrade progress
+run_upgrade() {
+    clear_screen
+    echo -e "${PRIMARY}  > UPGRADING STELLAR DAEMON${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Please wait while we upgrade your daemon...${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    # Check if running as root
+    if [ "$EUID" -ne 0 ]; then
+        print_error "This script must be run as root"
+        echo -e "  ${MUTED}Run with: sudo $0${NC}"
+        exit 1
+    fi
+
+    # Check dependencies (but don't ask to install missing ones in upgrade mode)
+    if ! command -v git &> /dev/null; then
+        print_error "Git is required but not installed"
+        exit 1
+    fi
+    if ! command -v cargo &> /dev/null; then
+        print_error "Rust/Cargo is required but not installed"
+        exit 1
+    fi
+
+    # Upgrade daemon
+    upgrade_daemon
+
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+}
+
 # Show installation progress
 run_installation() {
     clear_screen
@@ -702,6 +875,41 @@ run_installation() {
 
     echo ""
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+}
+
+# Show upgrade completion screen
+show_upgrade_complete() {
+    clear_screen
+    echo -e "${PRIMARY}  > UPGRADE COMPLETE${NC}"
+    echo ""
+    echo -e "${SECONDARY}  StellarStack Daemon has been successfully upgraded.${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${PRIMARY}  NEXT STEPS:${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Your existing configuration has been preserved.${NC}"
+    echo -e "${SECONDARY}  The previous daemon binary has been backed up to:${NC}"
+    echo -e "    ${PRIMARY}${DAEMON_INSTALL_DIR}/stellar-daemon.bak${NC}"
+    echo ""
+    echo -e "${WARNING}  [!]${NC} ${SECONDARY}Please restart the daemon to apply the upgrade:${NC}"
+    echo ""
+    echo -e "    ${PRIMARY}systemctl restart stellar-daemon${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${PRIMARY}  USEFUL COMMANDS:${NC}"
+    echo ""
+    echo -e "    ${SECONDARY}systemctl status stellar-daemon${NC}    ${MUTED}# Check status${NC}"
+    echo -e "    ${SECONDARY}systemctl restart stellar-daemon${NC}   ${MUTED}# Restart${NC}"
+    echo -e "    ${SECONDARY}systemctl stop stellar-daemon${NC}      ${MUTED}# Stop${NC}"
+    echo -e "    ${SECONDARY}journalctl -u stellar-daemon -f${NC}    ${MUTED}# View logs${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Thank you for using StellarStack!${NC}"
+    echo -e "${MUTED}  Documentation: https://docs.stellarstack.app${NC}"
     echo ""
 }
 
@@ -758,6 +966,15 @@ main() {
     # Step 2: Check for existing installation
     check_existing_installation
 
+    # Check if we're in upgrade mode (keep existing config)
+    if [ "$upgrade_mode" = "y" ]; then
+        # Upgrade path - skip config collection
+        run_upgrade
+        show_upgrade_complete
+        return
+    fi
+
+    # Full installation path
     # Step 3: Check dependencies
     check_dependencies
 

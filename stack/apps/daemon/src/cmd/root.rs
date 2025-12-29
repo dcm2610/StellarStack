@@ -1,8 +1,10 @@
 //! Main daemon command - starts the daemon server
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use anyhow::Result;
+use axum_server::tls_rustls::RustlsConfig;
 use tracing::{info, warn, error, debug};
 use tokio_util::sync::CancellationToken;
 
@@ -87,30 +89,56 @@ pub async fn run(config_path: &str) -> Result<()> {
     //     });
     // }
 
-    // Start the HTTP server
-    let bind_addr = format!("{}:{}", config.api.host, config.api.port);
-    info!("Starting HTTP server on {}", bind_addr);
-
-    let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
+    // Start the HTTP/HTTPS server
+    let bind_addr: SocketAddr = format!("{}:{}", config.api.host, config.api.port)
+        .parse()
+        .expect("Invalid bind address");
 
     // Handle graceful shutdown
     let manager_shutdown = manager.clone();
-    let shutdown_signal = async move {
+    let shutdown_token_clone = shutdown_token.clone();
+    let handle = axum_server::Handle::new();
+    let shutdown_handle = handle.clone();
+
+    tokio::spawn(async move {
         tokio::signal::ctrl_c()
             .await
             .expect("Failed to install CTRL+C handler");
         warn!("Received shutdown signal, stopping servers...");
 
         // Cancel background tasks
-        shutdown_token.cancel();
+        shutdown_token_clone.cancel();
 
         // Gracefully stop all servers
         manager_shutdown.shutdown().await;
-    };
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal)
-        .await?;
+        // Shutdown the HTTP server
+        shutdown_handle.graceful_shutdown(Some(Duration::from_secs(10)));
+    });
+
+    // Check if SSL is enabled
+    if config.api.ssl.enabled {
+        info!("Starting HTTPS server on {} (SSL enabled)", bind_addr);
+        info!("  Certificate: {}", config.api.ssl.cert);
+        info!("  Key: {}", config.api.ssl.key);
+
+        // Load TLS configuration
+        let tls_config = RustlsConfig::from_pem_file(&config.api.ssl.cert, &config.api.ssl.key)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to load TLS config: {}", e))?;
+
+        axum_server::bind_rustls(bind_addr, tls_config)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?;
+    } else {
+        info!("Starting HTTP server on {} (SSL disabled)", bind_addr);
+
+        axum_server::bind(bind_addr)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?;
+    }
 
     info!("Daemon stopped");
     Ok(())
