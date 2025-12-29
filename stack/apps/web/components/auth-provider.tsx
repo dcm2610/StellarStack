@@ -38,7 +38,7 @@ export function useAuth() {
 }
 
 // Routes that don't require authentication
-const publicRoutes = ["/"];
+const publicRoutes = ["/", "/auth/two-factor"];
 
 // Routes that require admin role
 const adminRoutes = ["/admin"];
