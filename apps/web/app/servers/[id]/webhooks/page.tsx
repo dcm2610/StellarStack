@@ -58,6 +58,7 @@ const WebhooksPage = (): JSX.Element | null => {
   const [formUrl, setFormUrl] = useState("");
   const [formEvents, setFormEvents] = useState<WebhookEvent[]>([]);
   const [formEnabled, setFormEnabled] = useState(true);
+  const [formProvider, setFormProvider] = useState<"generic" | "discord" | "slack">("generic");
 
   useEffect(() => {
     setMounted(true);
@@ -100,6 +101,7 @@ const WebhooksPage = (): JSX.Element | null => {
     setFormUrl("");
     setFormEvents([]);
     setFormEnabled(true);
+    setFormProvider("generic");
   };
 
   const openAddModal = () => {
@@ -112,6 +114,7 @@ const WebhooksPage = (): JSX.Element | null => {
     setFormUrl(webhook.url);
     setFormEvents(webhook.events);
     setFormEnabled(webhook.enabled);
+    setFormProvider(webhook.provider || "generic");
     setEditModalOpen(true);
   };
 
@@ -126,6 +129,7 @@ const WebhooksPage = (): JSX.Element | null => {
         serverId,
         url: formUrl,
         events: formEvents,
+        provider: formProvider,
       });
       setWebhookList((prev) => [...prev, newWebhook]);
       setAddModalOpen(false);
@@ -143,6 +147,7 @@ const WebhooksPage = (): JSX.Element | null => {
         url: formUrl,
         events: formEvents,
         enabled: formEnabled,
+        provider: formProvider,
       });
       setWebhookList((prev) => prev.map((w) => (w.id === selectedWebhook.id ? updated : w)));
       setEditModalOpen(false);
@@ -395,6 +400,24 @@ const WebhooksPage = (): JSX.Element | null => {
                           >
                             {webhook.enabled ? "Active" : "Disabled"}
                           </span>
+                          <span
+                            className={cn(
+                              "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
+                              webhook.provider === "discord"
+                                ? isDark
+                                  ? "border-indigo-700/50 text-indigo-400"
+                                  : "border-indigo-300 text-indigo-600"
+                                : webhook.provider === "slack"
+                                  ? isDark
+                                    ? "border-purple-700/50 text-purple-400"
+                                    : "border-purple-300 text-purple-600"
+                                  : isDark
+                                    ? "border-zinc-700 text-zinc-500"
+                                    : "border-zinc-300 text-zinc-400"
+                            )}
+                          >
+                            {webhook.provider === "generic" ? "Custom" : webhook.provider}
+                          </span>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -496,6 +519,44 @@ const WebhooksPage = (): JSX.Element | null => {
                   : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
               )}
             />
+          </div>
+          <div>
+            <label
+              className={cn(
+                "mb-2 block text-xs tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
+              Provider
+            </label>
+            <div className="flex gap-2">
+              {(["generic", "discord", "slack"] as const).map((provider) => (
+                <button
+                  key={provider}
+                  type="button"
+                  onClick={() => setFormProvider(provider)}
+                  className={cn(
+                    "flex-1 border p-3 text-center text-sm capitalize transition-all",
+                    formProvider === provider
+                      ? isDark
+                        ? "border-zinc-500 bg-zinc-800 text-zinc-100"
+                        : "border-zinc-400 bg-zinc-100 text-zinc-900"
+                      : isDark
+                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        : "border-zinc-300 text-zinc-500 hover:border-zinc-400"
+                  )}
+                >
+                  {provider === "generic" ? "Custom" : provider}
+                </button>
+              ))}
+            </div>
+            <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+              {formProvider === "discord"
+                ? "Formats payloads as Discord embeds"
+                : formProvider === "slack"
+                  ? "Formats payloads as Slack blocks"
+                  : "Sends raw JSON payload with signature"}
+            </p>
           </div>
           <div>
             <label
@@ -641,6 +702,44 @@ const WebhooksPage = (): JSX.Element | null => {
                 {formEnabled ? "Enabled" : "Disabled"}
               </span>
             </button>
+          </div>
+          <div>
+            <label
+              className={cn(
+                "mb-2 block text-xs tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
+              Provider
+            </label>
+            <div className="flex gap-2">
+              {(["generic", "discord", "slack"] as const).map((provider) => (
+                <button
+                  key={provider}
+                  type="button"
+                  onClick={() => setFormProvider(provider)}
+                  className={cn(
+                    "flex-1 border p-3 text-center text-sm capitalize transition-all",
+                    formProvider === provider
+                      ? isDark
+                        ? "border-zinc-500 bg-zinc-800 text-zinc-100"
+                        : "border-zinc-400 bg-zinc-100 text-zinc-900"
+                      : isDark
+                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        : "border-zinc-300 text-zinc-500 hover:border-zinc-400"
+                  )}
+                >
+                  {provider === "generic" ? "Custom" : provider}
+                </button>
+              ))}
+            </div>
+            <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+              {formProvider === "discord"
+                ? "Formats payloads as Discord embeds"
+                : formProvider === "slack"
+                  ? "Formats payloads as Slack blocks"
+                  : "Sends raw JSON payload with signature"}
+            </p>
           </div>
           <div>
             <label

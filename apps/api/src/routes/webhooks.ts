@@ -7,17 +7,23 @@ import type { Variables } from "../types";
 
 const webhooks = new Hono<{ Variables: Variables }>();
 
+// Supported webhook providers
+const WEBHOOK_PROVIDERS = ["generic", "discord", "slack"] as const;
+type WebhookProvider = (typeof WEBHOOK_PROVIDERS)[number];
+
 // Validation schemas
 const createWebhookSchema = z.object({
   url: z.string().url(),
   events: z.array(z.string()).min(1),
   serverId: z.string().optional(),
+  provider: z.enum(WEBHOOK_PROVIDERS).optional().default("generic"),
 });
 
 const updateWebhookSchema = z.object({
   url: z.string().url().optional(),
   events: z.array(z.string()).min(1).optional(),
   enabled: z.boolean().optional(),
+  provider: z.enum(WEBHOOK_PROVIDERS).optional(),
 });
 
 // Get available webhook events
@@ -64,7 +70,8 @@ webhooks.get("/", requireAuth, async (c) => {
   // Mask the secrets
   const webhooksWithMaskedSecrets = userWebhooks.map((webhook) => ({
     ...webhook,
-    secret: webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
+    secret:
+      webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
   }));
 
   return c.json(webhooksWithMaskedSecrets);
@@ -102,7 +109,8 @@ webhooks.get("/:id", requireAuth, async (c) => {
 
   return c.json({
     ...webhook,
-    secret: webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
+    secret:
+      webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
   });
 });
 
@@ -116,7 +124,7 @@ webhooks.post("/", requireAuth, async (c) => {
     return c.json({ error: "Validation failed", details: parsed.error.errors }, 400);
   }
 
-  const { url, events, serverId } = parsed.data;
+  const { url, events, serverId, provider } = parsed.data;
 
   // Validate events
   const availableEvents = getAvailableEvents();
@@ -144,6 +152,7 @@ webhooks.post("/", requireAuth, async (c) => {
       secret,
       events,
       serverId,
+      provider,
     },
     include: {
       server: {
@@ -152,12 +161,15 @@ webhooks.post("/", requireAuth, async (c) => {
     },
   });
 
-  return c.json({
-    ...webhook,
-    // Show full secret only on creation
-    secretOnce: secret,
-    secret: secret.substring(0, 8) + "..." + secret.substring(secret.length - 4),
-  }, 201);
+  return c.json(
+    {
+      ...webhook,
+      // Show full secret only on creation
+      secretOnce: secret,
+      secret: secret.substring(0, 8) + "..." + secret.substring(secret.length - 4),
+    },
+    201
+  );
 });
 
 // Update a webhook
@@ -201,7 +213,8 @@ webhooks.patch("/:id", requireAuth, async (c) => {
 
   return c.json({
     ...webhook,
-    secret: webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
+    secret:
+      webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
   });
 });
 
@@ -392,11 +405,14 @@ webhooks.post("/:id/deliveries/:deliveryId/retry", requireAuth, async (c) => {
       },
     });
 
-    return c.json({
-      success: false,
-      deliveryId: newDelivery.id,
-      error: error.message || "Request failed",
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        deliveryId: newDelivery.id,
+        error: error.message || "Request failed",
+      },
+      500
+    );
   }
 });
 

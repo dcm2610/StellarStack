@@ -380,10 +380,21 @@ export const permissions = {
 export const webhooks = {
   list: () => request<Webhook[]>(`/api/webhooks`),
   get: (webhookId: string) => request<Webhook>(`/api/webhooks/${webhookId}`),
-  create: (data: { serverId?: string; url: string; events: WebhookEvent[] }) =>
-    request<Webhook>(`/api/webhooks`, { method: "POST", body: data }),
-  update: (webhookId: string, data: { url?: string; events?: WebhookEvent[]; enabled?: boolean }) =>
-    request<Webhook>(`/api/webhooks/${webhookId}`, { method: "PATCH", body: data }),
+  create: (data: {
+    serverId?: string;
+    url: string;
+    events: WebhookEvent[];
+    provider?: "generic" | "discord" | "slack";
+  }) => request<Webhook>(`/api/webhooks`, { method: "POST", body: data }),
+  update: (
+    webhookId: string,
+    data: {
+      url?: string;
+      events?: WebhookEvent[];
+      enabled?: boolean;
+      provider?: "generic" | "discord" | "slack";
+    }
+  ) => request<Webhook>(`/api/webhooks/${webhookId}`, { method: "PATCH", body: data }),
   delete: (webhookId: string) => request(`/api/webhooks/${webhookId}`, { method: "DELETE" }),
   regenerateSecret: (webhookId: string) =>
     request<{ secret: string }>(`/api/webhooks/${webhookId}/regenerate-secret`, { method: "POST" }),

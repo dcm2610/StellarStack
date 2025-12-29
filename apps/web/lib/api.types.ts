@@ -586,11 +586,14 @@ export type WebhookEvent =
   | "backup.restored"
   | "backup.deleted";
 
+export type WebhookProvider = "generic" | "discord" | "slack";
+
 export interface Webhook {
   id: string;
   serverId: string | null;
   url: string;
   events: WebhookEvent[];
+  provider: WebhookProvider;
   enabled: boolean;
   secret?: string;
   secretOnce?: string;

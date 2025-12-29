@@ -47,10 +47,156 @@ export const WebhookEvents = {
  * Generate HMAC-SHA256 signature for webhook payload
  */
 const signPayload = (payload: string, secret: string): string => {
-  return crypto
-    .createHmac("sha256", secret)
-    .update(payload)
-    .digest("hex");
+  return crypto.createHmac("sha256", secret).update(payload).digest("hex");
+};
+
+/**
+ * Format event name for display
+ */
+const formatEventName = (event: string): string => {
+  return event
+    .split(".")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
+
+/**
+ * Get color for Discord embed based on event type
+ */
+const getDiscordColor = (event: string): number => {
+  if (event.includes("started") || event.includes("created") || event.includes("completed")) {
+    return 0x00ff00; // Green
+  }
+  if (event.includes("stopped") || event.includes("deleted") || event.includes("failed")) {
+    return 0xff0000; // Red
+  }
+  if (event.includes("warning")) {
+    return 0xffff00; // Yellow
+  }
+  return 0x0099ff; // Blue (default)
+};
+
+/**
+ * Format payload for Discord webhooks
+ */
+const formatDiscordPayload = (payload: WebhookPayload): object => {
+  const embed: {
+    title: string;
+    description?: string;
+    color: number;
+    fields: { name: string; value: string; inline?: boolean }[];
+    timestamp: string;
+    footer: { text: string };
+  } = {
+    title: `🔔 ${formatEventName(payload.event)}`,
+    color: getDiscordColor(payload.event),
+    fields: [],
+    timestamp: payload.timestamp,
+    footer: { text: "StellarStack" },
+  };
+
+  if (payload.server) {
+    embed.fields.push({
+      name: "Server",
+      value: payload.server.name,
+      inline: true,
+    });
+    if (payload.server.status) {
+      embed.fields.push({
+        name: "Status",
+        value: payload.server.status,
+        inline: true,
+      });
+    }
+  }
+
+  if (payload.data) {
+    // Add any extra data fields
+    for (const [key, value] of Object.entries(payload.data)) {
+      if (typeof value === "string" || typeof value === "number") {
+        embed.fields.push({
+          name: key.charAt(0).toUpperCase() + key.slice(1),
+          value: String(value),
+          inline: true,
+        });
+      }
+    }
+  }
+
+  return { embeds: [embed] };
+};
+
+/**
+ * Format payload for Slack webhooks
+ */
+const formatSlackPayload = (payload: WebhookPayload): object => {
+  const blocks: object[] = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: `🔔 ${formatEventName(payload.event)}`,
+        emoji: true,
+      },
+    },
+  ];
+
+  if (payload.server) {
+    const fields: { type: string; text: string }[] = [
+      {
+        type: "mrkdwn",
+        text: `*Server:*\n${payload.server.name}`,
+      },
+    ];
+    if (payload.server.status) {
+      fields.push({
+        type: "mrkdwn",
+        text: `*Status:*\n${payload.server.status}`,
+      });
+    }
+    blocks.push({
+      type: "section",
+      fields,
+    });
+  }
+
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: `StellarStack • ${new Date(payload.timestamp).toLocaleString()}`,
+      },
+    ],
+  });
+
+  return { blocks };
+};
+
+/**
+ * Format payload based on provider
+ */
+const formatPayloadForProvider = (
+  payload: WebhookPayload,
+  provider: string
+): { body: string; contentType: string } => {
+  switch (provider) {
+    case "discord":
+      return {
+        body: JSON.stringify(formatDiscordPayload(payload)),
+        contentType: "application/json",
+      };
+    case "slack":
+      return {
+        body: JSON.stringify(formatSlackPayload(payload)),
+        contentType: "application/json",
+      };
+    default:
+      return {
+        body: JSON.stringify(payload),
+        contentType: "application/json",
+      };
+  }
 };
 
 /**
@@ -115,13 +261,19 @@ export const dispatchWebhook = async (
     ...(data && { data }),
   };
 
-  const payloadString = JSON.stringify(payload);
-
   // Dispatch to all matching webhooks
   const deliveryPromises = webhooks.map(async (webhook) => {
-    const signature = signPayload(payloadString, webhook.secret);
+    // Format payload based on provider
+    const { body: formattedBody, contentType } = formatPayloadForProvider(
+      payload,
+      webhook.provider
+    );
 
-    // Create delivery record
+    // For generic webhooks, sign the payload; Discord/Slack don't use signatures
+    const signature =
+      webhook.provider === "generic" ? signPayload(formattedBody, webhook.secret) : "";
+
+    // Create delivery record (always store the original payload for debugging)
     const delivery = await db.webhookDelivery.create({
       data: {
         webhookId: webhook.id,
@@ -132,16 +284,22 @@ export const dispatchWebhook = async (
     });
 
     try {
+      // Build headers - only include signature for generic webhooks
+      const headers: Record<string, string> = {
+        "Content-Type": contentType,
+        "User-Agent": "StellarStack-Webhook/1.0",
+      };
+
+      if (webhook.provider === "generic") {
+        headers["X-Webhook-Signature"] = `sha256=${signature}`;
+        headers["X-Webhook-Event"] = event;
+        headers["X-Webhook-Delivery"] = delivery.id;
+      }
+
       const response = await fetch(webhook.url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Webhook-Signature": `sha256=${signature}`,
-          "X-Webhook-Event": event,
-          "X-Webhook-Delivery": delivery.id,
-          "User-Agent": "StellarStack-Webhook/1.0",
-        },
-        body: payloadString,
+        headers,
+        body: formattedBody,
         signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
@@ -275,8 +433,5 @@ export const verifyWebhookSignature = (
   secret: string
 ): boolean => {
   const expectedSignature = `sha256=${signPayload(payload, secret)}`;
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
 };

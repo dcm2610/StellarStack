@@ -455,6 +455,7 @@ model Webhook {
   url        String
   secret     String   // HMAC-SHA256 signing secret
   events     String[] // Array of event types to listen for
+  provider   String   @default("generic") // generic, discord, slack
 
   // Status
   enabled    Boolean  @default(true)
