@@ -619,7 +619,11 @@ impl Server {
                                 }
                             }
                             Ok(_) => {} // Ignore other events
-                            Err(_) => {
+                            Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                // Subscriber fell behind, log but continue
+                                debug!("Console forwarder [{}] lagged by {} messages, continuing", uuid, n);
+                            }
+                            Err(tokio::sync::broadcast::error::RecvError::Closed) => {
                                 info!("Console forwarder stopped for server {} after {} lines (channel closed)", uuid, line_count);
                                 return;
                             }

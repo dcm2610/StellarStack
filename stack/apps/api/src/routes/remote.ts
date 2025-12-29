@@ -96,17 +96,36 @@ remote.get("/servers", async (c) => {
       stopConfig = { type: "command", value: blueprint.stopCommand };
     }
 
-    // Build startup detection
-    const startupDetection = (blueprint.startupDetection as any) || {};
+    // Build startup detection - handle various formats
     let donePatterns: string[] = [];
-    if (typeof startupDetection.done === 'string') {
-      donePatterns = [startupDetection.done];
-    } else if (Array.isArray(startupDetection.done)) {
-      donePatterns = startupDetection.done;
-    } else if (typeof startupDetection === 'string') {
-      // Handle case where startupDetection is just a string
-      donePatterns = [startupDetection];
+    let startupDetection: any = blueprint.startupDetection;
+
+    // Try to parse if it's a string (may be double-stringified)
+    if (typeof startupDetection === 'string') {
+      try {
+        startupDetection = JSON.parse(startupDetection);
+      } catch {
+        // If parsing fails, try to extract pattern from malformed JSON string
+        // Pattern like: {"done": ")! For help, type "} -> extract just the pattern
+        const match = startupDetection.match(/"done":\s*"([^"]+)"/);
+        if (match) {
+          donePatterns = [match[1]];
+        }
+        startupDetection = null;
+      }
     }
+
+    // If we still have startupDetection as an object, extract done patterns
+    if (startupDetection && typeof startupDetection === 'object') {
+      if (typeof startupDetection.done === 'string') {
+        donePatterns = [startupDetection.done];
+      } else if (Array.isArray(startupDetection.done)) {
+        donePatterns = startupDetection.done.filter((p: any) => typeof p === 'string');
+      }
+    }
+
+    // Clean up Windows line endings from patterns
+    donePatterns = donePatterns.map(p => p.replace(/\r\n/g, '\n').replace(/\r/g, ''));
 
     return {
       uuid: server.id,
@@ -209,15 +228,35 @@ remote.get("/servers/:uuid", async (c) => {
     stopConfig = { type: "command", value: blueprint.stopCommand };
   }
 
-  const startupDetection = (blueprint.startupDetection as any) || {};
+  // Build startup detection - handle various formats
   let donePatterns: string[] = [];
-  if (typeof startupDetection.done === 'string') {
-    donePatterns = [startupDetection.done];
-  } else if (Array.isArray(startupDetection.done)) {
-    donePatterns = startupDetection.done;
-  } else if (typeof startupDetection === 'string') {
-    donePatterns = [startupDetection];
+  let startupDetection: any = blueprint.startupDetection;
+
+  // Try to parse if it's a string (may be double-stringified)
+  if (typeof startupDetection === 'string') {
+    try {
+      startupDetection = JSON.parse(startupDetection);
+    } catch {
+      // If parsing fails, try to extract pattern from malformed JSON string
+      const match = startupDetection.match(/"done":\s*"([^"]+)"/);
+      if (match) {
+        donePatterns = [match[1]];
+      }
+      startupDetection = null;
+    }
   }
+
+  // If we still have startupDetection as an object, extract done patterns
+  if (startupDetection && typeof startupDetection === 'object') {
+    if (typeof startupDetection.done === 'string') {
+      donePatterns = [startupDetection.done];
+    } else if (Array.isArray(startupDetection.done)) {
+      donePatterns = startupDetection.done.filter((p: any) => typeof p === 'string');
+    }
+  }
+
+  // Clean up Windows line endings from patterns
+  donePatterns = donePatterns.map(p => p.replace(/\r\n/g, '\n').replace(/\r/g, ''));
 
   return c.json({
     data: {

@@ -151,9 +151,10 @@ pub struct EventBus {
 }
 
 impl EventBus {
-    /// Create a new event bus with default capacity (256 events)
+    /// Create a new event bus with default capacity (4096 events)
+    /// Higher capacity to handle console output bursts without lagging
     pub fn new() -> Self {
-        Self::with_capacity(256)
+        Self::with_capacity(4096)
     }
 
     /// Create a new event bus with custom capacity
