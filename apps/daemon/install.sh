@@ -660,7 +660,7 @@ install_daemon() {
     # Build the daemon
     print_info "Building daemon (this may take a few minutes)..."
 
-    cd "${BUILD_DIR}/stack/apps/daemon"
+    cd "${BUILD_DIR}/apps/daemon"
 
     if cargo build --release; then
         print_success "Daemon built successfully"
