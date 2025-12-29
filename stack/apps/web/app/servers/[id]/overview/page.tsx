@@ -550,7 +550,8 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   <UsageMetricCard
                     itemId="disk"
                     percentage={displayData.disk.usage.percentage}
-                    details={[`${displayData.disk.used} / ${displayData.disk.total} GB`, displayData.disk.type || ""]}
+                    primaryValue={`${displayData.disk.used.toFixed(2)} / ${displayData.disk.total.toFixed(0)} GiB`}
+                    details={[`${displayData.disk.usage.percentage.toFixed(1)}% used`, displayData.disk.type || ""]}
                     history={displayData.disk.usage.history}
                     isDark={isDark}
                     isOffline={isOffline}

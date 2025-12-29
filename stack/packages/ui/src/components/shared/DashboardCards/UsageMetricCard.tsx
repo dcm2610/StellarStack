@@ -14,6 +14,8 @@ interface UsageMetricCardComponentProps extends UsageMetricCardProps {
   isDark: boolean;
   isOffline: boolean;
   labels: UsageMetricCardLabels;
+  /** Custom primary display value (e.g., "0.01 GiB / 70 GiB") - if provided, replaces percentage display */
+  primaryValue?: string;
 }
 
 export const UsageMetricCard = ({
@@ -26,6 +28,7 @@ export const UsageMetricCard = ({
   isDark,
   isOffline,
   labels,
+  primaryValue,
 }: UsageMetricCardComponentProps): JSX.Element => {
   const { getItemSize, isEditing } = useDragDropGrid();
   const size = getItemSize(itemId);
@@ -41,8 +44,8 @@ export const UsageMetricCard = ({
     return (
       <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
         <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.title}</span>
-        <span className={cn("text-xl font-mono", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"))}>
-          {isOffline ? "--" : <AnimatedNumber value={percentage} suffix="%" />}
+        <span className={cn(primaryValue ? "text-base" : "text-xl", "font-mono", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"))}>
+          {isOffline ? "--" : primaryValue ? primaryValue : <AnimatedNumber value={percentage} suffix="%" />}
         </span>
       </UsageCard>
     );
@@ -62,9 +65,11 @@ export const UsageMetricCard = ({
       <UsageCardContent className={isXs ? "space-y-1" : undefined}>
         <span className={cn(
           isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"),
-          isXs ? "text-xl" : isCompact ? "text-2xl" : isLarge ? "text-5xl" : "text-4xl"
+          primaryValue
+            ? (isXs ? "text-lg" : isCompact ? "text-xl" : isLarge ? "text-3xl" : "text-2xl")
+            : (isXs ? "text-xl" : isCompact ? "text-2xl" : isLarge ? "text-5xl" : "text-4xl")
         )}>
-          {isOffline ? "--" : <AnimatedNumber value={percentage} suffix="%" />}
+          {isOffline ? "--" : primaryValue ? primaryValue : <AnimatedNumber value={percentage} suffix="%" />}
         </span>
         {!isXs && (
           <div className={cn(
