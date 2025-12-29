@@ -19,7 +19,6 @@ DIM='\033[2m'
 PRIMARY="${BRIGHT_GREEN}"
 SECONDARY="${GREEN}"
 MUTED="${DIM_GREEN}"
-HIGHLIGHT="${BRIGHT_GREEN}${BOLD}"
 ERROR="${RED}"
 WARNING="${YELLOW}"
 
@@ -76,6 +75,42 @@ print_task_done() {
     echo -e "\r  ${PRIMARY}[■]${NC} ${PRIMARY}$1${NC}    "
 }
 
+# Wait for user to press enter
+wait_for_enter() {
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+    echo -ne "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to continue...${NC}"
+    read -r </dev/tty
+}
+
+# Ask yes/no question, returns 0 for yes, 1 for no
+ask_yes_no() {
+    local prompt="$1"
+    local default="$2"
+    local input
+
+    if [ "$default" = "y" ]; then
+        echo -ne "  ${SECONDARY}${prompt} ${MUTED}[Y/n]${NC} "
+    else
+        echo -ne "  ${SECONDARY}${prompt} ${MUTED}[y/N]${NC} "
+    fi
+
+    read -r input </dev/tty
+
+    if [ "$default" = "y" ]; then
+        if [ "$input" = "n" ] || [ "$input" = "N" ]; then
+            return 1
+        fi
+        return 0
+    else
+        if [ "$input" = "y" ] || [ "$input" = "Y" ]; then
+            return 0
+        fi
+        return 1
+    fi
+}
+
 # Clear screen and show header
 clear_screen() {
     clear
@@ -113,9 +148,7 @@ show_welcome() {
     echo -e "${SECONDARY}    > Docker${NC}"
     echo -e "${SECONDARY}    > Rust (for building)${NC}"
     echo ""
-    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to continue or ${PRIMARY}[Q]${SECONDARY} to abort${NC}"
+    wait_for_enter
 }
 
 # Check dependencies and ask to install missing ones
@@ -128,8 +161,6 @@ check_dependencies() {
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
 
-    local missing_deps=0
-
     # Check Docker
     if command -v docker &> /dev/null; then
         print_success "Docker is installed"
@@ -137,18 +168,15 @@ check_dependencies() {
         print_warning "Docker is NOT installed"
         echo ""
         echo -e "${SECONDARY}  Docker is required to run game server containers.${NC}"
-        echo -ne "  ${SECONDARY}Install Docker? ${MUTED}[Y/n]${NC} "
-        read -r input </dev/tty
-        if [ "$input" != "n" ] && [ "$input" != "N" ]; then
+        if ask_yes_no "Install Docker?" "y"; then
             install_docker="y"
             print_info "Docker will be installed"
         else
             print_error "Docker is required. Cannot continue."
             exit 1
         fi
-        echo ""
-        ((missing_deps++))
     fi
+    echo ""
 
     # Check Git
     if command -v git &> /dev/null; then
@@ -157,18 +185,15 @@ check_dependencies() {
         print_warning "Git is NOT installed"
         echo ""
         echo -e "${SECONDARY}  Git is required to clone the repository.${NC}"
-        echo -ne "  ${SECONDARY}Install Git? ${MUTED}[Y/n]${NC} "
-        read -r input </dev/tty
-        if [ "$input" != "n" ] && [ "$input" != "N" ]; then
+        if ask_yes_no "Install Git?" "y"; then
             install_git="y"
             print_info "Git will be installed"
         else
             print_error "Git is required. Cannot continue."
             exit 1
         fi
-        echo ""
-        ((missing_deps++))
     fi
+    echo ""
 
     # Check Rust/Cargo
     if command -v cargo &> /dev/null; then
@@ -177,18 +202,15 @@ check_dependencies() {
         print_warning "Rust/Cargo is NOT installed"
         echo ""
         echo -e "${SECONDARY}  Rust is required to build the daemon from source.${NC}"
-        echo -ne "  ${SECONDARY}Install Rust? ${MUTED}[Y/n]${NC} "
-        read -r input </dev/tty
-        if [ "$input" != "n" ] && [ "$input" != "N" ]; then
+        if ask_yes_no "Install Rust?" "y"; then
             install_rust="y"
             print_info "Rust will be installed"
         else
             print_error "Rust is required. Cannot continue."
             exit 1
         fi
-        echo ""
-        ((missing_deps++))
     fi
+    echo ""
 
     # Check Certbot (optional)
     if command -v certbot &> /dev/null; then
@@ -197,21 +219,11 @@ check_dependencies() {
         print_info "Certbot is not installed (optional - for SSL)"
     fi
 
-    echo ""
-    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
-    echo ""
-
-    if [ $missing_deps -gt 0 ]; then
-        echo -e "${SECONDARY}  ${missing_deps} dependency/dependencies will be installed.${NC}"
-    else
-        echo -e "${SECONDARY}  All required dependencies are installed.${NC}"
-    fi
-    echo ""
-    echo -e "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to continue or ${PRIMARY}[Q]${SECONDARY} to abort${NC}"
+    wait_for_enter
 }
 
 # Show daemon configuration
-show_daemon_config() {
+collect_daemon_config() {
     clear_screen
     echo -e "${PRIMARY}  > DAEMON CONFIGURATION${NC}"
     echo ""
@@ -220,36 +232,43 @@ show_daemon_config() {
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
 
-    echo -e "${SECONDARY}  Panel API URL ${MUTED}(e.g., https://api.example.com)${NC}"
-    echo -ne "  ${PRIMARY}>${NC} "
-    read -r daemon_panel_url </dev/tty
+    # Panel API URL
     while [ -z "$daemon_panel_url" ]; do
-        print_error "Panel API URL is required"
+        echo -e "${SECONDARY}  Panel API URL ${MUTED}(e.g., https://api.example.com)${NC}"
         echo -ne "  ${PRIMARY}>${NC} "
         read -r daemon_panel_url </dev/tty
+        if [ -z "$daemon_panel_url" ]; then
+            print_error "Panel API URL is required"
+            echo ""
+        fi
     done
     echo ""
 
-    echo -e "${SECONDARY}  Token ID ${MUTED}(from Panel > Nodes > Configure)${NC}"
-    echo -ne "  ${PRIMARY}>${NC} "
-    read -r daemon_token_id </dev/tty
+    # Token ID
     while [ -z "$daemon_token_id" ]; do
-        print_error "Token ID is required"
+        echo -e "${SECONDARY}  Token ID ${MUTED}(from Panel > Nodes > Configure)${NC}"
         echo -ne "  ${PRIMARY}>${NC} "
         read -r daemon_token_id </dev/tty
+        if [ -z "$daemon_token_id" ]; then
+            print_error "Token ID is required"
+            echo ""
+        fi
     done
     echo ""
 
-    echo -e "${SECONDARY}  Token ${MUTED}(full token string from Panel)${NC}"
-    echo -ne "  ${PRIMARY}>${NC} "
-    read -r daemon_token </dev/tty
+    # Token
     while [ -z "$daemon_token" ]; do
-        print_error "Token is required"
+        echo -e "${SECONDARY}  Token ${MUTED}(full token string from Panel)${NC}"
         echo -ne "  ${PRIMARY}>${NC} "
         read -r daemon_token </dev/tty
+        if [ -z "$daemon_token" ]; then
+            print_error "Token is required"
+            echo ""
+        fi
     done
     echo ""
 
+    # Daemon Port
     echo -e "${SECONDARY}  Daemon API Port ${MUTED}[default: 8080]${NC}"
     echo -ne "  ${PRIMARY}>${NC} "
     read -r input_port </dev/tty
@@ -258,21 +277,19 @@ show_daemon_config() {
     fi
     echo ""
 
+    # SFTP Port
     echo -e "${SECONDARY}  SFTP Port ${MUTED}[default: 2022]${NC}"
     echo -ne "  ${PRIMARY}>${NC} "
     read -r input_sftp </dev/tty
     if [ -n "$input_sftp" ]; then
         daemon_sftp_port="$input_sftp"
     fi
-    echo ""
 
-    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to continue${NC}"
+    wait_for_enter
 }
 
 # Show SSL configuration
-show_ssl_config() {
+collect_ssl_config() {
     clear_screen
     echo -e "${PRIMARY}  > SSL CONFIGURATION${NC}"
     echo ""
@@ -281,20 +298,14 @@ show_ssl_config() {
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
 
-    echo -e "${SECONDARY}  Enable SSL with Certbot? ${MUTED}[y/N]${NC}"
-    echo -ne "  ${PRIMARY}>${NC} "
-    read -r input_ssl </dev/tty
-
-    if [ "$input_ssl" = "y" ] || [ "$input_ssl" = "Y" ]; then
+    if ask_yes_no "Enable SSL with Certbot?" "n"; then
         daemon_enable_ssl="y"
+        echo ""
 
         # Check if certbot is installed or will be installed
         if ! command -v certbot &> /dev/null; then
-            echo ""
             echo -e "${SECONDARY}  Certbot is required for SSL.${NC}"
-            echo -ne "  ${SECONDARY}Install Certbot? ${MUTED}[Y/n]${NC} "
-            read -r input </dev/tty
-            if [ "$input" != "n" ] && [ "$input" != "N" ]; then
+            if ask_yes_no "Install Certbot?" "y"; then
                 install_certbot="y"
                 print_info "Certbot will be installed"
             else
@@ -305,25 +316,25 @@ show_ssl_config() {
 
         if [ "$daemon_enable_ssl" = "y" ]; then
             echo ""
-            echo -e "${SECONDARY}  Domain for SSL certificate ${MUTED}(e.g., node1.example.com)${NC}"
-            echo -ne "  ${PRIMARY}>${NC} "
-            read -r daemon_ssl_domain </dev/tty
             while [ -z "$daemon_ssl_domain" ]; do
-                print_error "Domain is required for SSL"
+                echo -e "${SECONDARY}  Domain for SSL certificate ${MUTED}(e.g., node1.example.com)${NC}"
                 echo -ne "  ${PRIMARY}>${NC} "
                 read -r daemon_ssl_domain </dev/tty
+                if [ -z "$daemon_ssl_domain" ]; then
+                    print_error "Domain is required for SSL"
+                    echo ""
+                fi
             done
         fi
+    else
+        print_info "SSL will be disabled"
     fi
-    echo ""
 
-    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to continue${NC}"
+    wait_for_enter
 }
 
 # Show Redis configuration
-show_redis_config() {
+collect_redis_config() {
     clear_screen
     echo -e "${PRIMARY}  > REDIS CONFIGURATION${NC}"
     echo ""
@@ -332,11 +343,7 @@ show_redis_config() {
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
 
-    echo -e "${SECONDARY}  Do you have a Redis server? ${MUTED}[y/N]${NC}"
-    echo -ne "  ${PRIMARY}>${NC} "
-    read -r input_redis </dev/tty
-
-    if [ "$input_redis" = "y" ] || [ "$input_redis" = "Y" ]; then
+    if ask_yes_no "Do you have a Redis server?" "n"; then
         daemon_enable_redis="y"
         echo ""
         echo -e "${SECONDARY}  Redis URL ${MUTED}[default: redis://127.0.0.1:6379]${NC}"
@@ -349,10 +356,7 @@ show_redis_config() {
         print_info "Redis will be disabled"
     fi
 
-    echo ""
-    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to continue${NC}"
+    wait_for_enter
 }
 
 # Show configuration summary
@@ -391,7 +395,14 @@ show_summary() {
     echo ""
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
-    echo -e "${SECONDARY}  Press ${PRIMARY}[ENTER]${SECONDARY} to install or ${PRIMARY}[B]${SECONDARY} to go back${NC}"
+
+    if ask_yes_no "Proceed with installation?" "y"; then
+        return 0
+    else
+        echo ""
+        print_info "Installation cancelled."
+        exit 0
+    fi
 }
 
 # Install dependencies
@@ -689,114 +700,31 @@ show_complete() {
     echo ""
 }
 
-# Read single keypress from terminal
-read_key() {
-    local key
-
-    # Read directly from terminal
-    IFS= read -rsn1 key </dev/tty
-
-    # Handle escape sequences (arrow keys)
-    if [[ $key == $'\x1b' ]]; then
-        read -rsn2 -t 0.1 key </dev/tty
-        case $key in
-            '[A') echo "UP" ;;
-            '[B') echo "DOWN" ;;
-            *) echo "ESC" ;;
-        esac
-    elif [[ $key == "" ]]; then
-        echo "ENTER"
-    elif [[ $key == " " ]]; then
-        echo "SPACE"
-    else
-        echo "$key"
-    fi
-}
-
-# Main loop
+# Main function - linear flow, no state machine
 main() {
-    local current_step="welcome"
+    # Step 1: Welcome
+    show_welcome
 
-    # Hide cursor
-    tput civis 2>/dev/null || true
+    # Step 2: Check dependencies
+    check_dependencies
 
-    # Restore cursor on exit
-    trap 'tput cnorm 2>/dev/null || true; echo ""' EXIT
+    # Step 3: Collect daemon configuration
+    collect_daemon_config
 
-    while true; do
-        case $current_step in
-            "welcome")
-                show_welcome
-                key=$(read_key)
-                case $key in
-                    "ENTER") current_step="dependencies" ;;
-                    "q"|"Q") exit 0 ;;
-                esac
-                ;;
-            "dependencies")
-                tput cnorm 2>/dev/null || true
-                check_dependencies
-                tput civis 2>/dev/null || true
-                key=$(read_key)
-                case $key in
-                    "ENTER") current_step="daemon_config" ;;
-                    "q"|"Q") exit 0 ;;
-                esac
-                ;;
-            "daemon_config")
-                tput cnorm 2>/dev/null || true
-                show_daemon_config
-                tput civis 2>/dev/null || true
-                key=$(read_key)
-                case $key in
-                    "ENTER") current_step="ssl_config" ;;
-                    "b"|"B") current_step="dependencies" ;;
-                    "q"|"Q") exit 0 ;;
-                esac
-                ;;
-            "ssl_config")
-                tput cnorm 2>/dev/null || true
-                show_ssl_config
-                tput civis 2>/dev/null || true
-                key=$(read_key)
-                case $key in
-                    "ENTER") current_step="redis_config" ;;
-                    "b"|"B") current_step="daemon_config" ;;
-                    "q"|"Q") exit 0 ;;
-                esac
-                ;;
-            "redis_config")
-                tput cnorm 2>/dev/null || true
-                show_redis_config
-                tput civis 2>/dev/null || true
-                key=$(read_key)
-                case $key in
-                    "ENTER") current_step="summary" ;;
-                    "b"|"B") current_step="ssl_config" ;;
-                    "q"|"Q") exit 0 ;;
-                esac
-                ;;
-            "summary")
-                show_summary
-                key=$(read_key)
-                case $key in
-                    "ENTER") current_step="install" ;;
-                    "b"|"B") current_step="redis_config" ;;
-                    "q"|"Q") exit 0 ;;
-                esac
-                ;;
-            "install")
-                tput cnorm 2>/dev/null || true
-                run_installation
-                current_step="complete"
-                ;;
-            "complete")
-                show_complete
-                key=$(read_key)
-                exit 0
-                ;;
-        esac
-    done
+    # Step 4: SSL configuration
+    collect_ssl_config
+
+    # Step 5: Redis configuration
+    collect_redis_config
+
+    # Step 6: Show summary and confirm
+    show_summary
+
+    # Step 7: Run installation
+    run_installation
+
+    # Step 8: Show completion
+    show_complete
 }
 
 # Run
