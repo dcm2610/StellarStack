@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter web build"
+
+[deploy]
+startCommand = "node .next/standalone/apps/web/server.js"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

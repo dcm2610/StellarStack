@@ -1,0 +1,6 @@
+# Force Nixpacks to use pnpm instead of npm
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm", "openssl"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]

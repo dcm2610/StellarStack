@@ -46,7 +46,8 @@
       "Bash(grep:*)",
       "Bash(docker ps:*)",
       "Bash(chmod:*)",
-      "Bash(bash -n:*)"
+      "Bash(bash -n:*)",
+      "Bash(pnpm --filter @workspace/api build:*)"
     ],
     "deny": [],
     "ask": []
