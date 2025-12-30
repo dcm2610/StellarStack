@@ -327,6 +327,11 @@ remote.post("/servers/:uuid/status", async (c) => {
     return c.json({ error: "Server not found" }, 404);
   }
 
+  // Don't update status if server is suspended (admin override)
+  if (server.status === "SUSPENDED") {
+    return c.json({ success: true, message: "Server is suspended, status not updated" });
+  }
+
   // Map daemon status to our schema
   const statusMap: Record<string, string> = {
     installing: "INSTALLING",
@@ -446,6 +451,11 @@ remote.post("/servers/:uuid/install", async (c) => {
 
   if (!server) {
     return c.json({ error: "Server not found" }, 404);
+  }
+
+  // Don't update status if server is suspended (admin override)
+  if (server.status === "SUSPENDED") {
+    return c.json({ success: true, message: "Server is suspended, status not updated" });
   }
 
   // Update server status based on installation result

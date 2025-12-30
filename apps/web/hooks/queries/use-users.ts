@@ -39,6 +39,16 @@ export const useUserMutations = () => {
     queryClient.invalidateQueries({ queryKey: userKeys.all });
   };
 
+  const create = useMutation({
+    mutationFn: (data: {
+      name: string;
+      email: string;
+      password: string;
+      role?: "user" | "admin";
+    }) => account.createUser(data),
+    onSuccess: invalidateUsers,
+  });
+
   const update = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name?: string; role?: string } }) =>
       account.updateUser(id, data),
@@ -57,5 +67,5 @@ export const useUserMutations = () => {
     },
   });
 
-  return { update, remove, updateMe };
+  return { create, update, remove, updateMe };
 };

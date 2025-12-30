@@ -93,6 +93,8 @@ export const account = {
   // Admin user management
   listUsers: () => request<User[]>("/api/account/users"),
   getUser: (id: string) => request<User>(`/api/account/users/${id}`),
+  createUser: (data: { name: string; email: string; password: string; role?: "user" | "admin" }) =>
+    request<User>("/api/account/users", { method: "POST", body: data }),
   updateUser: (id: string, data: { name?: string; role?: string }) =>
     request<User>(`/api/account/users/${id}`, { method: "PATCH", body: data }),
   deleteUser: (id: string) => request(`/api/account/users/${id}`, { method: "DELETE" }),

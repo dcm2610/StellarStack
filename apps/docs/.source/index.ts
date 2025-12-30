@@ -140,17 +140,17 @@ export const docs = _runtime.docs<typeof _source.docs>(
       data: { title: "API Reference", pages: ["index", "authentication", "servers", "nodes"] },
     },
     {
-      info: { path: "components/meta.json", fullPath: "content/docs/components/meta.json" },
-      data: {
-        title: "Components",
-        pages: ["index", "button", "card", "dashboard-cards", "console", "animations"],
-      },
-    },
-    {
       info: { path: "architecture/meta.json", fullPath: "content/docs/architecture/meta.json" },
       data: {
         title: "Architecture",
         pages: ["index", "control-plane", "daemon", "authentication", "real-time"],
+      },
+    },
+    {
+      info: { path: "components/meta.json", fullPath: "content/docs/components/meta.json" },
+      data: {
+        title: "Components",
+        pages: ["index", "button", "card", "dashboard-cards", "console", "animations"],
       },
     },
     {

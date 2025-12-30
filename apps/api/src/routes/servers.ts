@@ -3,7 +3,12 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { createHmac, timingSafeEqual } from "crypto";
 import { db } from "../lib/db";
-import { requireAuth, requireAdmin, requireServerAccess } from "../middleware/auth";
+import {
+  requireAuth,
+  requireAdmin,
+  requireServerAccess,
+  requireNotSuspended,
+} from "../middleware/auth";
 import type { Variables } from "../types";
 import { logActivityFromContext, ActivityEvents } from "../lib/activity";
 import { dispatchWebhook, WebhookEvents } from "../lib/webhooks";
@@ -620,6 +625,32 @@ servers.delete("/:serverId", requireAdmin, async (c) => {
     }
   }
 
+  // If this is a child server, return resources to the parent
+  if (server.parentServerId) {
+    const parentServer = await db.server.findUnique({
+      where: { id: server.parentServerId },
+    });
+
+    if (parentServer) {
+      await db.server.update({
+        where: { id: server.parentServerId },
+        data: {
+          memory: parentServer.memory + server.memory,
+          disk: parentServer.disk + server.disk,
+          cpu: parentServer.cpu + server.cpu,
+        },
+      });
+
+      // Emit update event for parent server
+      const updatedParent = await db.server.findUnique({
+        where: { id: server.parentServerId },
+      });
+      if (updatedParent) {
+        emitServerEvent("server:updated", server.parentServerId, serializeServer(updatedParent));
+      }
+    }
+  }
+
   // Release allocations
   await db.allocation.updateMany({
     where: { serverId },
@@ -641,7 +672,7 @@ servers.delete("/:serverId", requireAdmin, async (c) => {
 // === Server actions ===
 
 // Start server
-servers.post("/:serverId/start", requireServerAccess, async (c) => {
+servers.post("/:serverId/start", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
 
   const fullServer = await db.server.findUnique({
@@ -681,7 +712,7 @@ servers.post("/:serverId/start", requireServerAccess, async (c) => {
 });
 
 // Stop server
-servers.post("/:serverId/stop", requireServerAccess, async (c) => {
+servers.post("/:serverId/stop", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
 
   const fullServer = await db.server.findUnique({
@@ -721,7 +752,7 @@ servers.post("/:serverId/stop", requireServerAccess, async (c) => {
 });
 
 // Restart server
-servers.post("/:serverId/restart", requireServerAccess, async (c) => {
+servers.post("/:serverId/restart", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
 
   const fullServer = await db.server.findUnique({
@@ -761,7 +792,7 @@ servers.post("/:serverId/restart", requireServerAccess, async (c) => {
 });
 
 // Kill server
-servers.post("/:serverId/kill", requireServerAccess, async (c) => {
+servers.post("/:serverId/kill", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
 
   const fullServer = await db.server.findUnique({
@@ -1026,7 +1057,7 @@ servers.get("/:serverId/console", requireServerAccess, async (c) => {
 });
 
 // Send command to server (for non-WebSocket fallback)
-servers.post("/:serverId/command", requireServerAccess, async (c) => {
+servers.post("/:serverId/command", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const { command } = await c.req.json();
 
@@ -1374,7 +1405,7 @@ servers.get("/:serverId/files/download", async (c) => {
 });
 
 // Write file
-servers.post("/:serverId/files/write", requireServerAccess, async (c) => {
+servers.post("/:serverId/files/write", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const body = await c.req.json();
 
@@ -1402,7 +1433,7 @@ servers.post("/:serverId/files/write", requireServerAccess, async (c) => {
 });
 
 // Create file or directory
-servers.post("/:serverId/files/create", requireServerAccess, async (c) => {
+servers.post("/:serverId/files/create", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const body = await c.req.json();
 
@@ -1451,7 +1482,7 @@ servers.post("/:serverId/files/create", requireServerAccess, async (c) => {
 });
 
 // Delete file or directory
-servers.delete("/:serverId/files/delete", requireServerAccess, async (c) => {
+servers.delete("/:serverId/files/delete", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const rawPath = c.req.query("path");
 
@@ -1485,7 +1516,7 @@ servers.delete("/:serverId/files/delete", requireServerAccess, async (c) => {
 });
 
 // Rename file or directory
-servers.post("/:serverId/files/rename", requireServerAccess, async (c) => {
+servers.post("/:serverId/files/rename", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const body = await c.req.json();
 
@@ -1525,7 +1556,7 @@ servers.post("/:serverId/files/rename", requireServerAccess, async (c) => {
 });
 
 // Create archive
-servers.post("/:serverId/files/archive", requireServerAccess, async (c) => {
+servers.post("/:serverId/files/archive", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const body = await c.req.json();
 
@@ -1548,7 +1579,7 @@ servers.post("/:serverId/files/archive", requireServerAccess, async (c) => {
 });
 
 // Extract archive
-servers.post("/:serverId/files/extract", requireServerAccess, async (c) => {
+servers.post("/:serverId/files/extract", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const body = await c.req.json();
 
@@ -1618,7 +1649,7 @@ servers.get("/:serverId/backups", requireServerAccess, async (c) => {
 });
 
 // Create backup
-servers.post("/:serverId/backups", requireServerAccess, async (c) => {
+servers.post("/:serverId/backups", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const body = await c.req.json().catch(() => ({}));
 
@@ -1651,7 +1682,7 @@ servers.post("/:serverId/backups", requireServerAccess, async (c) => {
 });
 
 // Restore backup
-servers.post("/:serverId/backups/restore", requireServerAccess, async (c) => {
+servers.post("/:serverId/backups/restore", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const id = c.req.query("id");
 
@@ -1768,7 +1799,7 @@ servers.get("/:serverId/backups/download", async (c) => {
 });
 
 // Delete backup
-servers.delete("/:serverId/backups/delete", requireServerAccess, async (c) => {
+servers.delete("/:serverId/backups/delete", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const id = c.req.query("id");
 
@@ -2139,7 +2170,7 @@ const splitServerSchema = z.object({
 });
 
 // Split a server into a child server
-servers.post("/:serverId/split", requireServerAccess, async (c) => {
+servers.post("/:serverId/split", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const user = c.get("user");
   const body = await c.req.json();
@@ -2333,6 +2364,17 @@ servers.post("/:serverId/split", requireServerAccess, async (c) => {
           data: { status: "STOPPED" },
         });
       }
+
+      // Sync parent server resources with daemon and restart it
+      try {
+        await daemonRequest(parentServer.node, "POST", `/api/servers/${parentServer.id}/sync`);
+        // Restart parent server to apply new resource limits
+        await daemonRequest(parentServer.node, "POST", `/api/servers/${parentServer.id}/power`, {
+          action: "restart",
+        });
+      } catch (syncError) {
+        console.error("Failed to sync/restart parent server after split:", syncError);
+      }
     } catch (daemonError: any) {
       // Rollback: restore parent resources, release allocation, delete child server
       await db.server.update({
@@ -2412,7 +2454,7 @@ const transferServerSchema = z.object({
 });
 
 // Initiate a server transfer
-servers.post("/:serverId/transfer", requireServerAccess, async (c) => {
+servers.post("/:serverId/transfer", requireServerAccess, requireNotSuspended, async (c) => {
   const server = c.get("server");
   const user = c.get("user");
   const body = await c.req.json();

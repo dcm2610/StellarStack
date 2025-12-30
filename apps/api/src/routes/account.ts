@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../lib/db";
+import { auth } from "../lib/auth";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { sendEmail, testEmailConfig, getEmailConfigStatus } from "../lib/email";
 import type { Variables } from "../types";
@@ -18,6 +19,13 @@ const updateUserSchema = z.object({
   email: z.string().email().optional(),
   role: z.enum(["user", "admin"]).optional(),
   image: z.string().url().optional(),
+});
+
+const createUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(8),
+  role: z.enum(["user", "admin"]).default("user"),
 });
 
 // Get current user profile
@@ -109,6 +117,60 @@ account.get("/users", requireAdmin, async (c) => {
   });
 
   return c.json(users);
+});
+
+// Create user (admin only)
+account.post("/users", requireAdmin, async (c) => {
+  const body = await c.req.json();
+  const parsed = createUserSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.errors }, 400);
+  }
+
+  const { name, email, password, role } = parsed.data;
+
+  // Check if email already exists
+  const existingUser = await db.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    return c.json({ error: "A user with this email already exists" }, 400);
+  }
+
+  try {
+    // Use better-auth's API to create user with proper password hash
+    const ctx = await auth.api.signUpEmail({
+      body: { email, password, name },
+    });
+
+    if (!ctx.user) {
+      return c.json({ error: "Failed to create user" }, 500);
+    }
+
+    // Update user role and mark email as verified (admin-created users are trusted)
+    const user = await db.user.update({
+      where: { id: ctx.user.id },
+      data: {
+        role,
+        emailVerified: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    return c.json(user, 201);
+  } catch (error) {
+    console.error("Failed to create user:", error);
+    return c.json({ error: "Failed to create user" }, 500);
+  }
 });
 
 // Get single user (admin only)

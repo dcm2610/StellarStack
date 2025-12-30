@@ -10,7 +10,16 @@ import { FadeIn } from "@workspace/ui/components/fade-in";
 import { FloatingDots } from "@workspace/ui/components/floating-particles";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
-import { UsersIcon, TrashIcon, EditIcon, ShieldIcon, UserIcon, ArrowLeftIcon, SearchIcon } from "lucide-react";
+import {
+  UsersIcon,
+  TrashIcon,
+  EditIcon,
+  ShieldIcon,
+  UserIcon,
+  ArrowLeftIcon,
+  SearchIcon,
+  PlusIcon,
+} from "lucide-react";
 import { useUsers, useUserMutations } from "@/hooks/queries";
 import { useAdminTheme } from "@/hooks/use-admin-theme";
 import { useAuth } from "@/components/auth-provider";
@@ -24,10 +33,11 @@ export default function UsersPage() {
 
   // React Query hooks
   const { data: usersList = [], isLoading } = useUsers();
-  const { update, remove } = useUserMutations();
+  const { create, update, remove } = useUserMutations();
 
   // UI state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,18 +45,41 @@ export default function UsersPage() {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
+    password: "",
     role: "user" as "user" | "admin",
   });
 
   const resetForm = () => {
     setFormData({
       name: "",
+      email: "",
+      password: "",
       role: "user",
     });
     setEditingUser(null);
+    setIsCreateMode(false);
   };
 
   const handleSubmit = async () => {
+    if (isCreateMode) {
+      try {
+        await create.mutateAsync({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        });
+        toast.success("User created successfully");
+        setIsModalOpen(false);
+        resetForm();
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to create user";
+        toast.error(errorMessage);
+      }
+      return;
+    }
+
     if (!editingUser) return;
 
     try {
@@ -62,10 +95,25 @@ export default function UsersPage() {
     }
   };
 
+  const handleCreate = () => {
+    setIsCreateMode(true);
+    setEditingUser(null);
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "user",
+    });
+    setIsModalOpen(true);
+  };
+
   const handleEdit = (user: User) => {
+    setIsCreateMode(false);
     setEditingUser(user);
     setFormData({
       name: user.name,
+      email: user.email,
+      password: "",
       role: user.role,
     });
     setIsModalOpen(true);
@@ -100,25 +148,31 @@ export default function UsersPage() {
   const filteredUsers = useMemo(() => {
     if (!searchQuery) return usersList;
     const query = searchQuery.toLowerCase();
-    return usersList.filter((user) =>
-      user.name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.role.toLowerCase().includes(query)
+    return usersList.filter(
+      (user) =>
+        user.name.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.role.toLowerCase().includes(query)
     );
   }, [usersList, searchQuery]);
 
   if (!mounted) return null;
 
   return (
-    <div className={cn("min-h-svh transition-colors relative", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
+    <div
+      className={cn(
+        "relative min-h-svh transition-colors",
+        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+      )}
+    >
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={15} />
 
       <div className="relative p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           <FadeIn delay={0}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="mb-8 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
@@ -126,44 +180,61 @@ export default function UsersPage() {
                   onClick={() => router.push("/admin")}
                   className={cn(
                     "p-2 transition-all hover:scale-110 active:scale-95",
-                    isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                    isDark
+                      ? "text-zinc-400 hover:text-zinc-100"
+                      : "text-zinc-600 hover:text-zinc-900"
                   )}
                 >
-                  <ArrowLeftIcon className="w-4 h-4" />
+                  <ArrowLeftIcon className="h-4 w-4" />
                 </Button>
                 <div>
-                  <h1 className={cn(
-                    "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
-                  )}>
+                  <h1
+                    className={cn(
+                      "text-2xl font-light tracking-wider",
+                      isDark ? "text-zinc-100" : "text-zinc-800"
+                    )}
+                  >
                     USERS
                   </h1>
-                  <p className={cn(
-                    "text-sm mt-1",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}>
+                  <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
                     Manage user accounts and permissions
                   </p>
                 </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreate}
+                className={cn(
+                  "gap-2 text-xs tracking-wider uppercase",
+                  isDark
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                )}
+              >
+                <PlusIcon className="h-4 w-4" />
+                Create User
+              </Button>
             </div>
 
             {/* Search Bar */}
             <div className="relative mb-6">
-              <SearchIcon className={cn(
-                "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
-                isDark ? "text-zinc-500" : "text-zinc-400"
-              )} />
+              <SearchIcon
+                className={cn(
+                  "absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2",
+                  isDark ? "text-zinc-500" : "text-zinc-400"
+                )}
+              />
               <input
                 type="text"
                 placeholder="Search users..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
+                  "w-full border py-2.5 pr-4 pl-10 text-sm transition-colors focus:outline-none",
                   isDark
-                    ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
-                    : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
+                    ? "border-zinc-700 bg-zinc-900/50 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                    : "border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
                 )}
               />
             </div>
@@ -171,33 +242,43 @@ export default function UsersPage() {
 
           {/* Users Table */}
           <FadeIn delay={0.1}>
-            <div className={cn(
-              "border overflow-hidden",
-              isDark ? "border-zinc-700/50" : "border-zinc-200"
-            )}>
+            <div
+              className={cn(
+                "overflow-hidden border",
+                isDark ? "border-zinc-700/50" : "border-zinc-200"
+              )}
+            >
               <table className="w-full">
                 <thead>
-                  <tr className={cn(
-                    "text-xs uppercase tracking-wider",
-                    isDark ? "bg-zinc-900/50 text-zinc-400" : "bg-zinc-50 text-zinc-600"
-                  )}>
-                    <th className="text-left p-3">User</th>
-                    <th className="text-left p-3">Email</th>
-                    <th className="text-left p-3">Role</th>
-                    <th className="text-left p-3">Created</th>
-                    <th className="text-right p-3">Actions</th>
+                  <tr
+                    className={cn(
+                      "text-xs tracking-wider uppercase",
+                      isDark ? "bg-zinc-900/50 text-zinc-400" : "bg-zinc-50 text-zinc-600"
+                    )}
+                  >
+                    <th className="p-3 text-left">User</th>
+                    <th className="p-3 text-left">Email</th>
+                    <th className="p-3 text-left">Role</th>
+                    <th className="p-3 text-left">Created</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-12">
-                        <Spinner className="w-6 h-6 mx-auto" />
+                      <td colSpan={5} className="py-12 text-center">
+                        <Spinner className="mx-auto h-6 w-6" />
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className={cn("text-center py-12 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                      <td
+                        colSpan={5}
+                        className={cn(
+                          "py-12 text-center text-sm",
+                          isDark ? "text-zinc-500" : "text-zinc-400"
+                        )}
+                      >
                         {searchQuery ? "No users match your search." : "No users found."}
                       </td>
                     </tr>
@@ -214,30 +295,48 @@ export default function UsersPage() {
                       >
                         <td className={cn("p-3", isDark ? "text-zinc-100" : "text-zinc-800")}>
                           <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-8 h-8 flex items-center justify-center border",
-                              isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400" : "border-zinc-300 bg-zinc-100 text-zinc-600"
-                            )}>
+                            <div
+                              className={cn(
+                                "flex h-8 w-8 items-center justify-center border",
+                                isDark
+                                  ? "border-zinc-700 bg-zinc-800 text-zinc-400"
+                                  : "border-zinc-300 bg-zinc-100 text-zinc-600"
+                              )}
+                            >
                               {user.role === "admin" ? (
-                                <ShieldIcon className="w-4 h-4" />
+                                <ShieldIcon className="h-4 w-4" />
                               ) : (
-                                <UserIcon className="w-4 h-4" />
+                                <UserIcon className="h-4 w-4" />
                               )}
                             </div>
                             <div>
                               <div className="font-medium">{user.name}</div>
                               {user.id === currentUser?.id && (
-                                <div className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                                <div
+                                  className={cn(
+                                    "text-xs",
+                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                  )}
+                                >
                                   (You)
                                 </div>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className={cn("p-3 text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                        <td
+                          className={cn("p-3 text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}
+                        >
                           {user.email}
                           {user.emailVerified && (
-                            <span className={cn("ml-2 text-xs border px-1 py-0.5", isDark ? "text-zinc-400 border-zinc-600" : "text-zinc-500 border-zinc-400")}>
+                            <span
+                              className={cn(
+                                "ml-2 border px-1 py-0.5 text-xs",
+                                isDark
+                                  ? "border-zinc-600 text-zinc-400"
+                                  : "border-zinc-400 text-zinc-500"
+                              )}
+                            >
                               Verified
                             </span>
                           )}
@@ -247,22 +346,24 @@ export default function UsersPage() {
                             onClick={() => toggleRole(user)}
                             disabled={user.id === currentUser?.id || update.isPending}
                             className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-1 text-xs uppercase tracking-wider font-medium transition-colors border",
+                              "inline-flex items-center gap-1.5 border px-2 py-1 text-xs font-medium tracking-wider uppercase transition-colors",
                               isDark
                                 ? "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700"
                                 : "border-zinc-300 bg-zinc-100 text-zinc-600 hover:bg-zinc-200",
-                              user.id === currentUser?.id && "opacity-50 cursor-not-allowed"
+                              user.id === currentUser?.id && "cursor-not-allowed opacity-50"
                             )}
                           >
                             {user.role === "admin" ? (
-                              <ShieldIcon className="w-3 h-3" />
+                              <ShieldIcon className="h-3 w-3" />
                             ) : (
-                              <UserIcon className="w-3 h-3" />
+                              <UserIcon className="h-3 w-3" />
                             )}
                             {user.role}
                           </button>
                         </td>
-                        <td className={cn("p-3 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                        <td
+                          className={cn("p-3 text-sm", isDark ? "text-zinc-500" : "text-zinc-400")}
+                        >
                           {new Date(user.createdAt).toLocaleDateString()}
                         </td>
                         <td className="p-3">
@@ -272,11 +373,13 @@ export default function UsersPage() {
                               size="sm"
                               onClick={() => handleEdit(user)}
                               className={cn(
-                                "text-xs p-1.5",
-                                isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
+                                "p-1.5 text-xs",
+                                isDark
+                                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100"
+                                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                               )}
                             >
-                              <EditIcon className="w-3 h-3" />
+                              <EditIcon className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="outline"
@@ -290,15 +393,15 @@ export default function UsersPage() {
                               }}
                               disabled={user.id === currentUser?.id}
                               className={cn(
-                                "text-xs p-1.5",
+                                "p-1.5 text-xs",
                                 user.id === currentUser?.id
-                                  ? "opacity-50 cursor-not-allowed"
+                                  ? "cursor-not-allowed opacity-50"
                                   : isDark
                                     ? "border-red-900/50 text-red-400 hover:bg-red-900/20"
                                     : "border-red-200 text-red-600 hover:bg-red-50"
                               )}
                             >
-                              <TrashIcon className="w-3 h-3" />
+                              <TrashIcon className="h-3 w-3" />
                             </Button>
                           </div>
                         </td>
@@ -312,19 +415,23 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* Create/Edit Modal */}
       <FormModal
-        open={isModalOpen && !!editingUser}
+        open={isModalOpen}
         onOpenChange={(open) => {
           setIsModalOpen(open);
           if (!open) resetForm();
         }}
-        title="Edit User"
-        submitLabel="Update"
+        title={isCreateMode ? "Create User" : "Edit User"}
+        submitLabel={isCreateMode ? "Create" : "Update"}
         onSubmit={handleSubmit}
         isDark={isDark}
-        isLoading={update.isPending}
-        isValid={formData.name.length > 0}
+        isLoading={isCreateMode ? create.isPending : update.isPending}
+        isValid={
+          isCreateMode
+            ? formData.name.length > 0 && formData.email.length > 0 && formData.password.length >= 8
+            : formData.name.length > 0
+        }
       >
         <div className="space-y-4">
           <div>
@@ -343,28 +450,55 @@ export default function UsersPage() {
             <label className={labelClasses}>Email</label>
             <input
               type="email"
-              value={editingUser?.email || ""}
-              disabled
-              className={cn(inputClasses, "opacity-50 cursor-not-allowed")}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="user@example.com"
+              className={cn(inputClasses, !isCreateMode && "cursor-not-allowed opacity-50")}
+              disabled={!isCreateMode}
+              required
             />
-            <p className={cn("text-xs mt-1", isDark ? "text-zinc-600" : "text-zinc-400")}>
-              Email cannot be changed
-            </p>
+            {!isCreateMode && (
+              <p className={cn("mt-1 text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                Email cannot be changed
+              </p>
+            )}
           </div>
+
+          {isCreateMode && (
+            <div>
+              <label className={labelClasses}>Password</label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Minimum 8 characters"
+                className={inputClasses}
+                required
+                minLength={8}
+              />
+              {formData.password.length > 0 && formData.password.length < 8 && (
+                <p className={cn("mt-1 text-xs", isDark ? "text-amber-500" : "text-amber-600")}>
+                  Password must be at least 8 characters
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className={labelClasses}>Role</label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as "user" | "admin" })}
+              onChange={(e) =>
+                setFormData({ ...formData, role: e.target.value as "user" | "admin" })
+              }
               className={selectClasses}
-              disabled={editingUser?.id === currentUser?.id}
+              disabled={!isCreateMode && editingUser?.id === currentUser?.id}
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
-            {editingUser?.id === currentUser?.id && (
-              <p className={cn("text-xs mt-1", isDark ? "text-zinc-500" : "text-zinc-500")}>
+            {!isCreateMode && editingUser?.id === currentUser?.id && (
+              <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
                 You cannot change your own role
               </p>
             )}

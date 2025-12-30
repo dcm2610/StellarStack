@@ -73,9 +73,7 @@ export const requireDaemon = async (c: Context, next: Next) => {
 
   // Find node by token (and optionally by ID)
   const node = await db.node.findFirst({
-    where: nodeId
-      ? { id: nodeId, token: token }
-      : { token: token },
+    where: nodeId ? { id: nodeId, token: token } : { token: token },
   });
 
   if (!node) {
@@ -218,4 +216,25 @@ export const checkPermission = (c: Context, permission: Permission): boolean => 
   }
 
   return hasPermission(serverAccess.permissions, permission);
+};
+
+// Middleware to block actions on suspended servers (use after requireServerAccess)
+export const requireNotSuspended = async (c: Context, next: Next) => {
+  const serverAccess = c.get("serverAccess") as ServerAccessContext | undefined;
+  const user = c.get("user") as SessionUser | undefined;
+
+  if (!serverAccess) {
+    return c.json({ error: "Server access context not available" }, 500);
+  }
+
+  // Admins can still perform actions on suspended servers
+  if (user?.role === "admin") {
+    return next();
+  }
+
+  if (serverAccess.server.status === "SUSPENDED") {
+    return c.json({ error: "This server is suspended. Contact an administrator." }, 403);
+  }
+
+  return next();
 };
