@@ -129,6 +129,8 @@ impl SftpServer {
         // Create russh server config
         let config = russh::server::Config {
             keys: vec![key],
+            // Explicitly enable password authentication
+            methods: russh::MethodSet::PASSWORD,
             auth_rejection_time: std::time::Duration::from_secs(3),
             auth_rejection_time_initial: Some(std::time::Duration::from_secs(0)),
             ..Default::default()

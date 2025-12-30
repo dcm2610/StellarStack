@@ -5,6 +5,21 @@
 
 set -e
 
+# Version info - replaced during release builds, or use git if available
+INSTALLER_VERSION="__GIT_COMMIT__"
+INSTALLER_DATE="__BUILD_DATE__"
+
+# Try to get actual git info if we're running from a clone and placeholders are still present
+if [[ "$INSTALLER_VERSION" == "__GIT_COMMIT__" ]]; then
+    if command -v git &> /dev/null && git rev-parse --git-dir &> /dev/null 2>&1; then
+        INSTALLER_VERSION=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        INSTALLER_DATE=$(git log -1 --format=%cd --date=short 2>/dev/null || echo "unknown")
+    else
+        INSTALLER_VERSION="dev"
+        INSTALLER_DATE=$(date +%Y-%m-%d)
+    fi
+fi
+
 # Colors - Old school terminal green (Alien/Nostromo style)
 GREEN='\033[0;32m'
 BRIGHT_GREEN='\033[1;32m'
@@ -256,7 +271,7 @@ clear_screen() {
 EOF
     echo -e "${NC}"
     echo -e "${MUTED}  ════════════════════════════════════════════════════════════════════════════════════════════════════════${NC}"
-    echo -e "${SECONDARY}  INTERFACE 2037 // STELLARSTACK INC // DAEMON INSTALLER${NC}"
+    echo -e "${SECONDARY}  INTERFACE 2037 // STELLARSTACK INC // DAEMON INSTALLER // v${INSTALLER_VERSION} (${INSTALLER_DATE})${NC}"
     echo -e "${MUTED}  ════════════════════════════════════════════════════════════════════════════════════════════════════════${NC}"
     echo ""
 }
