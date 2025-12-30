@@ -1,9 +1,0 @@
-{
-  "title": "API Reference",
-  "pages": [
-    "index",
-    "authentication",
-    "servers",
-    "nodes"
-  ]
-}
