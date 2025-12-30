@@ -467,3 +467,33 @@ export interface SubdomainFeatureStatus {
 export const features = {
   subdomains: () => request<SubdomainFeatureStatus>("/api/features/subdomains"),
 };
+
+// System setup (public endpoints)
+export interface SystemStatus {
+  initialized: boolean;
+  hasAdmin: boolean;
+  userCount: number;
+}
+
+export interface SetupData {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface SetupResponse {
+  success: boolean;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  message: string;
+}
+
+export const setup = {
+  status: () => request<SystemStatus>("/api/admin/status"),
+  createAdmin: (data: SetupData) =>
+    request<SetupResponse>("/api/setup", { method: "POST", body: data }),
+};

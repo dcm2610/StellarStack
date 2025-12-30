@@ -10,6 +10,7 @@ import { FloatingDots } from "@workspace/ui/components/floating-particles";
 import { BsSun, BsMoon } from "react-icons/bs";
 import { signIn } from "@/lib/auth-client";
 import { useAuth } from "@/components/auth-provider";
+import { setup } from "@/lib/api";
 import { toast } from "sonner";
 
 const LoginPage = (): JSX.Element | null => {
@@ -17,6 +18,7 @@ const LoginPage = (): JSX.Element | null => {
   const { setTheme, resolvedTheme } = useNextTheme();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +27,25 @@ const LoginPage = (): JSX.Element | null => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Check if system needs setup
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await setup.status();
+        if (!status.initialized) {
+          // No users exist, redirect to setup
+          router.push("/setup");
+          return;
+        }
+      } catch {
+        // If check fails, continue to login
+      } finally {
+        setCheckingSetup(false);
+      }
+    };
+    checkStatus();
+  }, [router]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -62,7 +83,27 @@ const LoginPage = (): JSX.Element | null => {
     }
   };
 
-  if (!mounted) return null;
+  if (!mounted || checkingSetup) {
+    return (
+      <div
+        className={cn(
+          "relative flex min-h-svh items-center justify-center transition-colors",
+          isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+        )}
+      >
+        <AnimatedBackground isDark={isDark} />
+        <FloatingDots isDark={isDark} count={15} />
+        <div
+          className={cn(
+            "text-sm tracking-wider uppercase",
+            isDark ? "text-zinc-500" : "text-zinc-400"
+          )}
+        >
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   const inputClasses = cn(
     "w-full px-4 py-3 border bg-transparent text-sm transition-colors focus:outline-none",
@@ -77,10 +118,12 @@ const LoginPage = (): JSX.Element | null => {
   );
 
   return (
-    <div className={cn(
-      "min-h-svh transition-colors relative flex items-center justify-center",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
+    <div
+      className={cn(
+        "relative flex min-h-svh items-center justify-center transition-colors",
+        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+      )}
+    >
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={15} />
 
@@ -91,53 +134,62 @@ const LoginPage = (): JSX.Element | null => {
           size="sm"
           onClick={() => setTheme(isDark ? "light" : "dark")}
           className={cn(
-            "transition-all hover:scale-110 active:scale-95 p-2",
+            "p-2 transition-all hover:scale-110 active:scale-95",
             isDark
-              ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-              : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+              ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+              : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
           )}
         >
-          {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
+          {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
         </Button>
       </div>
 
       {/* Login Card */}
-      <div className={cn(
-        "relative w-full max-w-md mx-4 p-8 border transition-colors",
-        isDark
-          ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20"
-          : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20"
-      )}>
+      <div
+        className={cn(
+          "relative mx-4 w-full max-w-md border p-8 transition-colors",
+          isDark
+            ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-lg shadow-black/20"
+            : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 shadow-lg shadow-zinc-400/20"
+        )}
+      >
         {/* Corner decorations */}
-        <div className={cn(
-          "absolute top-0 left-0 w-3 h-3 border-t border-l",
-          isDark ? "border-zinc-500" : "border-zinc-400"
-        )} />
-        <div className={cn(
-          "absolute top-0 right-0 w-3 h-3 border-t border-r",
-          isDark ? "border-zinc-500" : "border-zinc-400"
-        )} />
-        <div className={cn(
-          "absolute bottom-0 left-0 w-3 h-3 border-b border-l",
-          isDark ? "border-zinc-500" : "border-zinc-400"
-        )} />
-        <div className={cn(
-          "absolute bottom-0 right-0 w-3 h-3 border-b border-r",
-          isDark ? "border-zinc-500" : "border-zinc-400"
-        )} />
+        <div
+          className={cn(
+            "absolute top-0 left-0 h-3 w-3 border-t border-l",
+            isDark ? "border-zinc-500" : "border-zinc-400"
+          )}
+        />
+        <div
+          className={cn(
+            "absolute top-0 right-0 h-3 w-3 border-t border-r",
+            isDark ? "border-zinc-500" : "border-zinc-400"
+          )}
+        />
+        <div
+          className={cn(
+            "absolute bottom-0 left-0 h-3 w-3 border-b border-l",
+            isDark ? "border-zinc-500" : "border-zinc-400"
+          )}
+        />
+        <div
+          className={cn(
+            "absolute right-0 bottom-0 h-3 w-3 border-r border-b",
+            isDark ? "border-zinc-500" : "border-zinc-400"
+          )}
+        />
 
         {/* Logo/Title */}
-        <div className="text-center mb-8">
-          <h1 className={cn(
-            "text-2xl font-light tracking-wider",
-            isDark ? "text-zinc-100" : "text-zinc-800"
-          )}>
+        <div className="mb-8 text-center">
+          <h1
+            className={cn(
+              "text-2xl font-light tracking-wider",
+              isDark ? "text-zinc-100" : "text-zinc-800"
+            )}
+          >
             STELLARSTACK
           </h1>
-          <p className={cn(
-            "text-sm mt-2",
-            isDark ? "text-zinc-500" : "text-zinc-500"
-          )}>
+          <p className={cn("mt-2 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
             Sign in to your account
           </p>
         </div>
@@ -175,7 +227,7 @@ const LoginPage = (): JSX.Element | null => {
           </div>
 
           {error && (
-            <div className="p-3 text-xs text-red-400 bg-red-900/20 border border-red-800 rounded">
+            <div className="rounded border border-red-800 bg-red-900/20 p-3 text-xs text-red-400">
               {error}
             </div>
           )}
@@ -184,7 +236,7 @@ const LoginPage = (): JSX.Element | null => {
             type="submit"
             disabled={isLoading}
             className={cn(
-              "w-full py-3 text-xs font-medium uppercase tracking-wider transition-all",
+              "w-full py-3 text-xs font-medium tracking-wider uppercase transition-all",
               isDark
                 ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:bg-zinc-700 disabled:text-zinc-500"
                 : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 disabled:bg-zinc-300 disabled:text-zinc-500"
@@ -195,10 +247,12 @@ const LoginPage = (): JSX.Element | null => {
         </form>
 
         {/* Footer */}
-        <div className={cn(
-          "mt-6 pt-6 border-t text-center text-xs",
-          isDark ? "border-zinc-800 text-zinc-600" : "border-zinc-200 text-zinc-400"
-        )}>
+        <div
+          className={cn(
+            "mt-6 border-t pt-6 text-center text-xs",
+            isDark ? "border-zinc-800 text-zinc-600" : "border-zinc-200 text-zinc-400"
+          )}
+        >
           Don&apos;t have an account?{" "}
           <button
             type="button"

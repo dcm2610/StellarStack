@@ -79,27 +79,223 @@ app.get("/health", (c) => {
 app.get("/api/ws/token", async (c) => {
   // Get session from cookies
   const cookies = c.req.header("Cookie") || "";
-  const sessionTokenMatch = cookies.match(/better-auth\.session_token=([^;]+)/);
-  const cookieSessionToken = sessionTokenMatch ? decodeURIComponent(sessionTokenMatch[1]) : null;
+  console.log("[WS Token] Cookies received:", cookies.substring(0, 100) + "...");
+
+  // Try multiple cookie name formats (Better Auth may use different formats)
+  let cookieSessionToken: string | null = null;
+
+  // Try: better-auth.session_token (with dot)
+  const dotMatch = cookies.match(/better-auth\.session_token=([^;]+)/);
+  if (dotMatch) {
+    cookieSessionToken = decodeURIComponent(dotMatch[1]);
+    console.log("[WS Token] Found token with dot format");
+  }
+
+  // Try: better-auth_session_token (with underscore)
+  if (!cookieSessionToken) {
+    const underscoreMatch = cookies.match(/better-auth_session_token=([^;]+)/);
+    if (underscoreMatch) {
+      cookieSessionToken = decodeURIComponent(underscoreMatch[1]);
+      console.log("[WS Token] Found token with underscore format");
+    }
+  }
+
+  // Try: session_token (simple)
+  if (!cookieSessionToken) {
+    const simpleMatch = cookies.match(/session_token=([^;]+)/);
+    if (simpleMatch) {
+      cookieSessionToken = decodeURIComponent(simpleMatch[1]);
+      console.log("[WS Token] Found token with simple format");
+    }
+  }
 
   if (!cookieSessionToken) {
+    console.log("[WS Token] No session token found in cookies");
     return c.json({ error: "Not authenticated" }, 401);
   }
 
-  const session = await db.session.findFirst({
-    where: {
-      token: cookieSessionToken,
-      expiresAt: { gt: new Date() },
-    },
+  console.log(
+    "[WS Token] Looking up session with token:",
+    cookieSessionToken.substring(0, 20) + "..."
+  );
+
+  // First, try to find any session with this token (ignore expiry for debugging)
+  const anySession = await db.session.findFirst({
+    where: { token: cookieSessionToken },
   });
 
-  if (!session) {
+  if (anySession) {
+    console.log("[WS Token] Found session, expires:", anySession.expiresAt, "now:", new Date());
+    if (anySession.expiresAt <= new Date()) {
+      console.log("[WS Token] Session is expired!");
+      return c.json({ error: "Session expired" }, 401);
+    }
+  } else {
+    console.log("[WS Token] No session found with this token");
+    // List some sessions for debugging (remove in production)
+    const recentSessions = await db.session.findMany({
+      take: 3,
+      orderBy: { createdAt: "desc" },
+      select: { token: true, expiresAt: true },
+    });
+    console.log(
+      "[WS Token] Recent sessions:",
+      recentSessions.map((s) => ({
+        tokenStart: s.token.substring(0, 20),
+        expiresAt: s.expiresAt,
+      }))
+    );
     return c.json({ error: "Invalid session" }, 401);
   }
 
-  // Return the session token - client can use this for WebSocket auth
-  // The token is the same as the cookie, so it's already valid
-  return c.json({ token: cookieSessionToken, userId: session.userId });
+  // Return the session token
+  return c.json({ token: cookieSessionToken, userId: anySession.userId });
+});
+
+// Public setup status endpoint - check if system is initialized
+app.get("/api/admin/status", async (c) => {
+  const userCount = await db.user.count();
+  const adminCount = await db.user.count({ where: { role: "admin" } });
+
+  return c.json({
+    initialized: userCount > 0,
+    hasAdmin: adminCount > 0,
+    userCount,
+  });
+});
+
+// Password recovery/migration - reset password for existing users
+// This is useful when migrating password hash algorithms (e.g., argon2 -> bcrypt)
+// Requires ADMIN_RECOVERY_KEY environment variable to be set
+app.post("/api/admin/reset-password", async (c) => {
+  const recoveryKey = process.env.ADMIN_RECOVERY_KEY;
+
+  if (!recoveryKey) {
+    return c.json(
+      {
+        error:
+          "Password recovery is disabled. Set ADMIN_RECOVERY_KEY environment variable to enable.",
+      },
+      403
+    );
+  }
+
+  const body = await c.req.json();
+  const { email, newPassword, recoveryKey: providedKey } = body;
+
+  if (!email || !newPassword || !providedKey) {
+    return c.json({ error: "Email, new password, and recovery key are required" }, 400);
+  }
+
+  if (providedKey !== recoveryKey) {
+    return c.json({ error: "Invalid recovery key" }, 403);
+  }
+
+  if (newPassword.length < 8) {
+    return c.json({ error: "Password must be at least 8 characters" }, 400);
+  }
+
+  try {
+    // Find the user
+    const user = await db.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Hash the new password using bcrypt
+    const { hashPassword } = await import("./lib/crypto");
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update the user's password in the account table
+    await db.account.updateMany({
+      where: {
+        userId: user.id,
+        providerId: "credential",
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    console.log(`[Recovery] Password reset for user: ${email}`);
+
+    return c.json({
+      success: true,
+      message: "Password has been reset successfully. You can now login with your new password.",
+    });
+  } catch (error) {
+    console.error("[Recovery] Failed to reset password:", error);
+    return c.json({ error: "Failed to reset password" }, 500);
+  }
+});
+
+// First-time setup - create initial admin account (only works if no users exist)
+app.post("/api/setup", async (c) => {
+  // Check if system is already initialized
+  const userCount = await db.user.count();
+  if (userCount > 0) {
+    return c.json({ error: "System is already initialized" }, 400);
+  }
+
+  const body = await c.req.json();
+
+  // Validate input
+  const { name, email, password } = body;
+  if (!name || !email || !password) {
+    return c.json({ error: "Name, email, and password are required" }, 400);
+  }
+
+  if (password.length < 8) {
+    return c.json({ error: "Password must be at least 8 characters" }, 400);
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return c.json({ error: "Invalid email format" }, 400);
+  }
+
+  try {
+    // Create the user using better-auth
+    const ctx = await auth.api.signUpEmail({
+      body: { email, password, name },
+    });
+
+    if (!ctx.user) {
+      return c.json({ error: "Failed to create user" }, 500);
+    }
+
+    // Update user to be admin with verified email
+    const user = await db.user.update({
+      where: { id: ctx.user.id },
+      data: {
+        role: "admin",
+        emailVerified: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    console.log(`[Setup] Created first admin user: ${user.email}`);
+
+    return c.json(
+      {
+        success: true,
+        user,
+        message: "Admin account created successfully",
+      },
+      201
+    );
+  } catch (error) {
+    console.error("[Setup] Failed to create admin:", error);
+    return c.json({ error: "Failed to create admin account" }, 500);
+  }
 });
 
 // Public feature flags endpoint - check if subdomains are available
