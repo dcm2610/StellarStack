@@ -79,6 +79,9 @@ read_existing_config() {
 enter_maintenance_mode() {
     if [ -z "$daemon_panel_url" ] || [ -z "$daemon_token_id" ] || [ -z "$daemon_token" ]; then
         print_warning "Missing credentials, skipping maintenance mode"
+        print_info "  Panel URL: ${daemon_panel_url:-'(not set)'}"
+        print_info "  Token ID: ${daemon_token_id:-'(not set)'}"
+        print_info "  Token: ${daemon_token:+(set)}${daemon_token:-'(not set)'}"
         return 1
     fi
 
@@ -88,22 +91,45 @@ enter_maintenance_mode() {
     print_task "Entering maintenance mode"
 
     local response
-    if response=$(curl -s --max-time 10 -X POST "$api_url" \
-        -H "Authorization: $auth_header" \
-        -H "Content-Type: application/json" 2>/dev/null); then
+    local http_code
+    local curl_output
 
-        # Check for success in response
-        if echo "$response" | grep -q '"success":true'; then
-            local affected=$(echo "$response" | grep -o '"affected":[0-9]*' | cut -d: -f2)
-            print_task_done "Entering maintenance mode"
-            print_info "Set ${affected:-0} servers to maintenance mode"
-            return 0
-        else
-            echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not enter maintenance mode${NC}    "
-            return 1
-        fi
-    else
+    # Use curl with both response body and HTTP status code
+    curl_output=$(curl -s -w "\n%{http_code}" --max-time 10 -X POST "$api_url" \
+        -H "Authorization: $auth_header" \
+        -H "Content-Type: application/json" 2>&1)
+    local curl_exit=$?
+
+    if [ $curl_exit -ne 0 ]; then
         echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not connect to panel${NC}    "
+        print_error "  curl error (exit code $curl_exit): Connection failed"
+        print_info "  URL: $api_url"
+        return 1
+    fi
+
+    # Extract HTTP code (last line) and response body (everything else)
+    http_code=$(echo "$curl_output" | tail -1)
+    response=$(echo "$curl_output" | sed '$d')
+
+    # Check for success in response
+    if echo "$response" | grep -q '"success":true'; then
+        local affected=$(echo "$response" | grep -o '"affected":[0-9]*' | cut -d: -f2)
+        print_task_done "Entering maintenance mode"
+        print_info "Set ${affected:-0} servers to maintenance mode"
+        return 0
+    else
+        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not enter maintenance mode${NC}    "
+        print_error "  HTTP $http_code from $api_url"
+        # Try to extract error message from response
+        local error_msg=$(echo "$response" | grep -o '"error":"[^"]*"' | cut -d'"' -f4)
+        local message=$(echo "$response" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$error_msg" ]; then
+            print_error "  Error: $error_msg"
+        elif [ -n "$message" ]; then
+            print_error "  Message: $message"
+        elif [ -n "$response" ]; then
+            print_error "  Response: ${response:0:200}"
+        fi
         return 1
     fi
 }
@@ -111,6 +137,7 @@ enter_maintenance_mode() {
 # Call panel API to exit maintenance mode
 exit_maintenance_mode() {
     if [ -z "$daemon_panel_url" ] || [ -z "$daemon_token_id" ] || [ -z "$daemon_token" ]; then
+        print_warning "Missing credentials, cannot exit maintenance mode"
         return 1
     fi
 
@@ -120,21 +147,44 @@ exit_maintenance_mode() {
     print_task "Restoring servers from maintenance mode"
 
     local response
-    if response=$(curl -s --max-time 10 -X POST "$api_url" \
-        -H "Authorization: $auth_header" \
-        -H "Content-Type: application/json" 2>/dev/null); then
+    local http_code
+    local curl_output
 
-        if echo "$response" | grep -q '"success":true'; then
-            local affected=$(echo "$response" | grep -o '"affected":[0-9]*' | cut -d: -f2)
-            print_task_done "Restoring servers from maintenance mode"
-            print_info "Restored ${affected:-0} servers to previous state"
-            return 0
-        else
-            echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not exit maintenance mode${NC}    "
-            return 1
-        fi
-    else
+    # Use curl with both response body and HTTP status code
+    curl_output=$(curl -s -w "\n%{http_code}" --max-time 10 -X POST "$api_url" \
+        -H "Authorization: $auth_header" \
+        -H "Content-Type: application/json" 2>&1)
+    local curl_exit=$?
+
+    if [ $curl_exit -ne 0 ]; then
         echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not connect to panel${NC}    "
+        print_error "  curl error (exit code $curl_exit): Connection failed"
+        print_info "  URL: $api_url"
+        return 1
+    fi
+
+    # Extract HTTP code (last line) and response body (everything else)
+    http_code=$(echo "$curl_output" | tail -1)
+    response=$(echo "$curl_output" | sed '$d')
+
+    if echo "$response" | grep -q '"success":true'; then
+        local affected=$(echo "$response" | grep -o '"affected":[0-9]*' | cut -d: -f2)
+        print_task_done "Restoring servers from maintenance mode"
+        print_info "Restored ${affected:-0} servers to previous state"
+        return 0
+    else
+        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not exit maintenance mode${NC}    "
+        print_error "  HTTP $http_code from $api_url"
+        # Try to extract error message from response
+        local error_msg=$(echo "$response" | grep -o '"error":"[^"]*"' | cut -d'"' -f4)
+        local message=$(echo "$response" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$error_msg" ]; then
+            print_error "  Error: $error_msg"
+        elif [ -n "$message" ]; then
+            print_error "  Message: $message"
+        elif [ -n "$response" ]; then
+            print_error "  Response: ${response:0:200}"
+        fi
         return 1
     fi
 }
