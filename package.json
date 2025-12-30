@@ -15,6 +15,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json,css}\"",
     "start:api": "pnpm --filter @workspace/api start",
     "start:web": "pnpm --filter web start",
+    "start:docs": "pnpm --filter docs start",
+    "start:home": "pnpm --filter home start",
     "prepare": "husky",
     "typecheck": "turbo typecheck"
   },
