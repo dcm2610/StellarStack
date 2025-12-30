@@ -8,7 +8,16 @@ import { Spinner } from "@workspace/ui/components/spinner";
 import { AnimatedBackground } from "@workspace/ui/components/animated-background";
 import { FadeIn } from "@workspace/ui/components/fade-in";
 import { FloatingDots } from "@workspace/ui/components/floating-particles";
-import { ArrowLeftIcon, SaveIcon, RefreshCwIcon, PlusIcon, TrashIcon, NetworkIcon, SplitIcon, ExternalLinkIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  SaveIcon,
+  RefreshCwIcon,
+  PlusIcon,
+  TrashIcon,
+  NetworkIcon,
+  SplitIcon,
+  ExternalLinkIcon,
+} from "lucide-react";
 import { useServer, useServerMutations } from "@/hooks/queries";
 import { useAdminTheme, CornerAccents } from "@/hooks/use-admin-theme";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
@@ -39,40 +48,44 @@ export default function EditServerPage() {
   const [isAddingAllocation, setIsAddingAllocation] = useState(false);
   const [removingAllocationId, setRemovingAllocationId] = useState<string | null>(null);
 
-  // Form state
+  // Track if form has been initialized to prevent polling from overwriting user edits
+  const [formInitialized, setFormInitialized] = useState(false);
+
+  // Form state - use strings for number fields to allow empty state while editing
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    memory: 1024,
-    disk: 10240,
-    cpu: 100,
+    memory: "1024",
+    disk: "10240",
+    cpu: "100",
     cpuPinning: "",
-    swap: -1,
+    swap: "-1",
     oomKillDisable: false,
-    backupLimit: 3,
+    backupLimit: "3",
   });
 
-  // Initialize form data and status when server data loads
+  // Initialize form data and status when server data loads (only once)
   useEffect(() => {
-    if (server) {
+    if (server && !formInitialized) {
       setSelectedStatus(server.status);
       setFormData({
         name: server.name,
         description: server.description || "",
-        memory: server.memory,
-        disk: server.disk,
-        cpu: server.cpu,
+        memory: String(server.memory),
+        disk: String(server.disk),
+        cpu: String(server.cpu),
         cpuPinning: server.cpuPinning || "",
-        swap: server.swap,
+        swap: String(server.swap),
         oomKillDisable: server.oomKillDisable,
-        backupLimit: server.backupLimit,
+        backupLimit: String(server.backupLimit),
       });
       // Set initial allocations from server data
       if (server.allocations) {
         setAllocations(server.allocations);
       }
+      setFormInitialized(true);
     }
-  }, [server]);
+  }, [server, formInitialized]);
 
   // Load allocations
   const loadAllocations = async () => {
@@ -165,13 +178,13 @@ export default function EditServerPage() {
         data: {
           name: formData.name,
           description: formData.description || undefined,
-          memory: formData.memory,
-          disk: formData.disk,
-          cpu: formData.cpu,
+          memory: parseInt(formData.memory) || 1024,
+          disk: parseInt(formData.disk) || 10240,
+          cpu: parseInt(formData.cpu) || 100,
           cpuPinning: formData.cpuPinning || undefined,
-          swap: formData.swap,
+          swap: parseInt(formData.swap) ?? -1,
           oomKillDisable: formData.oomKillDisable,
-          backupLimit: formData.backupLimit,
+          backupLimit: parseInt(formData.backupLimit) || 0,
         },
       });
       toast.success("Server updated successfully");
@@ -185,23 +198,33 @@ export default function EditServerPage() {
 
   if (isLoading) {
     return (
-      <div className={cn("min-h-svh flex items-center justify-center relative", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
+      <div
+        className={cn(
+          "relative flex min-h-svh items-center justify-center",
+          isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+        )}
+      >
         <AnimatedBackground isDark={isDark} />
-        <Spinner className="w-6 h-6" />
+        <Spinner className="h-6 w-6" />
       </div>
     );
   }
 
   return (
-    <div className={cn("min-h-svh transition-colors relative", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
+    <div
+      className={cn(
+        "relative min-h-svh transition-colors",
+        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+      )}
+    >
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={15} />
 
       <div className="relative p-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="mx-auto max-w-2xl">
           <FadeIn delay={0}>
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
+            <div className="mb-8 flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -211,19 +234,18 @@ export default function EditServerPage() {
                   isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
                 )}
               >
-                <ArrowLeftIcon className="w-4 h-4" />
+                <ArrowLeftIcon className="h-4 w-4" />
               </Button>
               <div>
-                <h1 className={cn(
-                  "text-2xl font-light tracking-wider",
-                  isDark ? "text-zinc-100" : "text-zinc-800"
-                )}>
+                <h1
+                  className={cn(
+                    "text-2xl font-light tracking-wider",
+                    isDark ? "text-zinc-100" : "text-zinc-800"
+                  )}
+                >
                   EDIT SERVER
                 </h1>
-                <p className={cn(
-                  "text-sm mt-1",
-                  isDark ? "text-zinc-500" : "text-zinc-500"
-                )}>
+                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
                   {server?.name} ({server?.shortId})
                 </p>
               </div>
@@ -232,12 +254,14 @@ export default function EditServerPage() {
 
           <FadeIn delay={0.1}>
             <form onSubmit={handleSubmit}>
-              <div className={cn(
-                "relative p-6 border",
-                isDark
-                  ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20"
-                  : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20"
-              )}>
+              <div
+                className={cn(
+                  "relative border p-6",
+                  isDark
+                    ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-lg shadow-black/20"
+                    : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 shadow-lg shadow-zinc-400/20"
+                )}
+              >
                 <CornerAccents isDark={isDark} size="sm" />
 
                 <div className="space-y-4">
@@ -258,14 +282,24 @@ export default function EditServerPage() {
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className={cn(inputClasses, "resize-none h-20")}
+                      className={cn(inputClasses, "h-20 resize-none")}
                       placeholder="Optional description..."
                     />
                   </div>
 
                   {/* Resources */}
-                  <div className={cn("pt-4 border-t", isDark ? "border-zinc-700/50" : "border-zinc-200")}>
-                    <h3 className={cn("text-sm font-medium uppercase tracking-wider mb-4", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <h3
+                      className={cn(
+                        "mb-4 text-sm font-medium tracking-wider uppercase",
+                        isDark ? "text-zinc-300" : "text-zinc-700"
+                      )}
+                    >
                       Resources
                     </h3>
 
@@ -275,13 +309,15 @@ export default function EditServerPage() {
                         <input
                           type="number"
                           value={formData.cpu}
-                          onChange={(e) => setFormData({ ...formData, cpu: parseInt(e.target.value) || 100 })}
+                          onChange={(e) => setFormData({ ...formData, cpu: e.target.value })}
                           className={inputClasses}
                           min={1}
                           step={1}
                           required
                         />
-                        <p className={cn("text-xs mt-1", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                        <p
+                          className={cn("mt-1 text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}
+                        >
                           100 = 1 thread
                         </p>
                       </div>
@@ -290,7 +326,7 @@ export default function EditServerPage() {
                         <input
                           type="number"
                           value={formData.memory}
-                          onChange={(e) => setFormData({ ...formData, memory: parseInt(e.target.value) || 1024 })}
+                          onChange={(e) => setFormData({ ...formData, memory: e.target.value })}
                           className={inputClasses}
                           min={128}
                           step={128}
@@ -302,7 +338,7 @@ export default function EditServerPage() {
                         <input
                           type="number"
                           value={formData.disk}
-                          onChange={(e) => setFormData({ ...formData, disk: parseInt(e.target.value) || 1024 })}
+                          onChange={(e) => setFormData({ ...formData, disk: e.target.value })}
                           className={inputClasses}
                           min={1024}
                           step={1024}
@@ -313,8 +349,18 @@ export default function EditServerPage() {
                   </div>
 
                   {/* Advanced */}
-                  <div className={cn("pt-4 border-t", isDark ? "border-zinc-700/50" : "border-zinc-200")}>
-                    <h3 className={cn("text-sm font-medium uppercase tracking-wider mb-4", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <h3
+                      className={cn(
+                        "mb-4 text-sm font-medium tracking-wider uppercase",
+                        isDark ? "text-zinc-300" : "text-zinc-700"
+                      )}
+                    >
                       Advanced
                     </h3>
 
@@ -334,22 +380,26 @@ export default function EditServerPage() {
                         <input
                           type="number"
                           value={formData.swap}
-                          onChange={(e) => setFormData({ ...formData, swap: parseInt(e.target.value) })}
+                          onChange={(e) => setFormData({ ...formData, swap: e.target.value })}
                           className={inputClasses}
                         />
-                        <p className={cn("text-xs mt-1", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                        <p
+                          className={cn("mt-1 text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}
+                        >
                           -1 = unlimited, 0 = disabled
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="mt-4 grid grid-cols-2 gap-4">
                       <div>
                         <label className={labelClasses}>Backup Limit</label>
                         <input
                           type="number"
                           value={formData.backupLimit}
-                          onChange={(e) => setFormData({ ...formData, backupLimit: parseInt(e.target.value) || 0 })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, backupLimit: e.target.value })
+                          }
                           className={inputClasses}
                           min={0}
                         />
@@ -359,10 +409,15 @@ export default function EditServerPage() {
                           type="checkbox"
                           id="oomKillDisable"
                           checked={formData.oomKillDisable}
-                          onChange={(e) => setFormData({ ...formData, oomKillDisable: e.target.checked })}
-                          className="w-4 h-4"
+                          onChange={(e) =>
+                            setFormData({ ...formData, oomKillDisable: e.target.checked })
+                          }
+                          className="h-4 w-4"
                         />
-                        <label htmlFor="oomKillDisable" className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                        <label
+                          htmlFor="oomKillDisable"
+                          className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}
+                        >
                           Disable OOM Killer
                         </label>
                       </div>
@@ -370,8 +425,18 @@ export default function EditServerPage() {
                   </div>
 
                   {/* Server Management */}
-                  <div className={cn("pt-4 border-t", isDark ? "border-zinc-700/50" : "border-zinc-200")}>
-                    <h3 className={cn("text-sm font-medium uppercase tracking-wider mb-4", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <h3
+                      className={cn(
+                        "mb-4 text-sm font-medium tracking-wider uppercase",
+                        isDark ? "text-zinc-300" : "text-zinc-700"
+                      )}
+                    >
                       Server Management
                     </h3>
 
@@ -391,7 +456,9 @@ export default function EditServerPage() {
                           <option value="INSTALLING">Installing</option>
                           <option value="ERROR">Error</option>
                         </select>
-                        <p className={cn("text-xs mt-1", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                        <p
+                          className={cn("mt-1 text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}
+                        >
                           Manually override server status
                         </p>
                       </div>
@@ -401,16 +468,21 @@ export default function EditServerPage() {
                           variant="outline"
                           onClick={() => setReinstallModalOpen(true)}
                           className={cn(
-                            "w-full flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95",
+                            "flex w-full items-center justify-center gap-2 text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-95",
                             isDark
                               ? "border-amber-700/50 text-amber-400 hover:border-amber-500 hover:text-amber-300"
                               : "border-amber-400 text-amber-600 hover:border-amber-500"
                           )}
                         >
-                          <RefreshCwIcon className="w-4 h-4" />
+                          <RefreshCwIcon className="h-4 w-4" />
                           Reinstall Server
                         </Button>
-                        <p className={cn("text-xs mt-1 text-center", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                        <p
+                          className={cn(
+                            "mt-1 text-center text-xs",
+                            isDark ? "text-zinc-600" : "text-zinc-400"
+                          )}
+                        >
                           Wipes server and runs install script
                         </p>
                       </div>
@@ -418,9 +490,19 @@ export default function EditServerPage() {
                   </div>
 
                   {/* Allocations */}
-                  <div className={cn("pt-4 border-t", isDark ? "border-zinc-700/50" : "border-zinc-200")}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className={cn("text-sm font-medium uppercase tracking-wider", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3
+                        className={cn(
+                          "text-sm font-medium tracking-wider uppercase",
+                          isDark ? "text-zinc-300" : "text-zinc-700"
+                        )}
+                      >
                         Allocations
                       </h3>
                       <Button
@@ -438,7 +520,7 @@ export default function EditServerPage() {
                             : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
                         )}
                       >
-                        <PlusIcon className="w-3 h-3" />
+                        <PlusIcon className="h-3 w-3" />
                         Add
                       </Button>
                     </div>
@@ -447,10 +529,15 @@ export default function EditServerPage() {
                     <div className="space-y-2">
                       {isLoadingAllocations ? (
                         <div className="flex items-center justify-center py-4">
-                          <Spinner className="w-4 h-4" />
+                          <Spinner className="h-4 w-4" />
                         </div>
                       ) : allocations.length === 0 ? (
-                        <p className={cn("text-sm py-4 text-center", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                        <p
+                          className={cn(
+                            "py-4 text-center text-sm",
+                            isDark ? "text-zinc-500" : "text-zinc-400"
+                          )}
+                        >
                           No allocations assigned
                         </p>
                       ) : (
@@ -458,29 +545,46 @@ export default function EditServerPage() {
                           <div
                             key={allocation.id}
                             className={cn(
-                              "flex items-center justify-between p-3 border",
+                              "flex items-center justify-between border p-3",
                               isDark
-                                ? "bg-zinc-900/50 border-zinc-800"
-                                : "bg-zinc-50 border-zinc-200"
+                                ? "border-zinc-800 bg-zinc-900/50"
+                                : "border-zinc-200 bg-zinc-50"
                             )}
                           >
                             <div className="flex items-center gap-3">
-                              <NetworkIcon className={cn("w-4 h-4", isDark ? "text-zinc-500" : "text-zinc-400")} />
-                              <span className={cn("font-mono text-sm", isDark ? "text-zinc-200" : "text-zinc-700")}>
+                              <NetworkIcon
+                                className={cn(
+                                  "h-4 w-4",
+                                  isDark ? "text-zinc-500" : "text-zinc-400"
+                                )}
+                              />
+                              <span
+                                className={cn(
+                                  "font-mono text-sm",
+                                  isDark ? "text-zinc-200" : "text-zinc-700"
+                                )}
+                              >
                                 {allocation.ip}:{allocation.port}
                               </span>
                               {index === 0 && (
-                                <span className={cn(
-                                  "px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium",
-                                  isDark
-                                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                    : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                                )}>
+                                <span
+                                  className={cn(
+                                    "px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
+                                    isDark
+                                      ? "border border-emerald-500/30 bg-emerald-500/20 text-emerald-400"
+                                      : "border border-emerald-200 bg-emerald-100 text-emerald-700"
+                                  )}
+                                >
                                   Primary
                                 </span>
                               )}
                               {allocation.alias && (
-                                <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                                <span
+                                  className={cn(
+                                    "text-xs",
+                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                  )}
+                                >
                                   ({allocation.alias})
                                 </span>
                               )}
@@ -492,19 +596,23 @@ export default function EditServerPage() {
                               disabled={index === 0 || removingAllocationId === allocation.id}
                               onClick={() => handleRemoveAllocation(allocation.id)}
                               className={cn(
-                                "p-1 h-auto",
+                                "h-auto p-1",
                                 index === 0
-                                  ? "opacity-30 cursor-not-allowed"
+                                  ? "cursor-not-allowed opacity-30"
                                   : isDark
-                                    ? "text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-                                    : "text-zinc-400 hover:text-red-600 hover:bg-red-50"
+                                    ? "text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+                                    : "text-zinc-400 hover:bg-red-50 hover:text-red-600"
                               )}
-                              title={index === 0 ? "Cannot remove primary allocation" : "Remove allocation"}
+                              title={
+                                index === 0
+                                  ? "Cannot remove primary allocation"
+                                  : "Remove allocation"
+                              }
                             >
                               {removingAllocationId === allocation.id ? (
-                                <Spinner className="w-4 h-4" />
+                                <Spinner className="h-4 w-4" />
                               ) : (
-                                <TrashIcon className="w-4 h-4" />
+                                <TrashIcon className="h-4 w-4" />
                               )}
                             </Button>
                           </div>
@@ -514,13 +622,15 @@ export default function EditServerPage() {
 
                     {/* Add allocation dialog */}
                     {showAddAllocation && (
-                      <div className={cn(
-                        "mt-4 p-4 border",
-                        isDark
-                          ? "bg-zinc-900/50 border-zinc-700"
-                          : "bg-zinc-50 border-zinc-200"
-                      )}>
-                        <p className={cn("text-sm mb-3", isDark ? "text-zinc-300" : "text-zinc-600")}>
+                      <div
+                        className={cn(
+                          "mt-4 border p-4",
+                          isDark ? "border-zinc-700 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
+                        )}
+                      >
+                        <p
+                          className={cn("mb-3 text-sm", isDark ? "text-zinc-300" : "text-zinc-600")}
+                        >
                           Select an available allocation to add:
                         </p>
                         <select
@@ -531,16 +641,22 @@ export default function EditServerPage() {
                           <option value="">Select allocation...</option>
                           {availableAllocations.map((alloc) => (
                             <option key={alloc.id} value={alloc.id}>
-                              {alloc.ip}:{alloc.port}{alloc.alias ? ` (${alloc.alias})` : ""}
+                              {alloc.ip}:{alloc.port}
+                              {alloc.alias ? ` (${alloc.alias})` : ""}
                             </option>
                           ))}
                         </select>
                         {availableAllocations.length === 0 && (
-                          <p className={cn("text-xs mt-2", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                          <p
+                            className={cn(
+                              "mt-2 text-xs",
+                              isDark ? "text-zinc-500" : "text-zinc-400"
+                            )}
+                          >
                             No available allocations on this node
                           </p>
                         )}
-                        <div className="flex items-center gap-2 mt-3">
+                        <div className="mt-3 flex items-center gap-2">
                           <Button
                             type="button"
                             variant="outline"
@@ -551,7 +667,9 @@ export default function EditServerPage() {
                             }}
                             className={cn(
                               "text-xs",
-                              isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
+                              isDark
+                                ? "border-zinc-700 text-zinc-400"
+                                : "border-zinc-300 text-zinc-600"
                             )}
                           >
                             Cancel
@@ -570,7 +688,7 @@ export default function EditServerPage() {
                           >
                             {isAddingAllocation ? (
                               <>
-                                <Spinner className="w-3 h-3 mr-1" />
+                                <Spinner className="mr-1 h-3 w-3" />
                                 Adding...
                               </>
                             ) : (
@@ -583,14 +701,28 @@ export default function EditServerPage() {
                   </div>
 
                   {/* Server Splitting */}
-                  <div className={cn("pt-4 border-t", isDark ? "border-zinc-700/50" : "border-zinc-200")}>
-                    <div className="flex items-center justify-between mb-4">
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
                       <div>
-                        <h3 className={cn("text-sm font-medium uppercase tracking-wider", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                        <h3
+                          className={cn(
+                            "text-sm font-medium tracking-wider uppercase",
+                            isDark ? "text-zinc-300" : "text-zinc-700"
+                          )}
+                        >
                           Server Splitting
                         </h3>
-                        <p className={cn("text-xs mt-1", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                          {server?.parentServerId ? "This is a child server" : "Split resources to create child servers"}
+                        <p
+                          className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}
+                        >
+                          {server?.parentServerId
+                            ? "This is a child server"
+                            : "Split resources to create child servers"}
                         </p>
                       </div>
                       <Button
@@ -599,15 +731,15 @@ export default function EditServerPage() {
                         size="sm"
                         onClick={() => router.push(`/servers/${serverId}/split`)}
                         className={cn(
-                          "flex items-center gap-2 text-xs uppercase tracking-wider",
+                          "flex items-center gap-2 text-xs tracking-wider uppercase",
                           isDark
                             ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                             : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
                         )}
                       >
-                        <SplitIcon className="w-4 h-4" />
+                        <SplitIcon className="h-4 w-4" />
                         Manage
-                        <ExternalLinkIcon className="w-3 h-3" />
+                        <ExternalLinkIcon className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -615,13 +747,13 @@ export default function EditServerPage() {
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="mt-6 flex justify-end gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push("/admin/servers")}
                   className={cn(
-                    "text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95",
+                    "text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-95",
                     isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
                   )}
                 >
@@ -631,16 +763,16 @@ export default function EditServerPage() {
                   type="submit"
                   disabled={update.isPending}
                   className={cn(
-                    "flex items-center gap-2 text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95",
+                    "flex items-center gap-2 text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-95",
                     isDark
                       ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
                       : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
                   )}
                 >
                   {update.isPending ? (
-                    <Spinner className="w-4 h-4" />
+                    <Spinner className="h-4 w-4" />
                   ) : (
-                    <SaveIcon className="w-4 h-4" />
+                    <SaveIcon className="h-4 w-4" />
                   )}
                   {update.isPending ? "Saving..." : "Save Changes"}
                 </Button>

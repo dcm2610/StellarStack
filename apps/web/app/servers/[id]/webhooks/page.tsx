@@ -28,12 +28,6 @@ import { toast } from "sonner";
 const webhookEvents: { value: WebhookEvent; label: string; description: string }[] = [
   { value: "server.started", label: "Server Started", description: "When the server starts" },
   { value: "server.stopped", label: "Server Stopped", description: "When the server stops" },
-  {
-    value: "server.status_changed",
-    label: "Status Changed",
-    description: "When server status changes",
-  },
-  { value: "server.console", label: "Console Output", description: "Console log messages" },
   { value: "backup.created", label: "Backup Created", description: "When a backup is created" },
   { value: "backup.restored", label: "Backup Restored", description: "When a backup is restored" },
   { value: "backup.deleted", label: "Backup Deleted", description: "When a backup is deleted" },
@@ -56,7 +50,7 @@ const WebhooksPage = (): JSX.Element | null => {
 
   // Form states
   const [formUrl, setFormUrl] = useState("");
-  const [formEvents, setFormEvents] = useState<WebhookEvent[]>([]);
+  const [formEvent, setFormEvent] = useState<WebhookEvent | null>(null);
   const [formEnabled, setFormEnabled] = useState(true);
   const [formProvider, setFormProvider] = useState<"generic" | "discord" | "slack">("generic");
 
@@ -90,7 +84,7 @@ const WebhooksPage = (): JSX.Element | null => {
 
   if (isInstalling) {
     return (
-      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
+      <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
         <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
       </div>
@@ -99,7 +93,7 @@ const WebhooksPage = (): JSX.Element | null => {
 
   const resetForm = () => {
     setFormUrl("");
-    setFormEvents([]);
+    setFormEvent(null);
     setFormEnabled(true);
     setFormProvider("generic");
   };
@@ -112,7 +106,7 @@ const WebhooksPage = (): JSX.Element | null => {
   const openEditModal = (webhook: Webhook) => {
     setSelectedWebhook(webhook);
     setFormUrl(webhook.url);
-    setFormEvents(webhook.events);
+    setFormEvent(webhook.events[0] || null);
     setFormEnabled(webhook.enabled);
     setFormProvider(webhook.provider || "generic");
     setEditModalOpen(true);
@@ -124,11 +118,12 @@ const WebhooksPage = (): JSX.Element | null => {
   };
 
   const handleAdd = async () => {
+    if (!formEvent) return;
     try {
       const newWebhook = await webhooks.create({
         serverId,
         url: formUrl,
-        events: formEvents,
+        events: [formEvent],
         provider: formProvider,
       });
       setWebhookList((prev) => [...prev, newWebhook]);
@@ -141,11 +136,11 @@ const WebhooksPage = (): JSX.Element | null => {
   };
 
   const handleEdit = async () => {
-    if (!selectedWebhook) return;
+    if (!selectedWebhook || !formEvent) return;
     try {
       const updated = await webhooks.update(selectedWebhook.id, {
         url: formUrl,
-        events: formEvents,
+        events: [formEvent],
         enabled: formEnabled,
         provider: formProvider,
       });
@@ -181,21 +176,14 @@ const WebhooksPage = (): JSX.Element | null => {
     }
   };
 
-  const toggleEvent = (event: WebhookEvent) => {
-    setFormEvents((prev) =>
-      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]
-    );
+  const selectEvent = (event: WebhookEvent) => {
+    setFormEvent(event);
   };
 
-  const isFormValid = formUrl.startsWith("http") && formEvents.length > 0;
+  const isFormValid = formUrl.startsWith("http") && formEvent !== null;
 
   return (
-    <div
-      className={cn(
-        "relative min-h-svh transition-colors",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}
-    >
+    <div className="relative min-h-svh transition-colors">
       {/* Background is now rendered in the layout for persistence */}
 
       <div className="relative p-8">
@@ -565,17 +553,17 @@ const WebhooksPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              Events
+              Event
             </label>
             <div className="space-y-2">
               {webhookEvents.map((event) => (
                 <button
                   key={event.value}
                   type="button"
-                  onClick={() => toggleEvent(event.value)}
+                  onClick={() => selectEvent(event.value)}
                   className={cn(
                     "flex w-full items-center gap-3 border p-3 text-left transition-all",
-                    formEvents.includes(event.value)
+                    formEvent === event.value
                       ? isDark
                         ? "border-zinc-500 bg-zinc-800"
                         : "border-zinc-400 bg-zinc-100"
@@ -586,8 +574,8 @@ const WebhooksPage = (): JSX.Element | null => {
                 >
                   <div
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center border",
-                      formEvents.includes(event.value)
+                      "flex h-5 w-5 items-center justify-center rounded-full border",
+                      formEvent === event.value
                         ? isDark
                           ? "border-green-500 bg-green-500/20"
                           : "border-green-400 bg-green-50"
@@ -596,9 +584,12 @@ const WebhooksPage = (): JSX.Element | null => {
                           : "border-zinc-300"
                     )}
                   >
-                    {formEvents.includes(event.value) && (
-                      <BsCheck2
-                        className={cn("h-3 w-3", isDark ? "text-green-400" : "text-green-600")}
+                    {formEvent === event.value && (
+                      <div
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          isDark ? "bg-green-400" : "bg-green-600"
+                        )}
                       />
                     )}
                   </div>
@@ -748,17 +739,17 @@ const WebhooksPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              Events
+              Event
             </label>
             <div className="space-y-2">
               {webhookEvents.map((event) => (
                 <button
                   key={event.value}
                   type="button"
-                  onClick={() => toggleEvent(event.value)}
+                  onClick={() => selectEvent(event.value)}
                   className={cn(
                     "flex w-full items-center gap-3 border p-3 text-left transition-all",
-                    formEvents.includes(event.value)
+                    formEvent === event.value
                       ? isDark
                         ? "border-zinc-500 bg-zinc-800"
                         : "border-zinc-400 bg-zinc-100"
@@ -769,8 +760,8 @@ const WebhooksPage = (): JSX.Element | null => {
                 >
                   <div
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center border",
-                      formEvents.includes(event.value)
+                      "flex h-5 w-5 items-center justify-center rounded-full border",
+                      formEvent === event.value
                         ? isDark
                           ? "border-green-500 bg-green-500/20"
                           : "border-green-400 bg-green-50"
@@ -779,9 +770,12 @@ const WebhooksPage = (): JSX.Element | null => {
                           : "border-zinc-300"
                     )}
                   >
-                    {formEvents.includes(event.value) && (
-                      <BsCheck2
-                        className={cn("h-3 w-3", isDark ? "text-green-400" : "text-green-600")}
+                    {formEvent === event.value && (
+                      <div
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          isDark ? "bg-green-400" : "bg-green-600"
+                        )}
                       />
                     )}
                   </div>

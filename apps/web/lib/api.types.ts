@@ -580,8 +580,6 @@ export interface PublicBrandingSettings {
 export type WebhookEvent =
   | "server.started"
   | "server.stopped"
-  | "server.status_changed"
-  | "server.console"
   | "backup.created"
   | "backup.restored"
   | "backup.deleted";

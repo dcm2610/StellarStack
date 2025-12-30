@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 
@@ -18,13 +18,13 @@ export const WaveText = ({
   baseClassName = "text-zinc-600",
 }: WaveTextProps) => {
   const [waveIndex, setWaveIndex] = useState(-1);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const isAnimatingRef = useRef(false);
 
   // Start wave animation at random intervals (3-8 seconds)
   useEffect(() => {
     const startWave = () => {
-      if (!isAnimating) {
-        setIsAnimating(true);
+      if (!isAnimatingRef.current) {
+        isAnimatingRef.current = true;
         setWaveIndex(0);
       }
     };
@@ -36,30 +36,29 @@ export const WaveText = ({
 
     // Random interval for subsequent waves
     const interval = setInterval(() => {
-      const randomDelay = Math.random() * 5000 + 3000; // 3-8 seconds
-      setTimeout(startWave, randomDelay);
-    }, 8000);
+      startWave();
+    }, 6000); // Wave every 6 seconds
 
     return () => {
       clearTimeout(initialDelay);
       clearInterval(interval);
     };
-  }, [isAnimating]);
+  }, []);
 
   // Animate through each character
   useEffect(() => {
     if (waveIndex >= 0 && waveIndex < text.length) {
       const timer = setTimeout(() => {
         setWaveIndex(waveIndex + 1);
-      }, 60); // Speed of wave propagation
+      }, 50); // Speed of wave propagation
 
       return () => clearTimeout(timer);
     } else if (waveIndex >= text.length) {
-      // Wave complete
+      // Wave complete, wait then reset
       const resetTimer = setTimeout(() => {
         setWaveIndex(-1);
-        setIsAnimating(false);
-      }, 1000);
+        isAnimatingRef.current = false;
+      }, 500);
 
       return () => clearTimeout(resetTimer);
     }
@@ -76,21 +75,14 @@ export const WaveText = ({
         const isHighlighted = distanceFromWave >= 0 && distanceFromWave < 4;
 
         // Calculate opacity based on distance from wave center
-        const opacity = isHighlighted
-          ? 1 - (distanceFromWave / 4)
-          : 0;
+        const opacity = isHighlighted ? 1 - distanceFromWave / 4 : 0;
 
         return (
           <motion.span
             key={index}
-            className={cn(
-              "transition-colors duration-150",
-              baseClassName
-            )}
+            className={cn("transition-colors duration-150", baseClassName)}
             style={{
-              color: isHighlighted
-                ? `rgba(244, 244, 245, ${opacity})`
-                : undefined,
+              color: isHighlighted ? `rgba(244, 244, 245, ${opacity})` : undefined,
             }}
           >
             {char === " " ? "\u00A0" : char}

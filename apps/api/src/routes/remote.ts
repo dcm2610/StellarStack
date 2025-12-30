@@ -15,6 +15,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../lib/db";
 import { requireDaemon } from "../middleware/auth";
+import { emitServerEvent } from "../lib/ws";
 import type { Variables } from "../types";
 
 const remote = new Hono<{ Variables: Variables }>();
@@ -97,7 +98,7 @@ remote.get("/servers", async (c) => {
     let startupDetection: any = blueprint.startupDetection;
 
     // Try to parse if it's a string (may be double-stringified)
-    if (typeof startupDetection === 'string') {
+    if (typeof startupDetection === "string") {
       try {
         startupDetection = JSON.parse(startupDetection);
       } catch {
@@ -112,16 +113,16 @@ remote.get("/servers", async (c) => {
     }
 
     // If we still have startupDetection as an object, extract done patterns
-    if (startupDetection && typeof startupDetection === 'object') {
-      if (typeof startupDetection.done === 'string') {
+    if (startupDetection && typeof startupDetection === "object") {
+      if (typeof startupDetection.done === "string") {
         donePatterns = [startupDetection.done];
       } else if (Array.isArray(startupDetection.done)) {
-        donePatterns = startupDetection.done.filter((p: any) => typeof p === 'string');
+        donePatterns = startupDetection.done.filter((p: any) => typeof p === "string");
       }
     }
 
     // Clean up Windows line endings from patterns
-    donePatterns = donePatterns.map(p => p.replace(/\r\n/g, '\n').replace(/\r/g, ''));
+    donePatterns = donePatterns.map((p) => p.replace(/\r\n/g, "\n").replace(/\r/g, ""));
 
     return {
       uuid: server.id,
@@ -229,7 +230,7 @@ remote.get("/servers/:uuid", async (c) => {
   let startupDetection: any = blueprint.startupDetection;
 
   // Try to parse if it's a string (may be double-stringified)
-  if (typeof startupDetection === 'string') {
+  if (typeof startupDetection === "string") {
     try {
       startupDetection = JSON.parse(startupDetection);
     } catch {
@@ -243,16 +244,16 @@ remote.get("/servers/:uuid", async (c) => {
   }
 
   // If we still have startupDetection as an object, extract done patterns
-  if (startupDetection && typeof startupDetection === 'object') {
-    if (typeof startupDetection.done === 'string') {
+  if (startupDetection && typeof startupDetection === "object") {
+    if (typeof startupDetection.done === "string") {
       donePatterns = [startupDetection.done];
     } else if (Array.isArray(startupDetection.done)) {
-      donePatterns = startupDetection.done.filter((p: any) => typeof p === 'string');
+      donePatterns = startupDetection.done.filter((p: any) => typeof p === "string");
     }
   }
 
   // Clean up Windows line endings from patterns
-  donePatterns = donePatterns.map(p => p.replace(/\r\n/g, '\n').replace(/\r/g, ''));
+  donePatterns = donePatterns.map((p) => p.replace(/\r\n/g, "\n").replace(/\r/g, ""));
 
   return c.json({
     data: {
@@ -343,6 +344,9 @@ remote.post("/servers/:uuid/status", async (c) => {
     where: { id: uuid },
     data: { status: newStatus as any },
   });
+
+  // Emit WebSocket event to notify frontend of status change
+  emitServerEvent("server:status", uuid, { id: uuid, status: newStatus });
 
   return c.json({ success: true });
 });
@@ -451,6 +455,9 @@ remote.post("/servers/:uuid/install", async (c) => {
     where: { id: uuid },
     data: { status: newStatus },
   });
+
+  // Emit WebSocket event to notify frontend of installation completion
+  emitServerEvent("server:status", uuid, { id: uuid, status: newStatus });
 
   return c.json({ success: true });
 });
@@ -780,26 +787,33 @@ remote.post("/sftp/auth", async (c) => {
  * Receive activity logs from daemon
  */
 // Safe metadata schema - only allow primitive values and arrays/objects of primitives
-const safeMetadataSchema = z.record(
-  z.union([
-    z.string().max(1000),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(z.union([z.string().max(1000), z.number(), z.boolean(), z.null()])),
-  ])
-).optional();
+const safeMetadataSchema = z
+  .record(
+    z.union([
+      z.string().max(1000),
+      z.number(),
+      z.boolean(),
+      z.null(),
+      z.array(z.union([z.string().max(1000), z.number(), z.boolean(), z.null()])),
+    ])
+  )
+  .optional();
 
 const activityLogSchema = z.object({
-  data: z.array(
-    z.object({
-      server: z.string().uuid(),
-      event: z.string().max(100).regex(/^[a-z0-9:._-]+$/i), // Only allow safe event names
-      metadata: safeMetadataSchema,
-      ip: z.string().ip().optional(),
-      timestamp: z.string().datetime(),
-    })
-  ).max(100), // Limit batch size
+  data: z
+    .array(
+      z.object({
+        server: z.string().uuid(),
+        event: z
+          .string()
+          .max(100)
+          .regex(/^[a-z0-9:._-]+$/i), // Only allow safe event names
+        metadata: safeMetadataSchema,
+        ip: z.string().ip().optional(),
+        timestamp: z.string().datetime(),
+      })
+    )
+    .max(100), // Limit batch size
 });
 
 remote.post("/activity", async (c) => {

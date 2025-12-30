@@ -5,15 +5,15 @@ import * as d_docs_19 from "../content/docs/components/console.mdx?collection=do
 import * as d_docs_18 from "../content/docs/components/card.mdx?collection=docs";
 import * as d_docs_17 from "../content/docs/components/button.mdx?collection=docs";
 import * as d_docs_16 from "../content/docs/components/animations.mdx?collection=docs";
-import * as d_docs_15 from "../content/docs/architecture/real-time.mdx?collection=docs";
-import * as d_docs_14 from "../content/docs/architecture/index.mdx?collection=docs";
-import * as d_docs_13 from "../content/docs/architecture/daemon.mdx?collection=docs";
-import * as d_docs_12 from "../content/docs/architecture/control-plane.mdx?collection=docs";
-import * as d_docs_11 from "../content/docs/architecture/authentication.mdx?collection=docs";
-import * as d_docs_10 from "../content/docs/guides/schedules.mdx?collection=docs";
-import * as d_docs_9 from "../content/docs/guides/permissions.mdx?collection=docs";
-import * as d_docs_8 from "../content/docs/guides/blueprints.mdx?collection=docs";
-import * as d_docs_7 from "../content/docs/guides/backups.mdx?collection=docs";
+import * as d_docs_15 from "../content/docs/guides/schedules.mdx?collection=docs";
+import * as d_docs_14 from "../content/docs/guides/permissions.mdx?collection=docs";
+import * as d_docs_13 from "../content/docs/guides/blueprints.mdx?collection=docs";
+import * as d_docs_12 from "../content/docs/guides/backups.mdx?collection=docs";
+import * as d_docs_11 from "../content/docs/architecture/real-time.mdx?collection=docs";
+import * as d_docs_10 from "../content/docs/architecture/index.mdx?collection=docs";
+import * as d_docs_9 from "../content/docs/architecture/daemon.mdx?collection=docs";
+import * as d_docs_8 from "../content/docs/architecture/control-plane.mdx?collection=docs";
+import * as d_docs_7 from "../content/docs/architecture/authentication.mdx?collection=docs";
 import * as d_docs_6 from "../content/docs/api/servers.mdx?collection=docs";
 import * as d_docs_5 from "../content/docs/api/nodes.mdx?collection=docs";
 import * as d_docs_4 from "../content/docs/api/index.mdx?collection=docs";
@@ -39,48 +39,48 @@ export const docs = _runtime.docs<typeof _source.docs>(
     { info: { path: "api/nodes.mdx", fullPath: "content/docs/api/nodes.mdx" }, data: d_docs_5 },
     { info: { path: "api/servers.mdx", fullPath: "content/docs/api/servers.mdx" }, data: d_docs_6 },
     {
-      info: { path: "guides/backups.mdx", fullPath: "content/docs/guides/backups.mdx" },
-      data: d_docs_7,
-    },
-    {
-      info: { path: "guides/blueprints.mdx", fullPath: "content/docs/guides/blueprints.mdx" },
-      data: d_docs_8,
-    },
-    {
-      info: { path: "guides/permissions.mdx", fullPath: "content/docs/guides/permissions.mdx" },
-      data: d_docs_9,
-    },
-    {
-      info: { path: "guides/schedules.mdx", fullPath: "content/docs/guides/schedules.mdx" },
-      data: d_docs_10,
-    },
-    {
       info: {
         path: "architecture/authentication.mdx",
         fullPath: "content/docs/architecture/authentication.mdx",
       },
-      data: d_docs_11,
+      data: d_docs_7,
     },
     {
       info: {
         path: "architecture/control-plane.mdx",
         fullPath: "content/docs/architecture/control-plane.mdx",
       },
-      data: d_docs_12,
+      data: d_docs_8,
     },
     {
       info: { path: "architecture/daemon.mdx", fullPath: "content/docs/architecture/daemon.mdx" },
-      data: d_docs_13,
+      data: d_docs_9,
     },
     {
       info: { path: "architecture/index.mdx", fullPath: "content/docs/architecture/index.mdx" },
-      data: d_docs_14,
+      data: d_docs_10,
     },
     {
       info: {
         path: "architecture/real-time.mdx",
         fullPath: "content/docs/architecture/real-time.mdx",
       },
+      data: d_docs_11,
+    },
+    {
+      info: { path: "guides/backups.mdx", fullPath: "content/docs/guides/backups.mdx" },
+      data: d_docs_12,
+    },
+    {
+      info: { path: "guides/blueprints.mdx", fullPath: "content/docs/guides/blueprints.mdx" },
+      data: d_docs_13,
+    },
+    {
+      info: { path: "guides/permissions.mdx", fullPath: "content/docs/guides/permissions.mdx" },
+      data: d_docs_14,
+    },
+    {
+      info: { path: "guides/schedules.mdx", fullPath: "content/docs/guides/schedules.mdx" },
       data: d_docs_15,
     },
     {
@@ -147,15 +147,15 @@ export const docs = _runtime.docs<typeof _source.docs>(
       },
     },
     {
-      info: { path: "guides/meta.json", fullPath: "content/docs/guides/meta.json" },
-      data: { title: "Guides", pages: ["permissions", "backups", "schedules", "blueprints"] },
-    },
-    {
       info: { path: "components/meta.json", fullPath: "content/docs/components/meta.json" },
       data: {
         title: "Components",
         pages: ["index", "button", "card", "dashboard-cards", "console", "animations"],
       },
+    },
+    {
+      info: { path: "guides/meta.json", fullPath: "content/docs/guides/meta.json" },
+      data: { title: "Guides", pages: ["permissions", "backups", "schedules", "blueprints"] },
     },
   ]
 );

@@ -43,7 +43,9 @@ export const Console = ({
   const [scrollSignal, setScrollSignal] = useState(0);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [hoveredTimestamp, setHoveredTimestamp] = useState<number | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(
+    null
+  );
   const timestampColumnRef = useRef<HTMLTableCellElement>(null);
 
   // Auto-scroll to bottom when new lines are added (smooth)
@@ -106,9 +108,8 @@ export const Console = ({
     if (e.key === "ArrowUp") {
       e.preventDefault();
       if (commandHistory.length > 0) {
-        const newIndex = historyIndex === -1
-          ? commandHistory.length - 1
-          : Math.max(0, historyIndex - 1);
+        const newIndex =
+          historyIndex === -1 ? commandHistory.length - 1 : Math.max(0, historyIndex - 1);
         setHistoryIndex(newIndex);
         setInputValue(commandHistory[newIndex] ?? "");
       }
@@ -127,9 +128,44 @@ export const Console = ({
     }
   };
 
-  // Focus input when clicking on console
-  const handleConsoleClick = () => {
+  // Focus input when clicking on console (but not when selecting text)
+  const handleConsoleClick = (e: React.MouseEvent) => {
+    // Don't focus if user is selecting text
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      return;
+    }
+    // Don't focus if clicking on a link
+    if ((e.target as HTMLElement).tagName === "A") {
+      return;
+    }
     inputRef.current?.focus();
+  };
+
+  // Parse URLs in text and return elements with clickable links
+  const parseLinks = (text: string): React.ReactNode => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (urlRegex.test(part)) {
+        // Reset regex lastIndex since we're reusing it
+        urlRegex.lastIndex = 0;
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="underline transition-opacity hover:opacity-80"
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
   };
 
   const displayLines = lines.slice(-maxLines);
@@ -137,24 +173,54 @@ export const Console = ({
   return (
     <div
       className={cn(
-        "relative flex flex-col h-full border transition-colors",
+        "relative flex h-full flex-col border transition-colors",
         isDark
-          ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20"
-          : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20",
+          ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-lg shadow-black/20"
+          : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 shadow-lg shadow-zinc-400/20",
         isOffline && "opacity-60",
         className
       )}
       onClick={handleConsoleClick}
     >
       {/* Corner accents */}
-      <div className={cn("absolute top-0 left-0 w-3 h-3 border-t border-l pointer-events-none", isDark ? "border-zinc-500" : "border-zinc-400")} />
-      <div className={cn("absolute top-0 right-0 w-3 h-3 border-t border-r pointer-events-none", isDark ? "border-zinc-500" : "border-zinc-400")} />
-      <div className={cn("absolute bottom-0 left-0 w-3 h-3 border-b border-l pointer-events-none", isDark ? "border-zinc-500" : "border-zinc-400")} />
-      <div className={cn("absolute bottom-0 right-0 w-3 h-3 border-b border-r pointer-events-none", isDark ? "border-zinc-500" : "border-zinc-400")} />
+      <div
+        className={cn(
+          "pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l",
+          isDark ? "border-zinc-500" : "border-zinc-400"
+        )}
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r",
+          isDark ? "border-zinc-500" : "border-zinc-400"
+        )}
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l",
+          isDark ? "border-zinc-500" : "border-zinc-400"
+        )}
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b",
+          isDark ? "border-zinc-500" : "border-zinc-400"
+        )}
+      />
 
       {/* Header */}
-      <div className={cn("flex items-center justify-between px-4 py-2 border-b", isDark ? "border-zinc-200/10" : "border-zinc-300")}>
-        <span className={cn("text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-400" : "text-zinc-600")}>
+      <div
+        className={cn(
+          "flex items-center justify-between border-b px-4 py-2",
+          isDark ? "border-zinc-200/10" : "border-zinc-300"
+        )}
+      >
+        <span
+          className={cn(
+            "text-xs font-medium tracking-wider uppercase",
+            isDark ? "text-zinc-400" : "text-zinc-600"
+          )}
+        >
           Console
         </span>
         <div className="flex items-center gap-2">
@@ -169,12 +235,17 @@ export const Console = ({
                   });
                 }
               }}
-              className={cn("text-xs transition-colors", isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-500 hover:text-zinc-700")}
+              className={cn(
+                "text-xs transition-colors",
+                isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-500 hover:text-zinc-700"
+              )}
             >
               Scroll to bottom
             </button>
           )}
-          <span className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-500")}>{displayLines.length} lines</span>
+          <span className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-500")}>
+            {displayLines.length} lines
+          </span>
         </div>
       </div>
 
@@ -185,7 +256,12 @@ export const Console = ({
           {isOffline && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20">
               <div className="flex flex-col items-center gap-2">
-                <span className={cn("text-xs uppercase tracking-wider", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                <span
+                  className={cn(
+                    "text-xs tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Server is offline
                 </span>
               </div>
@@ -194,8 +270,10 @@ export const Console = ({
           {/* Top gradient when scrolled to bottom but can scroll up */}
           <div
             className={cn(
-              "absolute top-0 left-0 right-0 h-8 z-10 pointer-events-none transition-opacity duration-300",
-              isDark ? "bg-gradient-to-b from-[#0f0f0f] to-transparent" : "bg-gradient-to-b from-white to-transparent",
+              "pointer-events-none absolute top-0 right-0 left-0 z-10 h-8 transition-opacity duration-300",
+              isDark
+                ? "bg-gradient-to-b from-[#0f0f0f] to-transparent"
+                : "bg-gradient-to-b from-white to-transparent",
               autoScroll && canScrollUp ? "opacity-100" : "opacity-0"
             )}
           />
@@ -204,54 +282,64 @@ export const Console = ({
             onScroll={handleScroll}
             onMouseLeave={handleTimestampColumnLeave}
             className={cn(
-              "h-full overflow-y-auto overflow-x-hidden font-mono text-xs p-2 scrollbar-thin scrollbar-track-transparent",
+              "scrollbar-thin scrollbar-track-transparent h-full overflow-x-hidden overflow-y-auto p-2 font-mono text-xs",
               isDark ? "scrollbar-thumb-zinc-700" : "scrollbar-thumb-zinc-400"
             )}
           >
-          <table className="w-full border-collapse">
-            <tbody>
-              {displayLines.map((line) => (
-                <tr key={line.id} className={cn("group", isDark ? "hover:bg-zinc-900/50" : "hover:bg-zinc-100")}>
-                  <td
-                    className={cn(
-                      "py-0.5 pr-4 whitespace-nowrap align-top w-[110px] cursor-default transition-colors",
-                      isDark ? "text-zinc-600 hover:text-zinc-400" : "text-zinc-500 hover:text-zinc-700"
-                    )}
-                    onMouseEnter={(e) => handleTimestampHover(line.timestamp, e)}
-                    onMouseMove={(e) => handleTimestampHover(line.timestamp, e)}
-                    onMouseLeave={handleTimestampColumnLeave}
+            <table className="w-full border-collapse">
+              <tbody>
+                {displayLines.map((line) => (
+                  <tr
+                    key={line.id}
+                    className={cn("group", isDark ? "hover:bg-zinc-900/50" : "hover:bg-zinc-100")}
                   >
-                    {formatTimestamp(line.timestamp)}
-                  </td>
-                  <td
-                    className={cn(
-                      "py-0.5 break-words",
-                      getLogLevelStyles(line.level, isDark)
-                    )}
-                  >
-                    {line.message}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <td
+                      className={cn(
+                        "w-[110px] cursor-default py-0.5 pr-4 align-top whitespace-nowrap transition-colors",
+                        isDark
+                          ? "text-zinc-600 hover:text-zinc-400"
+                          : "text-zinc-500 hover:text-zinc-700"
+                      )}
+                      onMouseEnter={(e) => handleTimestampHover(line.timestamp, e)}
+                      onMouseMove={(e) => handleTimestampHover(line.timestamp, e)}
+                      onMouseLeave={handleTimestampColumnLeave}
+                    >
+                      {formatTimestamp(line.timestamp)}
+                    </td>
+                    <td
+                      className={cn(
+                        "py-0.5 break-words select-text",
+                        getLogLevelStyles(line.level, isDark)
+                      )}
+                    >
+                      {parseLinks(line.message)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {/* Timestamp column tooltip */}
-          {hoveredTimestamp && tooltipPosition && (
-            <TimestampColumnTooltip
-              timestamp={hoveredTimestamp}
-              position={tooltipPosition}
-              isDark={isDark}
-            />
-          )}
+            {/* Timestamp column tooltip */}
+            {hoveredTimestamp && tooltipPosition && (
+              <TimestampColumnTooltip
+                timestamp={hoveredTimestamp}
+                position={tooltipPosition}
+                isDark={isDark}
+              />
+            )}
           </div>
         </div>
       </ScrollContext.Provider>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className={cn("border-t", isDark ? "border-zinc-200/10" : "border-zinc-300")}>
-        <div className="flex items-center px-4 py-3 gap-3">
-          <span className={cn("font-mono text-sm", isDark ? "text-zinc-600" : "text-zinc-500")}>$</span>
+      <form
+        onSubmit={handleSubmit}
+        className={cn("border-t", isDark ? "border-zinc-200/10" : "border-zinc-300")}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className={cn("font-mono text-sm", isDark ? "text-zinc-600" : "text-zinc-500")}>
+            $
+          </span>
           <input
             ref={inputRef}
             type="text"
@@ -261,8 +349,10 @@ export const Console = ({
             placeholder={isOffline ? "Connection lost..." : "Enter command..."}
             disabled={isOffline}
             className={cn(
-              "flex-1 bg-transparent border-none outline-none font-mono text-sm",
-              isDark ? "text-zinc-200 placeholder:text-zinc-700" : "text-zinc-800 placeholder:text-zinc-400",
+              "flex-1 border-none bg-transparent font-mono text-sm outline-none",
+              isDark
+                ? "text-zinc-200 placeholder:text-zinc-700"
+                : "text-zinc-800 placeholder:text-zinc-400",
               isOffline && "cursor-not-allowed"
             )}
           />

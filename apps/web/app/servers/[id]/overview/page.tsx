@@ -12,7 +12,13 @@ import { BsSun, BsMoon, BsGrid } from "react-icons/bs";
 import { FadeIn } from "@workspace/ui/components/fade-in";
 import { Badge } from "@workspace/ui/components/badge";
 import { BsExclamationTriangle } from "react-icons/bs";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@workspace/ui/components/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@workspace/ui/components/sheet";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { CpuCard } from "@workspace/ui/components/cpu-card";
@@ -40,17 +46,18 @@ const buildDisplayData = (server: any, statsData: StatsWithHistory) => {
 
   // New daemon stats format: memory_bytes, memory_limit_bytes, cpu_absolute, disk_bytes, disk_limit_bytes
   const cpuPercent = stats?.cpu_absolute ?? 0;
+  // CPU limit from server config (100 = 1 core, so 400 = 4 cores)
+  const cpuLimit = server?.cpu ?? 100;
+
   const memUsed = stats?.memory_bytes ? stats.memory_bytes / (1024 * 1024 * 1024) : 0;
-  const memLimit = stats?.memory_limit_bytes
-    ? stats.memory_limit_bytes / (1024 * 1024 * 1024)
-    : (server?.memory ? server.memory / 1024 : 1);
+  // Always use server.memory for limit (MiB to GiB) - daemon's memory_limit_bytes can be unreliable
+  const memLimit = server?.memory ? server.memory / 1024 : 1;
   const memPercent = memLimit > 0 ? (memUsed / memLimit) * 100 : 0;
 
-  // Disk usage from daemon stats (in bytes, convert to GB)
+  // Disk usage from daemon stats (in bytes, convert to GiB)
   const diskUsed = stats?.disk_bytes ? stats.disk_bytes / (1024 * 1024 * 1024) : 0;
-  const diskLimit = stats?.disk_limit_bytes
-    ? stats.disk_limit_bytes / (1024 * 1024 * 1024)
-    : (server?.disk ? server.disk / 1024 : 10);
+  // Always use server.disk for limit (MiB to GiB) - daemon's disk_limit_bytes can have unit issues
+  const diskLimit = server?.disk ? server.disk / 1024 : 10;
   const diskPercent = diskLimit > 0 ? (diskUsed / diskLimit) * 100 : 0;
 
   // Use network rate from statsData (bytes/sec)
@@ -75,7 +82,8 @@ const buildDisplayData = (server: any, statsData: StatsWithHistory) => {
     status: server?.status?.toLowerCase() || "stopped",
     cpu: {
       usage: { percentage: cpuPercent, history: statsData.cpuHistory },
-      cores: Math.ceil((server?.cpu ?? 100) / 100), // CPU limit as percentage (100 = 1 core)
+      limit: cpuLimit, // CPU limit as percentage (100 = 1 core)
+      cores: Math.ceil((server?.cpu ?? 100) / 100), // For display purposes
       frequency: 3.5,
       model: "CPU",
       architecture: "x86_64",
@@ -84,6 +92,8 @@ const buildDisplayData = (server: any, statsData: StatsWithHistory) => {
       tdp: 65,
       cache: "16MB",
       coreUsage: [] as { id: number; percentage: number; frequency: number }[],
+      // Formatted display string: "X% / Y%"
+      displayValue: `${cpuPercent.toFixed(0)}% / ${cpuLimit}%`,
     },
     memory: {
       usage: { percentage: memPercent, history: statsData.memoryPercentHistory },
@@ -94,11 +104,13 @@ const buildDisplayData = (server: any, statsData: StatsWithHistory) => {
       channels: "Dual",
       slots: "2/4",
       timings: "16-18-18-36",
+      // Formatted display string: "X GiB / Y GiB"
+      displayValue: `${memUsed.toFixed(2)} / ${memLimit.toFixed(2)} GiB`,
     },
     disk: {
       usage: { percentage: diskPercent, history: statsData.diskPercentHistory },
-      used: parseFloat(diskUsed.toFixed(1)),
-      total: parseFloat(diskLimit.toFixed(1)),
+      used: parseFloat(diskUsed.toFixed(2)),
+      total: parseFloat(diskLimit.toFixed(2)),
       type: "NVMe SSD",
       model: "Storage",
       interface: "NVMe",
@@ -109,8 +121,8 @@ const buildDisplayData = (server: any, statsData: StatsWithHistory) => {
     network: {
       download: Math.round(netRxRate / 1024), // KB/s
       upload: Math.round(netTxRate / 1024), // KB/s
-      downloadHistory: statsData.networkRxHistory.map(b => Math.round(b / 1024)),
-      uploadHistory: statsData.networkTxHistory.map(b => Math.round(b / 1024)),
+      downloadHistory: statsData.networkRxHistory.map((b) => Math.round(b / 1024)),
+      uploadHistory: statsData.networkTxHistory.map((b) => Math.round(b / 1024)),
     },
     networkConfig: {
       publicIp: server?.allocations?.[0]?.ip || "0.0.0.0",
@@ -129,15 +141,17 @@ const buildDisplayData = (server: any, statsData: StatsWithHistory) => {
       os: "Linux",
       osVersion: "Debian 12",
     },
-    node: server?.node ? {
-      id: server.node.id || "unknown",
-      shortId: server.node.shortId || server.node.id?.substring(0, 8) || "unknown",
-      name: server.node.displayName || "Node",
-      location: getLocationString(),
-      region: server.node.location?.country || "Unknown",
-      zone: server.node.location?.city || "Unknown",
-      provider: "StellarStack",
-    } : null,
+    node: server?.node
+      ? {
+          id: server.node.id || "unknown",
+          shortId: server.node.shortId || server.node.id?.substring(0, 8) || "unknown",
+          name: server.node.displayName || "Node",
+          location: getLocationString(),
+          region: server.node.location?.country || "Unknown",
+          zone: server.node.location?.city || "Unknown",
+          provider: "StellarStack",
+        }
+      : null,
     gameServer: {
       players: [] as { id: string; name: string; joinedAt: number }[],
       maxPlayers: 20,
@@ -157,7 +171,18 @@ const ServerOverviewPage = (): JSX.Element | null => {
   const [mounted, setMounted] = useState(false);
   const labels = useLabels();
 
-  const { server, consoleInfo, isLoading, isInstalling, start, stop, restart, kill, refetch, powerActionLoading } = useServer();
+  const {
+    server,
+    consoleInfo,
+    isLoading,
+    isInstalling,
+    start,
+    stop,
+    restart,
+    kill,
+    refetch,
+    powerActionLoading,
+  } = useServer();
 
   // Enable WebSocket if we have consoleInfo - this means the API approved the connection
   // The daemon will report the actual server state via WebSocket events
@@ -179,7 +204,11 @@ const ServerOverviewPage = (): JSX.Element | null => {
   const consoleLines = rawConsoleLines.map((line, index) => ({
     id: `${line.timestamp.getTime()}-${index}`,
     timestamp: line.timestamp.getTime(),
-    level: (line.type === "error" || line.type === "stderr" ? "error" : line.type === "info" ? "info" : "default") as "info" | "error" | "default",
+    level: (line.type === "error" || line.type === "stderr"
+      ? "error"
+      : line.type === "info"
+        ? "info"
+        : "default") as "info" | "error" | "default",
     message: line.text,
   }));
 
@@ -189,7 +218,17 @@ const ServerOverviewPage = (): JSX.Element | null => {
 
   const isDark = mounted ? resolvedTheme === "dark" : true;
 
-  const { items, visibleItems, layouts, hiddenCards, isLoaded, saveLayout, resetLayout, showCard, hideCard } = useGridStorage({
+  const {
+    items,
+    visibleItems,
+    layouts,
+    hiddenCards,
+    isLoaded,
+    saveLayout,
+    resetLayout,
+    showCard,
+    hideCard,
+  } = useGridStorage({
     key: `stellarstack-dashboard-layout-${serverId}`,
     defaultItems: defaultGridItems,
     defaultHiddenCards: defaultHiddenCards,
@@ -226,12 +265,18 @@ const ServerOverviewPage = (): JSX.Element | null => {
   const getStatusLabel = (): string => {
     if (!server) return labels.status.offline;
     switch (server.status) {
-      case "RUNNING": return labels.status.online;
-      case "STARTING": return labels.status.starting;
-      case "STOPPING": return labels.status.stopping;
-      case "STOPPED": return labels.status.stopped;
-      case "ERROR": return "ERROR";
-      default: return labels.status.stopped;
+      case "RUNNING":
+        return labels.status.online;
+      case "STARTING":
+        return labels.status.starting;
+      case "STOPPING":
+        return labels.status.stopping;
+      case "STOPPED":
+        return labels.status.stopped;
+      case "ERROR":
+        return "ERROR";
+      default:
+        return labels.status.stopped;
     }
   };
 
@@ -242,10 +287,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
   // Show installing placeholder if server is being installed
   if (isInstalling) {
     return (
-      <div className={cn(
-        "min-h-svh",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
+      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
         <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
       </div>
     );
@@ -254,12 +296,14 @@ const ServerOverviewPage = (): JSX.Element | null => {
   // Show loading spinner only if loading AND not connected to WebSocket
   if (isLoading && !wsConnected) {
     return (
-      <div className={cn(
-        "min-h-svh flex items-center justify-center",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
+      <div
+        className={cn(
+          "flex min-h-svh items-center justify-center",
+          isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+        )}
+      >
         <div className="flex items-center gap-3">
-          <Spinner className="w-5 h-5" />
+          <Spinner className="h-5 w-5" />
           <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
             Loading server...
           </span>
@@ -270,44 +314,49 @@ const ServerOverviewPage = (): JSX.Element | null => {
 
   return (
     <ThemeContext.Provider value={{ isDark }}>
-      <div className={cn(
-        "min-h-svh transition-colors relative",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
+      <div className="relative min-h-svh transition-colors">
         {/* Background is now rendered in the layout for persistence */}
 
         {/* Connection error banner */}
         {wsEnabled && !wsConnected && !wsConnecting && (
-          <div className={cn(
-            "relative z-10 px-4 py-3 flex items-center justify-center gap-2 text-sm",
-            isDark
-              ? "bg-amber-500/10 border-b border-amber-500/20 text-amber-400"
-              : "bg-amber-50 border-b border-amber-200 text-amber-700"
-          )}>
-            <BsExclamationTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>Unable to connect to daemon. Server controls may not work until connection is restored.</span>
+          <div
+            className={cn(
+              "relative z-10 flex items-center justify-center gap-2 px-4 py-3 text-sm",
+              isDark
+                ? "border-b border-amber-500/20 bg-amber-500/10 text-amber-400"
+                : "border-b border-amber-200 bg-amber-50 text-amber-700"
+            )}
+          >
+            <BsExclamationTriangle className="h-4 w-4 flex-shrink-0" />
+            <span>
+              Unable to connect to daemon. Server controls may not work until connection is
+              restored.
+            </span>
           </div>
         )}
 
         <div className="relative p-8">
           <FadeIn delay={0}>
-            <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between">
+            <div className="mx-auto mb-6 flex max-w-7xl items-center justify-between">
               <div className="flex items-center gap-4">
-                <SidebarTrigger className={cn(
-                  "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                )} />
+                <SidebarTrigger
+                  className={cn(
+                    "transition-all hover:scale-110 active:scale-95",
+                    isDark
+                      ? "text-zinc-400 hover:text-zinc-100"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  )}
+                />
                 <div>
-                  <h1 className={cn(
-                    "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
-                  )}>
+                  <h1
+                    className={cn(
+                      "text-2xl font-light tracking-wider",
+                      isDark ? "text-zinc-100" : "text-zinc-800"
+                    )}
+                  >
                     OVERVIEW
                   </h1>
-                  <p className={cn(
-                    "text-sm mt-1",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}>
+                  <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
                     {server?.name || `Server ${serverId}`}
                   </p>
                 </div>
@@ -322,11 +371,11 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       className={cn(
                         "transition-all hover:scale-[1.02] active:scale-95",
                         isDark
-                          ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                          : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                       )}
                     >
-                      <BsGrid className="w-4 h-4 mr-2" />
+                      <BsGrid className="mr-2 h-4 w-4" />
                       {labels.dashboard.manageCards}
                     </Button>
                     <Button
@@ -336,8 +385,8 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       className={cn(
                         "transition-all hover:scale-[1.02] active:scale-95",
                         isDark
-                          ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                          : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                       )}
                     >
                       {labels.dashboard.resetLayout}
@@ -350,10 +399,14 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   onClick={() => setIsEditing(!isEditing)}
                   className={cn(
                     "transition-all hover:scale-[1.02] active:scale-95",
-                    isEditing && (isDark ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200" : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"),
-                    !isEditing && (isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400")
+                    isEditing &&
+                      (isDark
+                        ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                        : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"),
+                    !isEditing &&
+                      (isDark
+                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                        : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900")
                   )}
                 >
                   {isEditing ? labels.dashboard.doneEditing : labels.dashboard.editLayout}
@@ -361,7 +414,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "text-xs font-medium bg-transparent uppercase",
+                    "bg-transparent text-xs font-medium uppercase",
                     server?.status === "ERROR" && "border-red-500 text-red-500",
                     server?.status === "RUNNING" && "border-green-500 text-green-500",
                     server?.status === "STOPPED" && "border-zinc-500 text-zinc-500",
@@ -377,13 +430,13 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   size="sm"
                   onClick={() => setTheme(isDark ? "light" : "dark")}
                   className={cn(
-                    "transition-all hover:scale-110 active:scale-95 p-2",
+                    "p-2 transition-all hover:scale-110 active:scale-95",
                     isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                   )}
                 >
-                  {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
+                  {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -393,8 +446,8 @@ const ServerOverviewPage = (): JSX.Element | null => {
             <SheetContent
               side="right"
               className={cn(
-                "w-[400px] sm:max-w-[450px] overflow-y-auto",
-                isDark ? "bg-[#0f0f0f] border-zinc-800" : "bg-white border-zinc-200"
+                "w-[400px] overflow-y-auto sm:max-w-[450px]",
+                isDark ? "border-zinc-800 bg-[#0f0f0f]" : "border-zinc-200 bg-white"
               )}
             >
               <SheetHeader>
@@ -413,20 +466,22 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       key={cardId}
                       onClick={() => showCard(cardId)}
                       className={cn(
-                        "overflow-hidden cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
+                        "cursor-pointer overflow-hidden transition-all hover:scale-[1.02] hover:shadow-lg",
                         isDark ? "hover:shadow-black/50" : "hover:shadow-zinc-300/50"
                       )}
                     >
-                      <div className="h-[120px] pointer-events-none">
+                      <div className="pointer-events-none h-[120px]">
                         <CardPreview cardId={cardId} isDark={isDark} server={displayData} />
                       </div>
                     </div>
                   ))}
                 {hiddenCards.filter((id) => id !== "console").length === 0 && (
-                  <div className={cn(
-                    "text-center py-8 text-sm",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
-                  )}>
+                  <div
+                    className={cn(
+                      "py-8 text-center text-sm",
+                      isDark ? "text-zinc-500" : "text-zinc-400"
+                    )}
+                  >
                     {labels.dashboard.allCardsOnDashboard}
                     <br />
                     {labels.dashboard.removeCardsHint}
@@ -437,7 +492,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
           </Sheet>
 
           <DragDropGrid
-            className="max-w-7xl mx-auto"
+            className="mx-auto max-w-7xl"
             items={visibleItems}
             allItems={items}
             savedLayouts={layouts}
@@ -454,7 +509,11 @@ const ServerOverviewPage = (): JSX.Element | null => {
             {!hiddenCards.includes("instance-name") && (
               <div key="instance-name" className="h-full">
                 <GridItem itemId="instance-name">
-                  <InstanceNameCard itemId="instance-name" isDark={isDark} instanceName={displayData.name} />
+                  <InstanceNameCard
+                    itemId="instance-name"
+                    isDark={isDark}
+                    instanceName={displayData.name}
+                  />
                 </GridItem>
               </div>
             )}
@@ -513,7 +572,11 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   <CpuCard
                     itemId="cpu"
                     percentage={displayData.cpu.usage.percentage}
-                    details={[`${displayData.cpu.cores} ${labels.cpu.cores || "CORES"}`, `${displayData.cpu.frequency} GHz`]}
+                    primaryValue={displayData.cpu.displayValue}
+                    details={[
+                      `${displayData.cpu.cores} ${labels.cpu.cores || "CORES"}`,
+                      `${displayData.cpu.frequency} GHz`,
+                    ]}
                     history={displayData.cpu.usage.history}
                     coreUsage={displayData.cpu.coreUsage}
                     isDark={isDark}
@@ -530,7 +593,11 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   <UsageMetricCard
                     itemId="ram"
                     percentage={displayData.memory.usage.percentage}
-                    details={[`${displayData.memory.used} / ${displayData.memory.total} GB`, displayData.memory.type || ""]}
+                    primaryValue={displayData.memory.displayValue}
+                    details={[
+                      `${displayData.memory.usage.percentage.toFixed(1)}% used`,
+                      displayData.memory.type || "",
+                    ]}
                     history={displayData.memory.usage.history}
                     isDark={isDark}
                     isOffline={isOffline}
@@ -547,7 +614,10 @@ const ServerOverviewPage = (): JSX.Element | null => {
                     itemId="disk"
                     percentage={displayData.disk.usage.percentage}
                     primaryValue={`${displayData.disk.used.toFixed(2)} / ${displayData.disk.total.toFixed(0)} GiB`}
-                    details={[`${displayData.disk.usage.percentage.toFixed(1)}% used`, displayData.disk.type || ""]}
+                    details={[
+                      `${displayData.disk.usage.percentage.toFixed(1)}% used`,
+                      displayData.disk.type || "",
+                    ]}
                     history={displayData.disk.usage.history}
                     isDark={isDark}
                     isOffline={isOffline}
@@ -577,7 +647,12 @@ const ServerOverviewPage = (): JSX.Element | null => {
             {!hiddenCards.includes("console") && (
               <div key="console" className="h-full">
                 <GridItem itemId="console" showRemoveHandle={false}>
-                  <Console lines={consoleLines} onCommand={handleCommand} isDark={isDark} isOffline={isOffline} />
+                  <Console
+                    lines={consoleLines}
+                    onCommand={handleCommand}
+                    isDark={isDark}
+                    isOffline={isOffline}
+                  />
                 </GridItem>
               </div>
             )}
@@ -630,11 +705,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
         </div>
 
         {/* Extensions */}
-        <EulaExtension
-          serverId={serverId}
-          lines={rawConsoleLines}
-          onRestart={restart}
-        />
+        <EulaExtension serverId={serverId} lines={rawConsoleLines} onRestart={restart} />
       </div>
     </ThemeContext.Provider>
   );

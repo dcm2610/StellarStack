@@ -86,7 +86,7 @@ const SplitPage = (): JSX.Element | null => {
 
   if (isInstalling) {
     return (
-      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
+      <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
         <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
       </div>
@@ -177,12 +177,7 @@ const SplitPage = (): JSX.Element | null => {
     formCpuPercent <= 90;
 
   return (
-    <div
-      className={cn(
-        "relative min-h-svh transition-colors",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}
-    >
+    <div className="relative min-h-svh transition-colors">
       {/* Background is now rendered in the layout for persistence */}
 
       <div className="relative p-8">

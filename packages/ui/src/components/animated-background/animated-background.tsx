@@ -95,9 +95,11 @@ export const AnimatedBackground = ({
 
     if (now - lastTrailTimeRef.current > 16 && mouse.x > -500) {
       const lastPoint = trail[0];
-      if (!lastPoint ||
-          Math.abs(mouse.x - lastPoint.x) > 3 ||
-          Math.abs(mouse.y - lastPoint.y) > 3) {
+      if (
+        !lastPoint ||
+        Math.abs(mouse.x - lastPoint.x) > 3 ||
+        Math.abs(mouse.y - lastPoint.y) > 3
+      ) {
         trail.unshift({ x: mouse.x, y: mouse.y, age: 1 });
         if (trail.length > trailLength) {
           trail.pop();
@@ -180,9 +182,7 @@ export const AnimatedBackground = ({
         }
 
         if (maxIntensity > 0.005) {
-          const alpha = isDark
-            ? 0.08 + maxIntensity * 0.35
-            : 0.12 + maxIntensity * 0.5;
+          const alpha = isDark ? 0.08 + maxIntensity * 0.35 : 0.12 + maxIntensity * 0.5;
           ctx.fillStyle = `rgba(${glowColor[0]}, ${glowColor[1]}, ${glowColor[2]}, ${alpha})`;
 
           const currentDotSize = dotSize + maxIntensity * (isDark ? 1.2 : 1.8);
@@ -199,7 +199,19 @@ export const AnimatedBackground = ({
     }
 
     animationRef.current = requestAnimationFrame(draw);
-  }, [isDark, dotSize, dotSpacing, glowRadius, glowIntensity, trailLength, trailDecay, pulseSpeed, pulseIntensity, idlePulseInterval, idlePulseRadius]);
+  }, [
+    isDark,
+    dotSize,
+    dotSpacing,
+    glowRadius,
+    glowIntensity,
+    trailLength,
+    trailDecay,
+    pulseSpeed,
+    pulseIntensity,
+    idlePulseInterval,
+    idlePulseRadius,
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -287,7 +299,7 @@ export const AnimatedBackground = ({
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none"
+      className="pointer-events-none fixed inset-0 z-0"
       style={{ width: "100vw", height: "100vh" }}
     />
   );

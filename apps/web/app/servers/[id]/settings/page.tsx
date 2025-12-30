@@ -17,7 +17,16 @@ import {
 } from "@workspace/ui/components/dialog";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { Slider } from "@workspace/ui/components/slider";
-import { BsSun, BsMoon, BsExclamationTriangle, BsCheckCircle, BsGlobe, BsGeoAlt, BsCheck, BsLayers } from "react-icons/bs";
+import {
+  BsSun,
+  BsMoon,
+  BsExclamationTriangle,
+  BsCheckCircle,
+  BsGlobe,
+  BsGeoAlt,
+  BsCheck,
+  BsLayers,
+} from "react-icons/bs";
 import { servers } from "@/lib/api";
 import { useServer } from "@/components/server-provider";
 import { ServerInstallingPlaceholder } from "@/components/server-installing-placeholder";
@@ -86,33 +95,194 @@ interface LocationPing {
 
 const locations: Location[] = [
   // North America
-  { id: "us-west-1", name: "US West 1", city: "Los Angeles", country: "USA", region: "North America", flag: "🇺🇸" },
-  { id: "us-west-2", name: "US West 2", city: "Seattle", country: "USA", region: "North America", flag: "🇺🇸" },
-  { id: "us-central-1", name: "US Central", city: "Dallas", country: "USA", region: "North America", flag: "🇺🇸" },
-  { id: "us-east-1", name: "US East 1", city: "New York", country: "USA", region: "North America", flag: "🇺🇸" },
-  { id: "us-east-2", name: "US East 2", city: "Miami", country: "USA", region: "North America", flag: "🇺🇸" },
-  { id: "ca-central-1", name: "Canada Central", city: "Toronto", country: "Canada", region: "North America", flag: "🇨🇦" },
+  {
+    id: "us-west-1",
+    name: "US West 1",
+    city: "Los Angeles",
+    country: "USA",
+    region: "North America",
+    flag: "🇺🇸",
+  },
+  {
+    id: "us-west-2",
+    name: "US West 2",
+    city: "Seattle",
+    country: "USA",
+    region: "North America",
+    flag: "🇺🇸",
+  },
+  {
+    id: "us-central-1",
+    name: "US Central",
+    city: "Dallas",
+    country: "USA",
+    region: "North America",
+    flag: "🇺🇸",
+  },
+  {
+    id: "us-east-1",
+    name: "US East 1",
+    city: "New York",
+    country: "USA",
+    region: "North America",
+    flag: "🇺🇸",
+  },
+  {
+    id: "us-east-2",
+    name: "US East 2",
+    city: "Miami",
+    country: "USA",
+    region: "North America",
+    flag: "🇺🇸",
+  },
+  {
+    id: "ca-central-1",
+    name: "Canada Central",
+    city: "Toronto",
+    country: "Canada",
+    region: "North America",
+    flag: "🇨🇦",
+  },
   // Europe
-  { id: "eu-west-1", name: "EU West 1", city: "London", country: "UK", region: "Europe", flag: "🇬🇧" },
-  { id: "eu-west-2", name: "EU West 2", city: "Paris", country: "France", region: "Europe", flag: "🇫🇷" },
-  { id: "eu-west-3", name: "EU West 3", city: "Amsterdam", country: "Netherlands", region: "Europe", flag: "🇳🇱" },
-  { id: "eu-central-1", name: "EU Central 1", city: "Frankfurt", country: "Germany", region: "Europe", flag: "🇩🇪" },
-  { id: "eu-central-2", name: "EU Central 2", city: "Warsaw", country: "Poland", region: "Europe", flag: "🇵🇱" },
-  { id: "eu-north-1", name: "EU North", city: "Stockholm", country: "Sweden", region: "Europe", flag: "🇸🇪" },
-  { id: "eu-south-1", name: "EU South", city: "Milan", country: "Italy", region: "Europe", flag: "🇮🇹" },
+  {
+    id: "eu-west-1",
+    name: "EU West 1",
+    city: "London",
+    country: "UK",
+    region: "Europe",
+    flag: "🇬🇧",
+  },
+  {
+    id: "eu-west-2",
+    name: "EU West 2",
+    city: "Paris",
+    country: "France",
+    region: "Europe",
+    flag: "🇫🇷",
+  },
+  {
+    id: "eu-west-3",
+    name: "EU West 3",
+    city: "Amsterdam",
+    country: "Netherlands",
+    region: "Europe",
+    flag: "🇳🇱",
+  },
+  {
+    id: "eu-central-1",
+    name: "EU Central 1",
+    city: "Frankfurt",
+    country: "Germany",
+    region: "Europe",
+    flag: "🇩🇪",
+  },
+  {
+    id: "eu-central-2",
+    name: "EU Central 2",
+    city: "Warsaw",
+    country: "Poland",
+    region: "Europe",
+    flag: "🇵🇱",
+  },
+  {
+    id: "eu-north-1",
+    name: "EU North",
+    city: "Stockholm",
+    country: "Sweden",
+    region: "Europe",
+    flag: "🇸🇪",
+  },
+  {
+    id: "eu-south-1",
+    name: "EU South",
+    city: "Milan",
+    country: "Italy",
+    region: "Europe",
+    flag: "🇮🇹",
+  },
   // Asia Pacific
-  { id: "ap-east-1", name: "Asia Pacific East", city: "Hong Kong", country: "Hong Kong", region: "Asia Pacific", flag: "🇭🇰" },
-  { id: "ap-southeast-1", name: "Asia Pacific SE 1", city: "Singapore", country: "Singapore", region: "Asia Pacific", flag: "🇸🇬" },
-  { id: "ap-southeast-2", name: "Asia Pacific SE 2", city: "Sydney", country: "Australia", region: "Asia Pacific", flag: "🇦🇺" },
-  { id: "ap-northeast-1", name: "Asia Pacific NE 1", city: "Tokyo", country: "Japan", region: "Asia Pacific", flag: "🇯🇵" },
-  { id: "ap-northeast-2", name: "Asia Pacific NE 2", city: "Seoul", country: "South Korea", region: "Asia Pacific", flag: "🇰🇷" },
-  { id: "ap-south-1", name: "Asia Pacific South", city: "Mumbai", country: "India", region: "Asia Pacific", flag: "🇮🇳" },
+  {
+    id: "ap-east-1",
+    name: "Asia Pacific East",
+    city: "Hong Kong",
+    country: "Hong Kong",
+    region: "Asia Pacific",
+    flag: "🇭🇰",
+  },
+  {
+    id: "ap-southeast-1",
+    name: "Asia Pacific SE 1",
+    city: "Singapore",
+    country: "Singapore",
+    region: "Asia Pacific",
+    flag: "🇸🇬",
+  },
+  {
+    id: "ap-southeast-2",
+    name: "Asia Pacific SE 2",
+    city: "Sydney",
+    country: "Australia",
+    region: "Asia Pacific",
+    flag: "🇦🇺",
+  },
+  {
+    id: "ap-northeast-1",
+    name: "Asia Pacific NE 1",
+    city: "Tokyo",
+    country: "Japan",
+    region: "Asia Pacific",
+    flag: "🇯🇵",
+  },
+  {
+    id: "ap-northeast-2",
+    name: "Asia Pacific NE 2",
+    city: "Seoul",
+    country: "South Korea",
+    region: "Asia Pacific",
+    flag: "🇰🇷",
+  },
+  {
+    id: "ap-south-1",
+    name: "Asia Pacific South",
+    city: "Mumbai",
+    country: "India",
+    region: "Asia Pacific",
+    flag: "🇮🇳",
+  },
   // South America
-  { id: "sa-east-1", name: "South America East", city: "São Paulo", country: "Brazil", region: "South America", flag: "🇧🇷" },
-  { id: "sa-west-1", name: "South America West", city: "Santiago", country: "Chile", region: "South America", flag: "🇨🇱" },
+  {
+    id: "sa-east-1",
+    name: "South America East",
+    city: "São Paulo",
+    country: "Brazil",
+    region: "South America",
+    flag: "🇧🇷",
+  },
+  {
+    id: "sa-west-1",
+    name: "South America West",
+    city: "Santiago",
+    country: "Chile",
+    region: "South America",
+    flag: "🇨🇱",
+  },
   // Africa & Middle East
-  { id: "me-south-1", name: "Middle East", city: "Dubai", country: "UAE", region: "Middle East", flag: "🇦🇪" },
-  { id: "af-south-1", name: "Africa South", city: "Cape Town", country: "South Africa", region: "Africa", flag: "🇿🇦" },
+  {
+    id: "me-south-1",
+    name: "Middle East",
+    city: "Dubai",
+    country: "UAE",
+    region: "Middle East",
+    flag: "🇦🇪",
+  },
+  {
+    id: "af-south-1",
+    name: "Africa South",
+    city: "Cape Town",
+    country: "South Africa",
+    region: "Africa",
+    flag: "🇿🇦",
+  },
 ];
 
 const defaultSettings: ServerSettings = {
@@ -126,14 +296,17 @@ const defaultSettings: ServerSettings = {
 };
 
 // Group server types by category
-const serverTypesByCategory = serverTypes.reduce<Record<string, ServerTypeOption[]>>((acc, type) => {
-  const category = type.category;
-  if (!acc[category]) {
-    acc[category] = [];
-  }
-  acc[category]!.push(type);
-  return acc;
-}, {});
+const serverTypesByCategory = serverTypes.reduce<Record<string, ServerTypeOption[]>>(
+  (acc, type) => {
+    const category = type.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category]!.push(type);
+    return acc;
+  },
+  {}
+);
 
 const SettingsPage = (): JSX.Element | null => {
   const params = useParams();
@@ -179,7 +352,7 @@ const SettingsPage = (): JSX.Element | null => {
     setIsPinging(true);
 
     // Initialize all locations as pending
-    const initialPings: LocationPing[] = locations.map(loc => ({
+    const initialPings: LocationPing[] = locations.map((loc) => ({
       locationId: loc.id,
       ping: null,
       status: "pending",
@@ -194,31 +367,40 @@ const SettingsPage = (): JSX.Element | null => {
     locations.forEach((location, index) => {
       // Mark as pinging
       setTimeout(() => {
-        setLocationPings(prev => prev.map(p =>
-          p.locationId === location.id ? { ...p, status: "pinging" } : p
-        ));
+        setLocationPings((prev) =>
+          prev.map((p) => (p.locationId === location.id ? { ...p, status: "pinging" } : p))
+        );
       }, index * 150);
 
       // Complete with random ping value
-      setTimeout(() => {
-        const basePing = Math.random() * 150 + 20; // 20-170ms base
-        // Add regional variation
-        let ping = basePing;
-        if (location.region === "North America") ping = Math.random() * 60 + 15;
-        else if (location.region === "Europe") ping = Math.random() * 80 + 40;
-        else if (location.region === "Asia Pacific") ping = Math.random() * 100 + 80;
-        else if (location.region === "South America") ping = Math.random() * 80 + 100;
-        else ping = Math.random() * 100 + 120;
+      setTimeout(
+        () => {
+          const basePing = Math.random() * 150 + 20; // 20-170ms base
+          // Add regional variation
+          let ping = basePing;
+          if (location.region === "North America") ping = Math.random() * 60 + 15;
+          else if (location.region === "Europe") ping = Math.random() * 80 + 40;
+          else if (location.region === "Asia Pacific") ping = Math.random() * 100 + 80;
+          else if (location.region === "South America") ping = Math.random() * 80 + 100;
+          else ping = Math.random() * 100 + 120;
 
-        // Small chance of error
-        const hasError = Math.random() < 0.05;
+          // Small chance of error
+          const hasError = Math.random() < 0.05;
 
-        setLocationPings(prev => prev.map(p =>
-          p.locationId === location.id
-            ? { ...p, ping: hasError ? null : Math.round(ping), status: hasError ? "error" : "done" }
-            : p
-        ));
-      }, index * 150 + 300 + Math.random() * 200);
+          setLocationPings((prev) =>
+            prev.map((p) =>
+              p.locationId === location.id
+                ? {
+                    ...p,
+                    ping: hasError ? null : Math.round(ping),
+                    status: hasError ? "error" : "done",
+                  }
+                : p
+            )
+          );
+        },
+        index * 150 + 300 + Math.random() * 200
+      );
     });
 
     // Set pinging to false and start cooldown after all pings complete
@@ -232,7 +414,7 @@ const SettingsPage = (): JSX.Element | null => {
   useEffect(() => {
     if (pingCooldown > 0) {
       const timer = setTimeout(() => {
-        setPingCooldown(prev => prev - 1);
+        setPingCooldown((prev) => prev - 1);
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -281,18 +463,18 @@ const SettingsPage = (): JSX.Element | null => {
 
   if (isInstalling) {
     return (
-      <div className={cn(
-        "min-h-svh",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
+      <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
         <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
       </div>
     );
   }
 
-  const handleSettingChange = <K extends keyof ServerSettings>(key: K, value: ServerSettings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+  const handleSettingChange = <K extends keyof ServerSettings>(
+    key: K,
+    value: ServerSettings[K]
+  ) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
   };
 
@@ -329,32 +511,30 @@ const SettingsPage = (): JSX.Element | null => {
   };
 
   return (
-    <div className={cn(
-      "min-h-full transition-colors relative",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
+    <div className="relative min-h-full transition-colors">
       {/* Background is now rendered in the layout for persistence */}
 
       <div className="relative p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className={cn(
-                "transition-all hover:scale-110 active:scale-95",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )} />
+              <SidebarTrigger
+                className={cn(
+                  "transition-all hover:scale-110 active:scale-95",
+                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                )}
+              />
               <div>
-                <h1 className={cn(
-                  "text-2xl font-light tracking-wider",
-                  isDark ? "text-zinc-100" : "text-zinc-800"
-                )}>
+                <h1
+                  className={cn(
+                    "text-2xl font-light tracking-wider",
+                    isDark ? "text-zinc-100" : "text-zinc-800"
+                  )}
+                >
                   SERVER SETTINGS
                 </h1>
-                <p className={cn(
-                  "text-sm mt-1",
-                  isDark ? "text-zinc-500" : "text-zinc-500"
-                )}>
+                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
                   Server {serverId} • Configuration
                 </p>
               </div>
@@ -366,13 +546,13 @@ const SettingsPage = (): JSX.Element | null => {
                   size="sm"
                   onClick={handleReset}
                   className={cn(
-                    "transition-all gap-2",
+                    "gap-2 transition-all",
                     isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                   )}
                 >
-                  <span className="text-xs uppercase tracking-wider">Reset</span>
+                  <span className="text-xs tracking-wider uppercase">Reset</span>
                 </Button>
               )}
               <Button
@@ -381,23 +561,23 @@ const SettingsPage = (): JSX.Element | null => {
                 onClick={() => setSaveModalOpen(true)}
                 disabled={!hasChanges}
                 className={cn(
-                  "transition-all gap-2",
+                  "gap-2 transition-all",
                   saved
                     ? isDark
                       ? "border-green-500/50 text-green-400"
                       : "border-green-400 text-green-600"
                     : isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500 disabled:opacity-40"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400 disabled:opacity-40"
+                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-40"
                 )}
               >
                 {saved ? (
                   <>
-                    <BsCheckCircle className="w-4 h-4" />
-                    <span className="text-xs uppercase tracking-wider">Saved</span>
+                    <BsCheckCircle className="h-4 w-4" />
+                    <span className="text-xs tracking-wider uppercase">Saved</span>
                   </>
                 ) : (
-                  <span className="text-xs uppercase tracking-wider">Save Changes</span>
+                  <span className="text-xs tracking-wider uppercase">Save Changes</span>
                 )}
               </Button>
               <Button
@@ -405,42 +585,68 @@ const SettingsPage = (): JSX.Element | null => {
                 size="sm"
                 onClick={() => setTheme(isDark ? "light" : "dark")}
                 className={cn(
-                  "transition-all hover:scale-110 active:scale-95 p-2",
+                  "p-2 transition-all hover:scale-110 active:scale-95",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
+                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
               </Button>
             </div>
           </div>
 
           {/* General Settings */}
-          <div className={cn(
-            "relative p-6 border mb-6",
-            isDark
-              ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10"
-              : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300"
-          )}>
-            <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+          <div
+            className={cn(
+              "relative mb-6 border p-6",
+              isDark
+                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
 
-            <h2 className={cn(
-              "text-sm font-medium uppercase tracking-wider mb-6",
-              isDark ? "text-zinc-300" : "text-zinc-700"
-            )}>
+            <h2
+              className={cn(
+                "mb-6 text-sm font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-300" : "text-zinc-700"
+              )}
+            >
               General
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Server Name
                 </label>
                 <input
@@ -448,18 +654,20 @@ const SettingsPage = (): JSX.Element | null => {
                   value={settings.name}
                   onChange={(e) => handleSettingChange("name", e.target.value)}
                   className={cn(
-                    "w-full mt-2 px-3 py-2 text-sm border outline-none transition-colors",
+                    "mt-2 w-full border px-3 py-2 text-sm transition-colors outline-none",
                     isDark
-                      ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200 focus:border-zinc-500"
-                      : "bg-white border-zinc-300 text-zinc-800 focus:border-zinc-400"
+                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
+                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
                   )}
                 />
               </div>
               <div>
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Description
                 </label>
                 <textarea
@@ -467,28 +675,30 @@ const SettingsPage = (): JSX.Element | null => {
                   onChange={(e) => handleSettingChange("description", e.target.value)}
                   rows={3}
                   className={cn(
-                    "w-full mt-2 px-3 py-2 text-sm border outline-none transition-colors resize-none",
+                    "mt-2 w-full resize-none border px-3 py-2 text-sm transition-colors outline-none",
                     isDark
-                      ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200 focus:border-zinc-500"
-                      : "bg-white border-zinc-300 text-zinc-800 focus:border-zinc-400"
+                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
+                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
                   )}
                 />
               </div>
               <div>
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Server Type
                 </label>
                 <select
                   value={settings.serverType}
                   onChange={(e) => handleSettingChange("serverType", e.target.value)}
                   className={cn(
-                    "w-full mt-2 px-3 py-2 text-sm border outline-none transition-colors cursor-pointer",
+                    "mt-2 w-full cursor-pointer border px-3 py-2 text-sm transition-colors outline-none",
                     isDark
-                      ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200 focus:border-zinc-500"
-                      : "bg-white border-zinc-300 text-zinc-800 focus:border-zinc-400"
+                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
+                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
                   )}
                 >
                   {Object.entries(serverTypesByCategory).map(([category, types]) => (
@@ -501,7 +711,9 @@ const SettingsPage = (): JSX.Element | null => {
                         <option
                           key={type.id}
                           value={type.id}
-                          className={isDark ? "bg-zinc-900 text-zinc-200" : "bg-white text-zinc-800"}
+                          className={
+                            isDark ? "bg-zinc-900 text-zinc-200" : "bg-white text-zinc-800"
+                          }
                         >
                           {type.name}
                         </option>
@@ -518,55 +730,77 @@ const SettingsPage = (): JSX.Element | null => {
           {/* Server Splitting - DISABLED: Server splitting feature is not yet implemented */}
 
           {/* Danger Zone */}
-          <div className={cn(
-            "relative p-6 border",
-            isDark
-              ? "bg-gradient-to-b from-red-950/20 via-[#0f0f0f] to-[#0a0a0a] border-red-900/30"
-              : "bg-gradient-to-b from-red-50 via-zinc-50 to-zinc-100 border-red-200"
-          )}>
-            <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-red-800" : "border-red-300")} />
-            <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-red-800" : "border-red-300")} />
-            <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-red-800" : "border-red-300")} />
-            <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-red-800" : "border-red-300")} />
+          <div
+            className={cn(
+              "relative border p-6",
+              isDark
+                ? "border-red-900/30 bg-gradient-to-b from-red-950/20 via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-red-200 bg-gradient-to-b from-red-50 via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-red-800" : "border-red-300"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-red-800" : "border-red-300"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-red-800" : "border-red-300"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                isDark ? "border-red-800" : "border-red-300"
+              )}
+            />
 
-            <div className="flex items-center gap-2 mb-6">
-              <BsExclamationTriangle className={cn("w-4 h-4", isDark ? "text-red-400" : "text-red-600")} />
-              <h2 className={cn(
-                "text-sm font-medium uppercase tracking-wider",
-                isDark ? "text-red-400" : "text-red-700"
-              )}>
+            <div className="mb-6 flex items-center gap-2">
+              <BsExclamationTriangle
+                className={cn("h-4 w-4", isDark ? "text-red-400" : "text-red-600")}
+              />
+              <h2
+                className={cn(
+                  "text-sm font-medium tracking-wider uppercase",
+                  isDark ? "text-red-400" : "text-red-700"
+                )}
+              >
                 Danger Zone
               </h2>
             </div>
 
             <div className="flex items-center justify-between">
-                <div>
-                  <h3 className={cn(
-                    "text-sm font-medium",
-                    isDark ? "text-zinc-200" : "text-zinc-700"
-                  )}>
-                    Reinstall Server
-                  </h3>
-                  <p className={cn(
-                    "text-xs mt-1",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}>
-                    This will reinstall the server with its current configuration
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setReinstallModalOpen(true)}
-                  className={cn(
-                    "transition-all",
-                    isDark
-                      ? "border-red-900/60 text-red-400/80 hover:text-red-300 hover:border-red-700"
-                      : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"
-                  )}
+              <div>
+                <h3
+                  className={cn("text-sm font-medium", isDark ? "text-zinc-200" : "text-zinc-700")}
                 >
-                  <span className="text-xs uppercase tracking-wider">Reinstall</span>
-                </Button>
+                  Reinstall Server
+                </h3>
+                <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  This will reinstall the server with its current configuration
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReinstallModalOpen(true)}
+                className={cn(
+                  "transition-all",
+                  isDark
+                    ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
+                    : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
+                )}
+              >
+                <span className="text-xs tracking-wider uppercase">Reinstall</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -597,32 +831,38 @@ const SettingsPage = (): JSX.Element | null => {
       />
 
       {/* Transfer Server Modal */}
-      <Dialog open={transferModalOpen} onOpenChange={(open) => !isTransferring && setTransferModalOpen(open)}>
-        <DialogContent className={cn(
-          "sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col",
-          isDark ? "bg-[#0f0f0f] border-zinc-800" : "bg-white border-zinc-200"
-        )}>
+      <Dialog
+        open={transferModalOpen}
+        onOpenChange={(open) => !isTransferring && setTransferModalOpen(open)}
+      >
+        <DialogContent
+          className={cn(
+            "flex max-h-[85vh] flex-col overflow-hidden sm:max-w-5xl",
+            isDark ? "border-zinc-800 bg-[#0f0f0f]" : "border-zinc-200 bg-white"
+          )}
+        >
           <DialogHeader>
-            <DialogTitle className={cn(
-              "text-lg font-light tracking-wider flex items-center gap-2",
-              isDark ? "text-zinc-100" : "text-zinc-800"
-            )}>
-              <BsGlobe className="w-5 h-5" />
+            <DialogTitle
+              className={cn(
+                "flex items-center gap-2 text-lg font-light tracking-wider",
+                isDark ? "text-zinc-100" : "text-zinc-800"
+              )}
+            >
+              <BsGlobe className="h-5 w-5" />
               TRANSFER SERVER
             </DialogTitle>
-            <DialogDescription className={cn(
-              "text-sm",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
+            <DialogDescription
+              className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+            >
               Select a new location for your server. Latency is measured from your current position.
             </DialogDescription>
           </DialogHeader>
 
           {isTransferring ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 gap-4">
-              <Spinner className={cn("w-8 h-8", isDark ? "text-zinc-400" : "text-zinc-600")} />
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 py-12">
+              <Spinner className={cn("h-8 w-8", isDark ? "text-zinc-400" : "text-zinc-600")} />
               <p className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
-                Transferring server to {locations.find(l => l.id === selectedLocation)?.city}...
+                Transferring server to {locations.find((l) => l.id === selectedLocation)?.city}...
               </p>
               <p className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
                 This may take several minutes. Do not close this window.
@@ -631,44 +871,52 @@ const SettingsPage = (): JSX.Element | null => {
           ) : (
             <>
               {/* Current Location */}
-              <div className={cn(
-                "px-4 py-3 border mb-4",
-                isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
-              )}>
+              <div
+                className={cn(
+                  "mb-4 border px-4 py-3",
+                  isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
+                )}
+              >
                 <div className="flex items-center gap-3">
-                  <BsGeoAlt className={cn("w-4 h-4", isDark ? "text-zinc-400" : "text-zinc-500")} />
+                  <BsGeoAlt className={cn("h-4 w-4", isDark ? "text-zinc-400" : "text-zinc-500")} />
                   <div>
-                    <span className={cn(
-                      "text-[10px] uppercase tracking-wider",
-                      isDark ? "text-zinc-500" : "text-zinc-400"
-                    )}>
+                    <span
+                      className={cn(
+                        "text-[10px] tracking-wider uppercase",
+                        isDark ? "text-zinc-500" : "text-zinc-400"
+                      )}
+                    >
                       Current Location
                     </span>
-                    <p className={cn(
-                      "text-sm font-medium",
-                      isDark ? "text-zinc-200" : "text-zinc-700"
-                    )}>
-                      {locations.find(l => l.id === currentLocation)?.flag}{" "}
-                      {locations.find(l => l.id === currentLocation)?.city},{" "}
-                      {locations.find(l => l.id === currentLocation)?.country}
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        isDark ? "text-zinc-200" : "text-zinc-700"
+                      )}
+                    >
+                      {locations.find((l) => l.id === currentLocation)?.flag}{" "}
+                      {locations.find((l) => l.id === currentLocation)?.city},{" "}
+                      {locations.find((l) => l.id === currentLocation)?.country}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Location Grid */}
-              <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+              <div className="flex-1 space-y-6 overflow-y-auto pr-2">
                 {Object.entries(locationsByRegion).map(([region, regionLocations]) => (
                   <div key={region}>
-                    <h3 className={cn(
-                      "text-[10px] font-medium uppercase tracking-wider mb-2 sticky top-0 py-1",
-                      isDark ? "text-zinc-500 bg-[#0f0f0f]" : "text-zinc-400 bg-white"
-                    )}>
+                    <h3
+                      className={cn(
+                        "sticky top-0 mb-2 py-1 text-[10px] font-medium tracking-wider uppercase",
+                        isDark ? "bg-[#0f0f0f] text-zinc-500" : "bg-white text-zinc-400"
+                      )}
+                    >
                       {region}
                     </h3>
                     <div className="grid grid-cols-2 gap-2">
                       {regionLocations.map((location) => {
-                        const pingData = locationPings.find(p => p.locationId === location.id);
+                        const pingData = locationPings.find((p) => p.locationId === location.id);
                         const isCurrentLocation = location.id === currentLocation;
                         const isSelected = location.id === selectedLocation;
                         const hasError = pingData?.status === "error";
@@ -680,18 +928,18 @@ const SettingsPage = (): JSX.Element | null => {
                             onClick={() => !isDisabled && setSelectedLocation(location.id)}
                             disabled={isDisabled}
                             className={cn(
-                              "relative flex items-center justify-between px-3 py-2.5 border text-left transition-all",
+                              "relative flex items-center justify-between border px-3 py-2.5 text-left transition-all",
                               isDisabled
                                 ? isDark
-                                  ? "border-zinc-800 bg-zinc-900/30 opacity-50 cursor-not-allowed"
-                                  : "border-zinc-200 bg-zinc-100/50 opacity-50 cursor-not-allowed"
+                                  ? "cursor-not-allowed border-zinc-800 bg-zinc-900/30 opacity-50"
+                                  : "cursor-not-allowed border-zinc-200 bg-zinc-100/50 opacity-50"
                                 : isSelected
                                   ? isDark
                                     ? "border-amber-600 bg-amber-950/30"
                                     : "border-amber-400 bg-amber-50"
                                   : isDark
-                                    ? "border-zinc-800 hover:border-zinc-600 bg-zinc-900/30 hover:bg-zinc-800/50"
-                                    : "border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50"
+                                    ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-600 hover:bg-zinc-800/50"
+                                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
                             )}
                             whileHover={!isDisabled ? { scale: 1.01 } : undefined}
                             whileTap={!isDisabled ? { scale: 0.99 } : undefined}
@@ -699,56 +947,75 @@ const SettingsPage = (): JSX.Element | null => {
                             <div className="flex items-center gap-2.5">
                               <span className="text-base">{location.flag}</span>
                               <div>
-                                <p className={cn(
-                                  "text-sm font-medium",
-                                  isDark ? "text-zinc-200" : "text-zinc-700"
-                                )}>
+                                <p
+                                  className={cn(
+                                    "text-sm font-medium",
+                                    isDark ? "text-zinc-200" : "text-zinc-700"
+                                  )}
+                                >
                                   {location.city}
                                 </p>
-                                <p className={cn(
-                                  "text-[10px]",
-                                  isDark ? "text-zinc-500" : "text-zinc-400"
-                                )}>
+                                <p
+                                  className={cn(
+                                    "text-[10px]",
+                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                  )}
+                                >
                                   {location.country}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               {pingData?.status === "pending" && (
-                                <span className={cn(
-                                  "text-xs",
-                                  isDark ? "text-zinc-600" : "text-zinc-400"
-                                )}>
+                                <span
+                                  className={cn(
+                                    "text-xs",
+                                    isDark ? "text-zinc-600" : "text-zinc-400"
+                                  )}
+                                >
                                   --
                                 </span>
                               )}
                               {pingData?.status === "pinging" && (
-                                <Spinner className={cn(
-                                  "w-3 h-3",
-                                  isDark ? "text-zinc-500" : "text-zinc-400"
-                                )} />
+                                <Spinner
+                                  className={cn(
+                                    "h-3 w-3",
+                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                  )}
+                                />
                               )}
                               {pingData?.status === "done" && (
-                                <span className={cn("text-xs font-mono", getPingColor(pingData.ping))}>
+                                <span
+                                  className={cn("font-mono text-xs", getPingColor(pingData.ping))}
+                                >
                                   {pingData.ping}ms
                                 </span>
                               )}
                               {pingData?.status === "error" && (
-                                <span className={cn("text-xs", isDark ? "text-red-400" : "text-red-600")}>
+                                <span
+                                  className={cn(
+                                    "text-xs",
+                                    isDark ? "text-red-400" : "text-red-600"
+                                  )}
+                                >
                                   Error
                                 </span>
                               )}
                               {isSelected && (
-                                <BsCheck className={cn(
-                                  "w-4 h-4",
-                                  isDark ? "text-amber-400" : "text-amber-600"
-                                )} />
+                                <BsCheck
+                                  className={cn(
+                                    "h-4 w-4",
+                                    isDark ? "text-amber-400" : "text-amber-600"
+                                  )}
+                                />
                               )}
                               {isCurrentLocation && (
-                                <span className={cn(
-                                  "text-[10px] uppercase tracking-wider",
-                                  isDark ? "text-zinc-600" : "text-zinc-400"
-                                )}>
+                                <span
+                                  className={cn(
+                                    "text-[10px] tracking-wider uppercase",
+                                    isDark ? "text-zinc-600" : "text-zinc-400"
+                                  )}
+                                >
                                   Current
                                 </span>
                               )}
@@ -762,10 +1029,12 @@ const SettingsPage = (): JSX.Element | null => {
               </div>
 
               {/* Footer */}
-              <div className={cn(
-                "flex items-center justify-between pt-4 mt-4 border-t",
-                isDark ? "border-zinc-800" : "border-zinc-200"
-              )}>
+              <div
+                className={cn(
+                  "mt-4 flex items-center justify-between border-t pt-4",
+                  isDark ? "border-zinc-800" : "border-zinc-200"
+                )}
+              >
                 <Button
                   variant="outline"
                   size="sm"
@@ -774,12 +1043,16 @@ const SettingsPage = (): JSX.Element | null => {
                   className={cn(
                     "gap-2",
                     isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
                   )}
                 >
-                  <span className="text-xs uppercase tracking-wider">
-                    {isPinging ? "Pinging..." : pingCooldown > 0 ? `Wait ${pingCooldown}s` : "Refresh Ping"}
+                  <span className="text-xs tracking-wider uppercase">
+                    {isPinging
+                      ? "Pinging..."
+                      : pingCooldown > 0
+                        ? `Wait ${pingCooldown}s`
+                        : "Refresh Ping"}
                   </span>
                 </Button>
                 <div className="flex gap-2">
@@ -793,7 +1066,7 @@ const SettingsPage = (): JSX.Element | null => {
                         : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                     )}
                   >
-                    <span className="text-xs uppercase tracking-wider">Cancel</span>
+                    <span className="text-xs tracking-wider uppercase">Cancel</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -803,12 +1076,12 @@ const SettingsPage = (): JSX.Element | null => {
                     className={cn(
                       "gap-2",
                       isDark
-                        ? "border-amber-700 text-amber-400 hover:text-amber-300 hover:border-amber-600 disabled:opacity-40"
+                        ? "border-amber-700 text-amber-400 hover:border-amber-600 hover:text-amber-300 disabled:opacity-40"
                         : "border-amber-400 text-amber-600 hover:text-amber-700 disabled:opacity-40"
                     )}
                   >
-                    <BsGlobe className="w-3 h-3" />
-                    <span className="text-xs uppercase tracking-wider">Transfer</span>
+                    <BsGlobe className="h-3 w-3" />
+                    <span className="text-xs tracking-wider uppercase">Transfer</span>
                   </Button>
                 </div>
               </div>
@@ -822,7 +1095,7 @@ const SettingsPage = (): JSX.Element | null => {
         open={transferConfirmOpen}
         onOpenChange={setTransferConfirmOpen}
         title="Confirm Transfer"
-        description={`Are you sure you want to transfer this server to ${locations.find(l => l.id === selectedLocation)?.city}, ${locations.find(l => l.id === selectedLocation)?.country}? The server will be stopped during the transfer process.`}
+        description={`Are you sure you want to transfer this server to ${locations.find((l) => l.id === selectedLocation)?.city}, ${locations.find((l) => l.id === selectedLocation)?.country}? The server will be stopped during the transfer process.`}
         onConfirm={confirmTransfer}
         confirmLabel="Transfer"
         variant="danger"
@@ -831,47 +1104,56 @@ const SettingsPage = (): JSX.Element | null => {
 
       {/* Server Split Modal */}
       <Dialog open={splitModalOpen} onOpenChange={setSplitModalOpen}>
-        <DialogContent className={cn(
-          "sm:max-w-lg",
-          isDark ? "bg-[#0f0f0f] border-zinc-800" : "bg-white border-zinc-200"
-        )}>
+        <DialogContent
+          className={cn(
+            "sm:max-w-lg",
+            isDark ? "border-zinc-800 bg-[#0f0f0f]" : "border-zinc-200 bg-white"
+          )}
+        >
           <DialogHeader>
-            <DialogTitle className={cn(
-              "text-lg font-light tracking-wider flex items-center gap-2",
-              isDark ? "text-zinc-100" : "text-zinc-800"
-            )}>
-              <BsLayers className="w-5 h-5" />
+            <DialogTitle
+              className={cn(
+                "flex items-center gap-2 text-lg font-light tracking-wider",
+                isDark ? "text-zinc-100" : "text-zinc-800"
+              )}
+            >
+              <BsLayers className="h-5 w-5" />
               SPLIT SERVER
             </DialogTitle>
-            <DialogDescription className={cn(
-              "text-sm",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
+            <DialogDescription
+              className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+            >
               Divide this server&apos;s resources into two separate instances.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            <div className={cn(
-              "p-3 border text-xs",
-              isDark ? "border-amber-900/50 bg-amber-950/20 text-amber-400/80" : "border-amber-200 bg-amber-50 text-amber-700"
-            )}>
-              Splitting will create a new server with the allocated resources. The original server will retain the remaining resources.
+            <div
+              className={cn(
+                "border p-3 text-xs",
+                isDark
+                  ? "border-amber-900/50 bg-amber-950/20 text-amber-400/80"
+                  : "border-amber-200 bg-amber-50 text-amber-700"
+              )}
+            >
+              Splitting will create a new server with the allocated resources. The original server
+              will retain the remaining resources.
             </div>
 
             {/* CPU Split */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+              <div className="mb-3 flex items-center justify-between">
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   CPU Allocation
                 </label>
-                <span className={cn(
-                  "text-xs font-mono",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
-                )}>
+                <span
+                  className={cn("font-mono text-xs", isDark ? "text-zinc-400" : "text-zinc-600")}
+                >
                   {splitResources.cpu}% / {100 - splitResources.cpu}%
                 </span>
               </div>
@@ -880,29 +1162,37 @@ const SettingsPage = (): JSX.Element | null => {
                 max={90}
                 step={5}
                 value={[splitResources.cpu]}
-                onValueChange={(value) => setSplitResources(prev => ({ ...prev, cpu: value[0] ?? prev.cpu }))}
+                onValueChange={(value) =>
+                  setSplitResources((prev) => ({ ...prev, cpu: value[0] ?? prev.cpu }))
+                }
                 isDark={isDark}
               />
-              <div className="flex justify-between mt-2">
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>New Server</span>
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>This Server</span>
+              <div className="mt-2 flex justify-between">
+                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                  New Server
+                </span>
+                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                  This Server
+                </span>
               </div>
             </div>
 
             {/* Memory Split */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+              <div className="mb-3 flex items-center justify-between">
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Memory Allocation
                 </label>
-                <span className={cn(
-                  "text-xs font-mono",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
-                )}>
-                  {Math.round(settings.memoryLimit * splitResources.memory / 100)} MB / {Math.round(settings.memoryLimit * (100 - splitResources.memory) / 100)} MB
+                <span
+                  className={cn("font-mono text-xs", isDark ? "text-zinc-400" : "text-zinc-600")}
+                >
+                  {Math.round((settings.memoryLimit * splitResources.memory) / 100)} MB /{" "}
+                  {Math.round((settings.memoryLimit * (100 - splitResources.memory)) / 100)} MB
                 </span>
               </div>
               <Slider
@@ -910,29 +1200,37 @@ const SettingsPage = (): JSX.Element | null => {
                 max={90}
                 step={5}
                 value={[splitResources.memory]}
-                onValueChange={(value) => setSplitResources(prev => ({ ...prev, memory: value[0] ?? prev.memory }))}
+                onValueChange={(value) =>
+                  setSplitResources((prev) => ({ ...prev, memory: value[0] ?? prev.memory }))
+                }
                 isDark={isDark}
               />
-              <div className="flex justify-between mt-2">
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>New Server</span>
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>This Server</span>
+              <div className="mt-2 flex justify-between">
+                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                  New Server
+                </span>
+                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                  This Server
+                </span>
               </div>
             </div>
 
             {/* Disk Split */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+              <div className="mb-3 flex items-center justify-between">
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Disk Allocation
                 </label>
-                <span className={cn(
-                  "text-xs font-mono",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
-                )}>
-                  {Math.round(settings.diskLimit * splitResources.disk / 100)} MB / {Math.round(settings.diskLimit * (100 - splitResources.disk) / 100)} MB
+                <span
+                  className={cn("font-mono text-xs", isDark ? "text-zinc-400" : "text-zinc-600")}
+                >
+                  {Math.round((settings.diskLimit * splitResources.disk) / 100)} MB /{" "}
+                  {Math.round((settings.diskLimit * (100 - splitResources.disk)) / 100)} MB
                 </span>
               </div>
               <Slider
@@ -940,12 +1238,18 @@ const SettingsPage = (): JSX.Element | null => {
                 max={90}
                 step={5}
                 value={[splitResources.disk]}
-                onValueChange={(value) => setSplitResources(prev => ({ ...prev, disk: value[0] ?? prev.disk }))}
+                onValueChange={(value) =>
+                  setSplitResources((prev) => ({ ...prev, disk: value[0] ?? prev.disk }))
+                }
                 isDark={isDark}
               />
-              <div className="flex justify-between mt-2">
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>New Server</span>
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>This Server</span>
+              <div className="mt-2 flex justify-between">
+                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                  New Server
+                </span>
+                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                  This Server
+                </span>
               </div>
             </div>
           </div>
@@ -961,7 +1265,7 @@ const SettingsPage = (): JSX.Element | null => {
                   : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
               )}
             >
-              <span className="text-xs uppercase tracking-wider">Cancel</span>
+              <span className="text-xs tracking-wider uppercase">Cancel</span>
             </Button>
             <Button
               variant="outline"
@@ -974,8 +1278,8 @@ const SettingsPage = (): JSX.Element | null => {
                   : "border-zinc-400 text-zinc-700 hover:text-zinc-900"
               )}
             >
-              <BsLayers className="w-3 h-3" />
-              <span className="text-xs uppercase tracking-wider">Split Server</span>
+              <BsLayers className="h-3 w-3" />
+              <span className="text-xs tracking-wider uppercase">Split Server</span>
             </Button>
           </div>
         </DialogContent>

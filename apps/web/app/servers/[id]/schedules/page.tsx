@@ -11,7 +11,21 @@ import { Switch } from "@workspace/ui/components/switch";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { BsSun, BsMoon, BsPlus, BsTrash, BsPencil, BsPlayFill, BsStopFill, BsArrowRepeat, BsTerminal, BsCloudUpload, BsChatDots, BsX, BsClock } from "react-icons/bs";
+import {
+  BsSun,
+  BsMoon,
+  BsPlus,
+  BsTrash,
+  BsPencil,
+  BsPlayFill,
+  BsStopFill,
+  BsArrowRepeat,
+  BsTerminal,
+  BsCloudUpload,
+  BsChatDots,
+  BsX,
+  BsClock,
+} from "react-icons/bs";
 import { servers } from "@/lib/api";
 import type { Schedule, ScheduleTask, CreateScheduleData } from "@/lib/api";
 import { useServer } from "@/components/server-provider";
@@ -29,11 +43,31 @@ interface LocalTask {
 }
 
 const actionOptions: { value: ActionType; label: string; icon: JSX.Element }[] = [
-  { value: "power_start", label: "Start Server", icon: <BsPlayFill className="w-4 h-4 text-green-500" /> },
-  { value: "power_stop", label: "Stop Server", icon: <BsStopFill className="w-4 h-4 text-red-500" /> },
-  { value: "power_restart", label: "Restart Server", icon: <BsArrowRepeat className="w-4 h-4 text-amber-500" /> },
-  { value: "backup", label: "Create Backup", icon: <BsCloudUpload className="w-4 h-4 text-blue-500" /> },
-  { value: "command", label: "Run Command", icon: <BsTerminal className="w-4 h-4 text-purple-500" /> },
+  {
+    value: "power_start",
+    label: "Start Server",
+    icon: <BsPlayFill className="h-4 w-4 text-green-500" />,
+  },
+  {
+    value: "power_stop",
+    label: "Stop Server",
+    icon: <BsStopFill className="h-4 w-4 text-red-500" />,
+  },
+  {
+    value: "power_restart",
+    label: "Restart Server",
+    icon: <BsArrowRepeat className="h-4 w-4 text-amber-500" />,
+  },
+  {
+    value: "backup",
+    label: "Create Backup",
+    icon: <BsCloudUpload className="h-4 w-4 text-blue-500" />,
+  },
+  {
+    value: "command",
+    label: "Run Command",
+    icon: <BsTerminal className="h-4 w-4 text-purple-500" />,
+  },
 ];
 
 const SchedulesPage = (): JSX.Element | null => {
@@ -83,10 +117,7 @@ const SchedulesPage = (): JSX.Element | null => {
 
   if (isInstalling) {
     return (
-      <div className={cn(
-        "min-h-svh",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
+      <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
         <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
       </div>
@@ -108,13 +139,15 @@ const SchedulesPage = (): JSX.Element | null => {
   const openEditModal = (schedule: Schedule) => {
     setSelectedSchedule(schedule);
     setFormName(schedule.name);
-    setFormTasks(schedule.tasks.map((t, i) => ({
-      id: t.id || `task-${i}-${Date.now()}`,
-      action: t.action as ActionType,
-      payload: t.payload,
-      sequence_id: t.sequence_id,
-      time_offset: t.time_offset,
-    })));
+    setFormTasks(
+      schedule.tasks.map((t, i) => ({
+        id: t.id || `task-${i}-${Date.now()}`,
+        action: t.action as ActionType,
+        payload: t.payload,
+        sequence_id: t.sequence_id,
+        time_offset: t.time_offset,
+      }))
+    );
     setFormCron(schedule.cron);
     setFormEnabled(schedule.enabled);
     setEditModalOpen(true);
@@ -136,23 +169,21 @@ const SchedulesPage = (): JSX.Element | null => {
       sequence_id: formTasks.length,
       time_offset: 0,
     };
-    setFormTasks(prev => [...prev, newTask]);
+    setFormTasks((prev) => [...prev, newTask]);
   };
 
   const removeTask = (taskId: string) => {
-    setFormTasks(prev => prev.filter(t => t.id !== taskId).map((t, i) => ({ ...t, sequence_id: i })));
+    setFormTasks((prev) =>
+      prev.filter((t) => t.id !== taskId).map((t, i) => ({ ...t, sequence_id: i }))
+    );
   };
 
   const updateTaskPayload = (taskId: string, payload: string) => {
-    setFormTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, payload } : t
-    ));
+    setFormTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, payload } : t)));
   };
 
   const updateTaskOffset = (taskId: string, offset: number) => {
-    setFormTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, time_offset: offset } : t
-    ));
+    setFormTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, time_offset: offset } : t)));
   };
 
   const handleCreate = async () => {
@@ -226,7 +257,7 @@ const SchedulesPage = (): JSX.Element | null => {
       await servers.schedules.update(serverId, schedule.id, {
         ...schedule,
         enabled: !schedule.enabled,
-        tasks: schedule.tasks.map(t => ({
+        tasks: schedule.tasks.map((t) => ({
           action: t.action,
           payload: t.payload,
           sequence_id: t.sequence_id,
@@ -240,12 +271,12 @@ const SchedulesPage = (): JSX.Element | null => {
   };
 
   const getActionIcon = (action: string) => {
-    const option = actionOptions.find(o => o.value === action);
+    const option = actionOptions.find((o) => o.value === action);
     return option?.icon || null;
   };
 
   const getActionLabel = (action: string) => {
-    const option = actionOptions.find(o => o.value === action);
+    const option = actionOptions.find((o) => o.value === action);
     return option?.label || action;
   };
 
@@ -263,8 +294,11 @@ const SchedulesPage = (): JSX.Element | null => {
     return "Never";
   };
 
-  const isFormValid = formName.trim() !== "" && formCron.trim() !== "" && formTasks.length > 0 &&
-    formTasks.every(t => {
+  const isFormValid =
+    formName.trim() !== "" &&
+    formCron.trim() !== "" &&
+    formTasks.length > 0 &&
+    formTasks.every((t) => {
       if (t.action === "command") {
         return t.payload && t.payload.trim() !== "";
       }
@@ -274,10 +308,12 @@ const SchedulesPage = (): JSX.Element | null => {
   const ScheduleForm = () => (
     <div className="space-y-4">
       <div>
-        <label className={cn(
-          "text-xs uppercase tracking-wider mb-2 block",
-          isDark ? "text-zinc-400" : "text-zinc-600"
-        )}>
+        <label
+          className={cn(
+            "mb-2 block text-xs tracking-wider uppercase",
+            isDark ? "text-zinc-400" : "text-zinc-600"
+          )}
+        >
           Schedule Name
         </label>
         <Input
@@ -288,25 +324,24 @@ const SchedulesPage = (): JSX.Element | null => {
           className={cn(
             "transition-all",
             isDark
-              ? "bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              : "bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+              ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
+              : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
           )}
         />
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className={cn(
-            "text-xs uppercase tracking-wider",
-            isDark ? "text-zinc-400" : "text-zinc-600"
-          )}>
+        <div className="mb-2 flex items-center justify-between">
+          <label
+            className={cn(
+              "text-xs tracking-wider uppercase",
+              isDark ? "text-zinc-400" : "text-zinc-600"
+            )}
+          >
             Tasks ({formTasks.length}/{MAX_TASKS})
           </label>
           {formTasks.length >= MAX_TASKS && (
-            <span className={cn(
-              "text-xs",
-              isDark ? "text-amber-400" : "text-amber-600"
-            )}>
+            <span className={cn("text-xs", isDark ? "text-amber-400" : "text-amber-600")}>
               Maximum reached
             </span>
           )}
@@ -314,10 +349,12 @@ const SchedulesPage = (): JSX.Element | null => {
 
         {/* Task list */}
         {formTasks.length > 0 && (
-          <div className={cn(
-            "mb-3 border divide-y max-h-64 overflow-y-auto",
-            isDark ? "border-zinc-700 divide-zinc-700" : "border-zinc-200 divide-zinc-200"
-          )}>
+          <div
+            className={cn(
+              "mb-3 max-h-64 divide-y overflow-y-auto border",
+              isDark ? "divide-zinc-700 border-zinc-700" : "divide-zinc-200 border-zinc-200"
+            )}
+          >
             {formTasks.map((task, index) => (
               <div
                 key={task.id}
@@ -326,20 +363,17 @@ const SchedulesPage = (): JSX.Element | null => {
                   isDark ? "bg-zinc-800/50" : "bg-zinc-50"
                 )}
               >
-                <span className={cn(
-                  "text-xs font-mono w-5 shrink-0",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+                <span
+                  className={cn(
+                    "w-5 shrink-0 font-mono text-xs",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   {index + 1}.
                 </span>
-                <div className="shrink-0">
-                  {getActionIcon(task.action)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className={cn(
-                    "text-sm",
-                    isDark ? "text-zinc-200" : "text-zinc-700"
-                  )}>
+                <div className="shrink-0">{getActionIcon(task.action)}</div>
+                <div className="min-w-0 flex-1">
+                  <span className={cn("text-sm", isDark ? "text-zinc-200" : "text-zinc-700")}>
                     {getActionLabel(task.action)}
                   </span>
                   {task.action === "command" && (
@@ -351,13 +385,15 @@ const SchedulesPage = (): JSX.Element | null => {
                       className={cn(
                         "mt-2 text-sm",
                         isDark
-                          ? "bg-zinc-900 border-zinc-600 text-zinc-100 placeholder:text-zinc-600"
-                          : "bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                          ? "border-zinc-600 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
+                          : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
                       )}
                     />
                   )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <BsClock className={cn("w-3 h-3", isDark ? "text-zinc-500" : "text-zinc-400")} />
+                  <div className="mt-2 flex items-center gap-2">
+                    <BsClock
+                      className={cn("h-3 w-3", isDark ? "text-zinc-500" : "text-zinc-400")}
+                    />
                     <Input
                       type="number"
                       value={task.time_offset}
@@ -365,16 +401,13 @@ const SchedulesPage = (): JSX.Element | null => {
                       min={0}
                       disabled={isSaving}
                       className={cn(
-                        "text-sm w-20",
+                        "w-20 text-sm",
                         isDark
-                          ? "bg-zinc-900 border-zinc-600 text-zinc-100"
-                          : "bg-white border-zinc-300 text-zinc-900"
+                          ? "border-zinc-600 bg-zinc-900 text-zinc-100"
+                          : "border-zinc-300 bg-white text-zinc-900"
                       )}
                     />
-                    <span className={cn(
-                      "text-xs",
-                      isDark ? "text-zinc-500" : "text-zinc-400"
-                    )}>
+                    <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
                       seconds delay
                     </span>
                   </div>
@@ -384,13 +417,11 @@ const SchedulesPage = (): JSX.Element | null => {
                   onClick={() => removeTask(task.id)}
                   disabled={isSaving}
                   className={cn(
-                    "p-1.5 shrink-0 transition-colors disabled:opacity-50",
-                    isDark
-                      ? "text-zinc-500 hover:text-red-400"
-                      : "text-zinc-400 hover:text-red-500"
+                    "shrink-0 p-1.5 transition-colors disabled:opacity-50",
+                    isDark ? "text-zinc-500 hover:text-red-400" : "text-zinc-400 hover:text-red-500"
                   )}
                 >
-                  <BsX className="w-4 h-4" />
+                  <BsX className="h-4 w-4" />
                 </button>
               </div>
             ))}
@@ -398,7 +429,7 @@ const SchedulesPage = (): JSX.Element | null => {
         )}
 
         {/* Add task buttons */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {actionOptions.map((opt) => (
             <button
               key={opt.value}
@@ -406,7 +437,7 @@ const SchedulesPage = (): JSX.Element | null => {
               onClick={() => addTask(opt.value)}
               disabled={formTasks.length >= MAX_TASKS || isSaving}
               className={cn(
-                "flex items-center gap-2 p-2 border transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed",
+                "flex items-center gap-2 border p-2 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-40",
                 isDark
                   ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                   : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800"
@@ -420,10 +451,12 @@ const SchedulesPage = (): JSX.Element | null => {
       </div>
 
       <div>
-        <label className={cn(
-          "text-xs uppercase tracking-wider mb-2 block",
-          isDark ? "text-zinc-400" : "text-zinc-600"
-        )}>
+        <label
+          className={cn(
+            "mb-2 block text-xs tracking-wider uppercase",
+            isDark ? "text-zinc-400" : "text-zinc-600"
+          )}
+        >
           Cron Expression
         </label>
         <Input
@@ -432,25 +465,24 @@ const SchedulesPage = (): JSX.Element | null => {
           placeholder="0 4 * * *"
           disabled={isSaving}
           className={cn(
-            "transition-all font-mono",
+            "font-mono transition-all",
             isDark
-              ? "bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              : "bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+              ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
+              : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
           )}
         />
-        <p className={cn(
-          "text-xs mt-1",
-          isDark ? "text-zinc-500" : "text-zinc-500"
-        )}>
+        <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
           Format: minute hour day month weekday
         </p>
       </div>
 
       <div className="flex items-center justify-between">
-        <label className={cn(
-          "text-xs uppercase tracking-wider",
-          isDark ? "text-zinc-400" : "text-zinc-600"
-        )}>
+        <label
+          className={cn(
+            "text-xs tracking-wider uppercase",
+            isDark ? "text-zinc-400" : "text-zinc-600"
+          )}
+        >
           Enabled
         </label>
         <Switch
@@ -464,33 +496,32 @@ const SchedulesPage = (): JSX.Element | null => {
   );
 
   return (
-    <div className={cn(
-      "min-h-full transition-colors relative",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
+    <div className="relative min-h-full transition-colors">
       {/* Background is now rendered in the layout for persistence */}
 
       <div className="relative p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className={cn(
-                "transition-all hover:scale-110 active:scale-95",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )} />
+              <SidebarTrigger
+                className={cn(
+                  "transition-all hover:scale-110 active:scale-95",
+                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                )}
+              />
               <div>
-                <h1 className={cn(
-                  "text-2xl font-light tracking-wider",
-                  isDark ? "text-zinc-100" : "text-zinc-800"
-                )}>
+                <h1
+                  className={cn(
+                    "text-2xl font-light tracking-wider",
+                    isDark ? "text-zinc-100" : "text-zinc-800"
+                  )}
+                >
                   SCHEDULES
                 </h1>
-                <p className={cn(
-                  "text-sm mt-1",
-                  isDark ? "text-zinc-500" : "text-zinc-500"
-                )}>
-                  {server?.name || `Server ${serverId}`} - {schedules.filter(s => s.enabled).length} active
+                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  {server?.name || `Server ${serverId}`} -{" "}
+                  {schedules.filter((s) => s.enabled).length} active
                 </p>
               </div>
             </div>
@@ -500,27 +531,27 @@ const SchedulesPage = (): JSX.Element | null => {
                 size="sm"
                 onClick={openCreateModal}
                 className={cn(
-                  "transition-all gap-2",
+                  "gap-2 transition-all",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                <BsPlus className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">New Schedule</span>
+                <BsPlus className="h-4 w-4" />
+                <span className="text-xs tracking-wider uppercase">New Schedule</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setTheme(isDark ? "light" : "dark")}
                 className={cn(
-                  "transition-all hover:scale-110 active:scale-95 p-2",
+                  "p-2 transition-all hover:scale-110 active:scale-95",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
+                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -528,18 +559,22 @@ const SchedulesPage = (): JSX.Element | null => {
           {/* Schedule List */}
           <div className="space-y-4">
             {isLoading ? (
-              <div className={cn(
-                "text-center py-12 text-sm flex items-center justify-center gap-2",
-                isDark ? "text-zinc-500" : "text-zinc-400"
-              )}>
-                <Spinner className="w-4 h-4" />
+              <div
+                className={cn(
+                  "flex items-center justify-center gap-2 py-12 text-center text-sm",
+                  isDark ? "text-zinc-500" : "text-zinc-400"
+                )}
+              >
+                <Spinner className="h-4 w-4" />
                 Loading schedules...
               </div>
             ) : schedules.length === 0 ? (
-              <div className={cn(
-                "text-center py-12 border",
-                isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
-              )}>
+              <div
+                className={cn(
+                  "border py-12 text-center",
+                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                )}
+              >
                 No schedules found. Create your first schedule.
               </div>
             ) : (
@@ -547,63 +582,93 @@ const SchedulesPage = (): JSX.Element | null => {
                 <div
                   key={schedule.id}
                   className={cn(
-                    "relative p-6 border transition-all",
+                    "relative border p-6 transition-all",
                     isDark
-                      ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10"
-                      : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300",
+                      ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                      : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100",
                     !schedule.enabled && "opacity-50"
                   )}
                 >
                   {/* Corner decorations */}
-                  <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-                  <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-                  <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-                  <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                      isDark ? "border-zinc-500" : "border-zinc-400"
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                      isDark ? "border-zinc-500" : "border-zinc-400"
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                      isDark ? "border-zinc-500" : "border-zinc-400"
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                      isDark ? "border-zinc-500" : "border-zinc-400"
+                    )}
+                  />
 
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className={cn(
-                          "text-sm font-medium uppercase tracking-wider",
-                          isDark ? "text-zinc-100" : "text-zinc-800"
-                        )}>
+                      <div className="mb-3 flex items-center gap-3">
+                        <h3
+                          className={cn(
+                            "text-sm font-medium tracking-wider uppercase",
+                            isDark ? "text-zinc-100" : "text-zinc-800"
+                          )}
+                        >
                           {schedule.name}
                         </h3>
-                        <span className={cn(
-                          "text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 border",
-                          isDark ? "border-zinc-600 text-zinc-400" : "border-zinc-400 text-zinc-600"
-                        )}>
+                        <span
+                          className={cn(
+                            "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
+                            isDark
+                              ? "border-zinc-600 text-zinc-400"
+                              : "border-zinc-400 text-zinc-600"
+                          )}
+                        >
                           {schedule.tasks.length} task{schedule.tasks.length !== 1 ? "s" : ""}
                         </span>
                       </div>
 
                       {/* Task list preview */}
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="mb-3 flex flex-wrap gap-2">
                         {schedule.tasks.map((task, index) => (
                           <div
                             key={task.id}
                             className={cn(
-                              "flex items-center gap-1.5 px-2 py-1 border text-xs",
-                              isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-200 bg-zinc-50"
+                              "flex items-center gap-1.5 border px-2 py-1 text-xs",
+                              isDark
+                                ? "border-zinc-700 bg-zinc-800/50"
+                                : "border-zinc-200 bg-zinc-50"
                             )}
                           >
-                            <span className={cn(
-                              "text-[10px]",
-                              isDark ? "text-zinc-500" : "text-zinc-400"
-                            )}>
+                            <span
+                              className={cn(
+                                "text-[10px]",
+                                isDark ? "text-zinc-500" : "text-zinc-400"
+                              )}
+                            >
                               {index + 1}.
                             </span>
                             {getActionIcon(task.action)}
-                            <span className={cn(
-                              isDark ? "text-zinc-300" : "text-zinc-700"
-                            )}>
+                            <span className={cn(isDark ? "text-zinc-300" : "text-zinc-700")}>
                               {getActionLabel(task.action)}
                             </span>
                             {task.time_offset > 0 && (
-                              <span className={cn(
-                                "text-[10px]",
-                                isDark ? "text-zinc-500" : "text-zinc-400"
-                              )}>
+                              <span
+                                className={cn(
+                                  "text-[10px]",
+                                  isDark ? "text-zinc-500" : "text-zinc-400"
+                                )}
+                              >
                                 +{task.time_offset}s
                               </span>
                             )}
@@ -611,10 +676,12 @@ const SchedulesPage = (): JSX.Element | null => {
                         ))}
                       </div>
 
-                      <div className={cn(
-                        "flex items-center gap-4 text-xs",
-                        isDark ? "text-zinc-500" : "text-zinc-500"
-                      )}>
+                      <div
+                        className={cn(
+                          "flex items-center gap-4 text-xs",
+                          isDark ? "text-zinc-500" : "text-zinc-500"
+                        )}
+                      >
                         <span className="font-mono">{schedule.cron}</span>
                         <span>-</span>
                         <span>Next: {formatNextRun(schedule)}</span>
@@ -622,7 +689,7 @@ const SchedulesPage = (): JSX.Element | null => {
                         <span>Last: {formatLastRun(schedule)}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="ml-4 flex items-center gap-2">
                       <Switch
                         checked={schedule.enabled}
                         onCheckedChange={() => toggleSchedule(schedule)}
@@ -633,26 +700,26 @@ const SchedulesPage = (): JSX.Element | null => {
                         size="sm"
                         onClick={() => openEditModal(schedule)}
                         className={cn(
-                          "transition-all p-2",
+                          "p-2 transition-all",
                           isDark
-                            ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                            : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                            ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                            : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                         )}
                       >
-                        <BsPencil className="w-4 h-4" />
+                        <BsPencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => openDeleteModal(schedule)}
                         className={cn(
-                          "transition-all p-2",
+                          "p-2 transition-all",
                           isDark
-                            ? "border-red-900/60 text-red-400/80 hover:text-red-300 hover:border-red-700"
-                            : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"
+                            ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
+                            : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
                         )}
                       >
-                        <BsTrash className="w-4 h-4" />
+                        <BsTrash className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
