@@ -73,6 +73,67 @@ app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// WebSocket authentication token endpoint
+// This allows clients to get a short-lived token for WebSocket authentication
+// when cookies don't work (cross-origin)
+app.get("/api/ws/token", async (c) => {
+  // Get session from cookies
+  const cookies = c.req.header("Cookie") || "";
+  const sessionTokenMatch = cookies.match(/better-auth\.session_token=([^;]+)/);
+  const cookieSessionToken = sessionTokenMatch ? decodeURIComponent(sessionTokenMatch[1]) : null;
+
+  if (!cookieSessionToken) {
+    return c.json({ error: "Not authenticated" }, 401);
+  }
+
+  const session = await db.session.findFirst({
+    where: {
+      token: cookieSessionToken,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!session) {
+    return c.json({ error: "Invalid session" }, 401);
+  }
+
+  // Return the session token - client can use this for WebSocket auth
+  // The token is the same as the cookie, so it's already valid
+  return c.json({ token: cookieSessionToken, userId: session.userId });
+});
+
+// Public feature flags endpoint - check if subdomains are available
+app.get("/api/features/subdomains", async (c) => {
+  const subdomainSettings = await db.settings.findUnique({
+    where: { key: "subdomains" },
+  });
+  const cloudflareSettings = await db.settings.findUnique({
+    where: { key: "cloudflare" },
+  });
+
+  const subdomains = subdomainSettings?.value as {
+    enabled?: boolean;
+    baseDomain?: string;
+    dnsProvider?: string;
+  } | null;
+  const cloudflare = cloudflareSettings?.value as { enabled?: boolean; domain?: string } | null;
+
+  // Subdomains are available if:
+  // 1. Subdomain feature is enabled in settings, AND
+  // 2. Either Cloudflare is configured OR manual DNS is being used
+  const isCloudflareConfigured = cloudflare?.enabled === true && !!cloudflare?.domain;
+  const isManualDns = subdomains?.dnsProvider === "manual";
+
+  const enabled = subdomains?.enabled === true && (isCloudflareConfigured || isManualDns);
+  const baseDomain = isCloudflareConfigured ? cloudflare?.domain : subdomains?.baseDomain;
+
+  return c.json({
+    enabled,
+    baseDomain: enabled ? baseDomain : null,
+    dnsProvider: subdomains?.dnsProvider || "manual",
+  });
+});
+
 // API routes
 app.route("/api/account", account);
 app.route("/api/locations", locations);
@@ -96,13 +157,17 @@ app.get(
     const sessionTokenMatch = cookies.match(/better-auth\.session_token=([^;]+)/);
     const cookieSessionToken = sessionTokenMatch ? decodeURIComponent(sessionTokenMatch[1]) : null;
 
+    console.log(`[WS] Connection upgrade, cookie token present: ${!!cookieSessionToken}`);
+
     return {
       onOpen: async (_event, ws) => {
+        console.log("[WS] Client connected");
         // Add client first
         wsManager.addClient(ws.raw as any);
 
         // Try to auto-authenticate via cookie
         if (cookieSessionToken) {
+          console.log("[WS] Attempting cookie authentication...");
           const session = await db.session.findFirst({
             where: {
               token: cookieSessionToken,
@@ -112,9 +177,14 @@ app.get(
           });
 
           if (session) {
+            console.log(`[WS] Cookie auth successful for user ${session.userId}`);
             wsManager.authenticateClient(ws.raw as any, session.userId);
             ws.send(JSON.stringify({ type: "auth_success", userId: session.userId }));
+          } else {
+            console.log("[WS] Cookie auth failed - no valid session found");
           }
+        } else {
+          console.log("[WS] No cookie token found");
         }
       },
       onMessage: async (event, ws) => {

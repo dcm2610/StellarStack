@@ -1,18 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme as useNextTheme } from "next-themes";
 import { SidebarProvider, SidebarInset } from "@workspace/ui/components/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { useAuth } from "@/components/auth-provider";
+import { AnimatedBackground } from "@workspace/ui/components/animated-background";
+import { FloatingDots } from "@workspace/ui/components/floating-particles";
 import { cn } from "@workspace/ui/lib/utils";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Memoized background component to prevent re-renders
+const PersistentBackground = memo(function PersistentBackground({ isDark }: { isDark: boolean }) {
+  return (
+    <>
+      <AnimatedBackground isDark={isDark} />
+      <FloatingDots isDark={isDark} count={15} />
+    </>
+  );
+});
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { resolvedTheme } = useNextTheme();
   const { isAdmin, isLoading, isAuthenticated } = useAuth();
@@ -37,14 +45,19 @@ export default function AdminLayout({
   // Show loading while checking auth
   if (isLoading || !mounted) {
     return (
-      <div className={cn(
-        "min-h-svh flex items-center justify-center",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
-        <div className={cn(
-          "text-sm uppercase tracking-wider",
-          isDark ? "text-zinc-500" : "text-zinc-400"
-        )}>
+      <div
+        className={cn(
+          "flex min-h-svh items-center justify-center",
+          isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+        )}
+      >
+        <PersistentBackground isDark={isDark} />
+        <div
+          className={cn(
+            "relative z-10 text-sm tracking-wider uppercase",
+            isDark ? "text-zinc-500" : "text-zinc-400"
+          )}
+        >
           Loading...
         </div>
       </div>
@@ -57,14 +70,16 @@ export default function AdminLayout({
   }
 
   return (
-    <SidebarProvider>
-      <AdminSidebar isDark={isDark} />
-      <SidebarInset className={cn(
-        "transition-colors",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}>
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <>
+      <PersistentBackground isDark={isDark} />
+      <SidebarProvider>
+        <AdminSidebar isDark={isDark} />
+        <SidebarInset
+          className={cn("transition-colors", isDark ? "bg-transparent" : "bg-transparent")}
+        >
+          {children}
+        </SidebarInset>
+      </SidebarProvider>
+    </>
   );
 }

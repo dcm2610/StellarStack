@@ -456,3 +456,14 @@ export const adminSettings = {
     getPublic: () => request<PublicBrandingSettings>("/api/admin/settings/branding/public"),
   },
 };
+
+// Public feature flags (no auth required)
+export interface SubdomainFeatureStatus {
+  enabled: boolean;
+  baseDomain: string | null;
+  dnsProvider: "cloudflare" | "manual";
+}
+
+export const features = {
+  subdomains: () => request<SubdomainFeatureStatus>("/api/features/subdomains"),
+};

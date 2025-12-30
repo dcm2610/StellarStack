@@ -24,7 +24,7 @@ import {
 import { useServer } from "@/components/server-provider";
 import { ServerInstallingPlaceholder } from "@/components/server-installing-placeholder";
 import { ServerSuspendedPlaceholder } from "@/components/server-suspended-placeholder";
-import { servers, type Allocation } from "@/lib/api";
+import { servers, features, type Allocation, type SubdomainFeatureStatus } from "@/lib/api";
 
 interface Subdomain {
   id: string;
@@ -43,6 +43,7 @@ const NetworkPage = (): JSX.Element | null => {
   const [subdomains, setSubdomains] = useState<Subdomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [settingPrimary, setSettingPrimary] = useState<string | null>(null);
+  const [subdomainFeature, setSubdomainFeature] = useState<SubdomainFeatureStatus | null>(null);
 
   // Get server data for SFTP details and primary allocation
   const { server, consoleInfo, isInstalling, refetch } = useServer();
@@ -63,12 +64,23 @@ const NetworkPage = (): JSX.Element | null => {
     setMounted(true);
   }, []);
 
-  // Fetch allocations
+  // Fetch allocations and subdomain feature status
   useEffect(() => {
     if (serverId) {
       fetchAllocations();
+      fetchSubdomainFeature();
     }
   }, [serverId]);
+
+  const fetchSubdomainFeature = async () => {
+    try {
+      const status = await features.subdomains();
+      setSubdomainFeature(status);
+    } catch (error) {
+      console.error("Failed to fetch subdomain feature status:", error);
+      setSubdomainFeature({ enabled: false, baseDomain: null, dnsProvider: "manual" });
+    }
+  };
 
   const fetchAllocations = async () => {
     try {
@@ -383,130 +395,135 @@ const NetworkPage = (): JSX.Element | null => {
             )}
           </div>
 
-          {/* Subdomains Section */}
-          <div className="mb-8">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BsGlobe className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
-                <h2
-                  className={cn(
-                    "text-sm font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-300" : "text-zinc-700"
-                  )}
-                >
-                  Subdomains
-                </h2>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={openAddSubdomainModal}
-                className={cn(
-                  "gap-2 transition-all",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                )}
-              >
-                <BsPlus className="h-4 w-4" />
-                <span className="text-xs tracking-wider uppercase">Add Subdomain</span>
-              </Button>
-            </div>
-
-            {subdomains.length === 0 ? (
-              <div
-                className={cn(
-                  "border p-8 text-center",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
-                )}
-              >
-                No subdomains configured. Add a subdomain to create a friendly URL for your server.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {subdomains.map((sub) => (
-                  <div
-                    key={sub.id}
+          {/* Subdomains Section - Only show if feature is enabled */}
+          {subdomainFeature?.enabled && (
+            <div className="mb-8">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BsGlobe className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
+                  <h2
                     className={cn(
-                      "relative border p-4 transition-all",
-                      isDark
-                        ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                        : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                      "text-sm font-medium tracking-wider uppercase",
+                      isDark ? "text-zinc-300" : "text-zinc-700"
                     )}
                   >
-                    {/* Corner decorations */}
-                    <div
-                      className={cn(
-                        "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
-                      )}
-                    />
-                    <div
-                      className={cn(
-                        "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
-                      )}
-                    />
-                    <div
-                      className={cn(
-                        "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
-                      )}
-                    />
-                    <div
-                      className={cn(
-                        "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
-                      )}
-                    />
+                    Subdomains
+                  </h2>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openAddSubdomainModal}
+                  className={cn(
+                    "gap-2 transition-all",
+                    isDark
+                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                  )}
+                >
+                  <BsPlus className="h-4 w-4" />
+                  <span className="text-xs tracking-wider uppercase">Add Subdomain</span>
+                </Button>
+              </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div
+              {subdomains.length === 0 ? (
+                <div
+                  className={cn(
+                    "border p-8 text-center",
+                    isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  )}
+                >
+                  No subdomains configured. Add a subdomain to create a friendly URL for your
+                  server.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {subdomains.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className={cn(
+                        "relative border p-4 transition-all",
+                        isDark
+                          ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                          : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                      )}
+                    >
+                      {/* Corner decorations */}
+                      <div
+                        className={cn(
+                          "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                          isDark ? "border-zinc-500" : "border-zinc-400"
+                        )}
+                      />
+                      <div
+                        className={cn(
+                          "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                          isDark ? "border-zinc-500" : "border-zinc-400"
+                        )}
+                      />
+                      <div
+                        className={cn(
+                          "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                          isDark ? "border-zinc-500" : "border-zinc-400"
+                        )}
+                      />
+                      <div
+                        className={cn(
+                          "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                          isDark ? "border-zinc-500" : "border-zinc-400"
+                        )}
+                      />
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={cn(
+                              "font-mono text-sm",
+                              isDark ? "text-zinc-100" : "text-zinc-800"
+                            )}
+                          >
+                            {sub.subdomain}.{sub.domain}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {sub.ssl && (
+                              <span
+                                className={cn(
+                                  "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
+                                  isDark
+                                    ? "border-green-500/50 text-green-400"
+                                    : "border-green-400 text-green-600"
+                                )}
+                              >
+                                SSL
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+                          >
+                            → Port {sub.targetPort}
+                          </span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteSubdomainModal(sub)}
                           className={cn(
-                            "font-mono text-sm",
-                            isDark ? "text-zinc-100" : "text-zinc-800"
+                            "p-2 transition-all",
+                            isDark
+                              ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
+                              : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
                           )}
                         >
-                          {sub.subdomain}.{sub.domain}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {sub.ssl && (
-                            <span
-                              className={cn(
-                                "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                                isDark
-                                  ? "border-green-500/50 text-green-400"
-                                  : "border-green-400 text-green-600"
-                              )}
-                            >
-                              SSL
-                            </span>
-                          )}
-                        </div>
-                        <span className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
-                          → Port {sub.targetPort}
-                        </span>
+                          <BsTrash className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteSubdomainModal(sub)}
-                        className={cn(
-                          "p-2 transition-all",
-                          isDark
-                            ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
-                            : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
-                        )}
-                      >
-                        <BsTrash className="h-4 w-4" />
-                      </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* SFTP Connection Details Section */}
           <div className="mb-8">

@@ -12,6 +12,19 @@ const getWebSocketUrl = (): string => {
   return url.toString();
 };
 
+// Fetch WebSocket auth token from API
+const fetchWsToken = async (): Promise<{ token: string; userId: string } | null> => {
+  try {
+    const response = await fetch(`${API_URL}/api/ws/token`, {
+      credentials: "include",
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 export type WSEventType =
   | "server:created"
   | "server:updated"
@@ -55,6 +68,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSubscriptionsRef = useRef<string[]>([]);
+  const isAuthenticatedRef = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [lastMessage, setLastMessage] = useState<WSEvent | null>(null);
@@ -139,7 +153,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
               // This ensures components re-render when data changes
               queryClient.invalidateQueries({
                 queryKey,
-                refetchType: 'none' // Don't refetch, just mark as stale to trigger re-render
+                refetchType: "none", // Don't refetch, just mark as stale to trigger re-render
               });
 
               // Also update the server in the list cache
@@ -173,7 +187,12 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
           case "auth_success":
             // Authentication successful - subscribe to pending servers
             setIsAuthenticated(true);
+            isAuthenticatedRef.current = true;
+            console.log("WebSocket: Authentication successful");
             if (pendingSubscriptionsRef.current.length > 0) {
+              console.log(
+                `WebSocket: Subscribing to ${pendingSubscriptionsRef.current.length} pending servers`
+              );
               pendingSubscriptionsRef.current.forEach((serverId) => {
                 wsRef.current?.send(JSON.stringify({ type: "subscribe", serverId }));
               });
@@ -184,6 +203,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
           case "auth_error":
             // Authentication failed
             setIsAuthenticated(false);
+            isAuthenticatedRef.current = false;
             console.warn("WebSocket authentication failed");
             break;
 
@@ -212,15 +232,31 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
     try {
       const ws = new WebSocket(getWebSocketUrl());
 
-      ws.onopen = () => {
+      ws.onopen = async () => {
         console.log("WebSocket connected");
         setIsConnected(true);
         setIsAuthenticated(false);
 
         // Store serverIds as pending - will subscribe after auth_success
         pendingSubscriptionsRef.current = [...serverIds];
-        // Auto-auth happens server-side via cookies
-        // If user is not logged in, auth_success won't be received
+
+        // Cookie auth happens automatically on server side, but in case it fails
+        // (cross-origin issues), we'll send the token manually after a short delay
+        setTimeout(async () => {
+          // Check if we're already authenticated (cookie worked)
+          if (wsRef.current?.readyState === WebSocket.OPEN && !isAuthenticatedRef.current) {
+            console.log("WebSocket: Cookie auth may have failed, trying token auth...");
+            const tokenData = await fetchWsToken();
+            if (
+              tokenData &&
+              wsRef.current?.readyState === WebSocket.OPEN &&
+              !isAuthenticatedRef.current
+            ) {
+              console.log("WebSocket: Sending auth token...");
+              wsRef.current.send(JSON.stringify({ type: "auth", token: tokenData.token }));
+            }
+          }
+        }, 500); // Wait 500ms to see if cookie auth succeeds first
       };
 
       ws.onmessage = handleMessage;
@@ -229,6 +265,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
         console.log("WebSocket disconnected");
         setIsConnected(false);
         setIsAuthenticated(false);
+        isAuthenticatedRef.current = false;
         wsRef.current = null;
 
         // Auto-reconnect

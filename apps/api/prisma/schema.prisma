@@ -509,6 +509,9 @@ model Subdomain {
   // Subdomain name (e.g., "my-server" -> my-server.stellarstack.io)
   subdomain String   @unique
 
+  // DNS record ID from Cloudflare (for cleanup)
+  dnsRecordId String?
+
   // Timestamps
   createdAt DateTime @default(now())
 

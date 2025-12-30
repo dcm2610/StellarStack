@@ -3,6 +3,13 @@ import { z } from "zod";
 import crypto from "crypto";
 import { db } from "../lib/db";
 import { requireAuth, requireServerAccess } from "../middleware/auth";
+import {
+  createDnsRecord,
+  deleteDnsRecord,
+  deleteDnsRecordByName,
+  getCloudflareSettings,
+  isCloudflareEnabled,
+} from "../lib/cloudflare";
 import type { Variables } from "../types";
 
 const domains = new Hono<{ Variables: Variables }>();
@@ -65,9 +72,13 @@ domains.post("/:serverId/subdomain", requireServerAccess, async (c) => {
 
   // Validate subdomain format
   if (!isValidSubdomain(subdomain)) {
-    return c.json({
-      error: "Invalid subdomain. Must be 3-32 characters, alphanumeric with hyphens, cannot start/end with hyphen",
-    }, 400);
+    return c.json(
+      {
+        error:
+          "Invalid subdomain. Must be 3-32 characters, alphanumeric with hyphens, cannot start/end with hyphen",
+      },
+      400
+    );
   }
 
   // Check for reserved subdomains
@@ -94,7 +105,66 @@ domains.post("/:serverId/subdomain", requireServerAccess, async (c) => {
     return c.json({ error: "Subdomain is already taken" }, 400);
   }
 
-  // Create the subdomain
+  // Get the server's primary allocation IP for DNS
+  const fullServer = await db.server.findUnique({
+    where: { id: server.id },
+    include: {
+      allocations: true,
+      node: true,
+    },
+  });
+
+  if (!fullServer) {
+    return c.json({ error: "Server not found" }, 404);
+  }
+
+  // Get target IP - use primary allocation IP or first allocation or node host
+  const primaryAllocation =
+    fullServer.allocations.find((a) => a.id === fullServer.primaryAllocationId) ||
+    fullServer.allocations[0];
+  const targetIp = primaryAllocation?.ip || fullServer.node.host;
+
+  // Check if Cloudflare is enabled and create DNS record
+  let dnsRecordId: string | null = null;
+  const cloudflareEnabled = await isCloudflareEnabled();
+
+  if (cloudflareEnabled) {
+    const cloudflareSettings = await getCloudflareSettings();
+    const dnsResult = await createDnsRecord(subdomain, targetIp, true);
+
+    if (!dnsResult.success) {
+      return c.json(
+        {
+          error: "Failed to create DNS record",
+          details: dnsResult.error,
+        },
+        500
+      );
+    }
+
+    dnsRecordId = dnsResult.recordId || null;
+
+    // Use Cloudflare domain as base
+    const newSubdomain = await db.subdomain.create({
+      data: {
+        serverId: server.id,
+        subdomain,
+        dnsRecordId,
+      },
+    });
+
+    return c.json(
+      {
+        success: true,
+        subdomain: newSubdomain.subdomain,
+        fullDomain: `${newSubdomain.subdomain}.${cloudflareSettings.domain}`,
+        dnsConfigured: true,
+      },
+      201
+    );
+  }
+
+  // Cloudflare not enabled - just save to database (manual DNS required)
   const newSubdomain = await db.subdomain.create({
     data: {
       serverId: server.id,
@@ -102,17 +172,16 @@ domains.post("/:serverId/subdomain", requireServerAccess, async (c) => {
     },
   });
 
-  // TODO: Create DNS record via Cloudflare API or update nginx config
-  // This would typically involve:
-  // 1. Getting the server's allocation IP and port
-  // 2. Creating an A record or CNAME pointing to the proxy server
-  // 3. Updating nginx/traefik config to route the subdomain to the server
-
-  return c.json({
-    success: true,
-    subdomain: newSubdomain.subdomain,
-    fullDomain: `${newSubdomain.subdomain}.${SUBDOMAIN_BASE}`,
-  }, 201);
+  return c.json(
+    {
+      success: true,
+      subdomain: newSubdomain.subdomain,
+      fullDomain: `${newSubdomain.subdomain}.${SUBDOMAIN_BASE}`,
+      dnsConfigured: false,
+      note: "DNS record not created. Cloudflare integration is not enabled. Configure DNS manually.",
+    },
+    201
+  );
 });
 
 // Release a subdomain
@@ -127,11 +196,27 @@ domains.delete("/:serverId/subdomain", requireServerAccess, async (c) => {
     return c.json({ error: "Server does not have a subdomain" }, 404);
   }
 
+  // Delete DNS record from Cloudflare if we have a record ID
+  if (subdomain.dnsRecordId) {
+    const deleteResult = await deleteDnsRecord(subdomain.dnsRecordId);
+    if (!deleteResult.success) {
+      console.error(`Failed to delete Cloudflare DNS record: ${deleteResult.error}`);
+      // Continue with deletion anyway - the subdomain may need manual cleanup
+    }
+  } else {
+    // Try to delete by name as fallback
+    const cloudflareEnabled = await isCloudflareEnabled();
+    if (cloudflareEnabled) {
+      const deleteResult = await deleteDnsRecordByName(subdomain.subdomain);
+      if (!deleteResult.success) {
+        console.error(`Failed to delete Cloudflare DNS record by name: ${deleteResult.error}`);
+      }
+    }
+  }
+
   await db.subdomain.delete({
     where: { serverId: server.id },
   });
-
-  // TODO: Remove DNS record and proxy config
 
   return c.json({ success: true });
 });
@@ -147,13 +232,15 @@ domains.get("/:serverId/domains", requireServerAccess, async (c) => {
     orderBy: { createdAt: "desc" },
   });
 
-  return c.json(customDomains.map((d) => ({
-    id: d.id,
-    domain: d.domain,
-    verified: d.verified,
-    verifyCode: d.verifyCode,
-    createdAt: d.createdAt,
-  })));
+  return c.json(
+    customDomains.map((d) => ({
+      id: d.id,
+      domain: d.domain,
+      verified: d.verified,
+      verifyCode: d.verifyCode,
+      createdAt: d.createdAt,
+    }))
+  );
 });
 
 // Add a custom domain
@@ -195,20 +282,23 @@ domains.post("/:serverId/domains", requireServerAccess, async (c) => {
     },
   });
 
-  return c.json({
-    success: true,
-    id: customDomain.id,
-    domain: customDomain.domain,
-    verified: false,
-    verifyCode: customDomain.verifyCode,
-    instructions: {
-      type: "TXT",
-      name: "_stellarstack",
-      value: verifyCode,
-      ttl: 300,
-      note: `Add a TXT record to your DNS with name "_stellarstack.${domain}" and value "${verifyCode}"`,
+  return c.json(
+    {
+      success: true,
+      id: customDomain.id,
+      domain: customDomain.domain,
+      verified: false,
+      verifyCode: customDomain.verifyCode,
+      instructions: {
+        type: "TXT",
+        name: "_stellarstack",
+        value: verifyCode,
+        ttl: 300,
+        note: `Add a TXT record to your DNS with name "_stellarstack.${domain}" and value "${verifyCode}"`,
+      },
     },
-  }, 201);
+    201
+  );
 });
 
 // Verify domain ownership
@@ -252,24 +342,34 @@ domains.post("/:serverId/domains/:domainId/verify", requireServerAccess, async (
         message: "Domain verified successfully",
       });
     } else {
-      return c.json({
-        verified: false,
-        message: "Verification code not found in DNS",
-        found: flatRecords,
-        expected: customDomain.verifyCode,
-      }, 400);
+      return c.json(
+        {
+          verified: false,
+          message: "Verification code not found in DNS",
+          found: flatRecords,
+          expected: customDomain.verifyCode,
+        },
+        400
+      );
     }
   } catch (error: any) {
     if (error.code === "ENODATA" || error.code === "ENOTFOUND") {
-      return c.json({
-        verified: false,
-        message: "TXT record not found. Make sure you added the DNS record and waited for propagation.",
-      }, 400);
+      return c.json(
+        {
+          verified: false,
+          message:
+            "TXT record not found. Make sure you added the DNS record and waited for propagation.",
+        },
+        400
+      );
     }
-    return c.json({
-      verified: false,
-      message: `DNS lookup failed: ${error.message}`,
-    }, 500);
+    return c.json(
+      {
+        verified: false,
+        message: `DNS lookup failed: ${error.message}`,
+      },
+      500
+    );
   }
 });
 

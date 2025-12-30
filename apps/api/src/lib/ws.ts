@@ -47,6 +47,21 @@ class WebSocketManager {
    * Send periodic updates to all subscribed clients
    */
   private async sendPeriodicUpdates() {
+    // Debug: Log client state
+    const clientCount = this.clients.size;
+    const authenticatedCount = Array.from(this.clients.values()).filter(
+      (c) => c.authenticated
+    ).length;
+    const subscribedCount = Array.from(this.clients.values()).filter(
+      (c) => c.subscribedServers.size > 0
+    ).length;
+
+    if (clientCount > 0) {
+      console.log(
+        `[WS Periodic] Clients: ${clientCount}, Authenticated: ${authenticatedCount}, Subscribed: ${subscribedCount}`
+      );
+    }
+
     // Collect all unique server IDs that clients are subscribed to
     const subscribedServerIds = new Set<string>();
     for (const [, client] of this.clients) {
@@ -58,6 +73,8 @@ class WebSocketManager {
     }
 
     if (subscribedServerIds.size === 0) return;
+
+    console.log(`[WS Periodic] Sending updates for ${subscribedServerIds.size} servers`);
 
     try {
       // Fetch all subscribed servers in one query
