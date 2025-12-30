@@ -10,9 +10,9 @@ interface FooterProps {
 
 const footerLinks = {
   product: [
-    { name: "Features", href: "/features" },
-    { name: "Changelog", href: "/changelog" },
-    { name: "Roadmap", href: "/roadmap" },
+    { name: "Features", href: "/" },
+    { name: "Changelog", href: "/" },
+    { name: "Roadmap", href: "/" },
   ],
   resources: [
     { name: "Documentation", href: "https://docs.stellarstack.app" },
@@ -21,33 +21,35 @@ const footerLinks = {
     { name: "Community", href: "https://discord.gg/stellarstack" },
   ],
   company: [
-    { name: "About", href: "/about" },
-    { name: "Careers", href: "/careers" },
+    { name: "About", href: "/" },
+    { name: "Careers", href: "/" },
     { name: "Contact", href: "mailto:hello@stellarstack.app" },
   ],
 };
 
 export const Footer = ({ isDark }: FooterProps) => {
   return (
-    <footer className={cn(
-      "relative border-t overflow-hidden",
-      isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-white"
-    )}>
+    <footer
+      className={cn(
+        "relative overflow-hidden border-t",
+        isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-white"
+      )}
+    >
       {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+      <div className="mx-auto max-w-7xl px-6 py-16">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link href="/" className={cn(
-              "text-lg font-light tracking-[0.2em] block mb-4",
-              isDark ? "text-zinc-100" : "text-zinc-800"
-            )}>
+            <Link
+              href="/"
+              className={cn(
+                "mb-4 block text-lg font-light tracking-[0.2em]",
+                isDark ? "text-zinc-100" : "text-zinc-800"
+              )}
+            >
               STELLARSTACK
             </Link>
-            <p className={cn(
-              "text-sm mb-6",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
+            <p className={cn("mb-6 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
               Open-source game server management for the modern era.
             </p>
             <div className="flex items-center gap-4">
@@ -60,7 +62,7 @@ export const Footer = ({ isDark }: FooterProps) => {
                   isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-400 hover:text-zinc-600"
                 )}
               >
-                <BsGithub className="w-5 h-5" />
+                <BsGithub className="h-5 w-5" />
               </a>
               <a
                 href="https://discord.gg/stellarstack"
@@ -71,7 +73,7 @@ export const Footer = ({ isDark }: FooterProps) => {
                   isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-400 hover:text-zinc-600"
                 )}
               >
-                <BsDiscord className="w-5 h-5" />
+                <BsDiscord className="h-5 w-5" />
               </a>
               <a
                 href="https://twitter.com/stellarstack"
@@ -82,26 +84,33 @@ export const Footer = ({ isDark }: FooterProps) => {
                   isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-400 hover:text-zinc-600"
                 )}
               >
-                <BsTwitterX className="w-5 h-5" />
+                <BsTwitterX className="h-5 w-5" />
               </a>
             </div>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className={cn(
-              "text-xs font-medium uppercase tracking-wider mb-4",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}>
+            <h4
+              className={cn(
+                "mb-4 text-xs font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
               Product
             </h4>
             <ul className="space-y-3">
               {footerLinks.product.map((item) => (
                 <li key={item.name}>
-                  <Link href={item.href} className={cn(
-                    "text-sm transition-colors",
-                    isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-500 hover:text-zinc-700"
-                  )}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "text-sm transition-colors",
+                      isDark
+                        ? "text-zinc-500 hover:text-zinc-300"
+                        : "text-zinc-500 hover:text-zinc-700"
+                    )}
+                  >
                     {item.name}
                   </Link>
                 </li>
@@ -111,19 +120,26 @@ export const Footer = ({ isDark }: FooterProps) => {
 
           {/* Resources */}
           <div>
-            <h4 className={cn(
-              "text-xs font-medium uppercase tracking-wider mb-4",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}>
+            <h4
+              className={cn(
+                "mb-4 text-xs font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
               Resources
             </h4>
             <ul className="space-y-3">
               {footerLinks.resources.map((item) => (
                 <li key={item.name}>
-                  <a href={item.href} className={cn(
-                    "text-sm transition-colors",
-                    isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-500 hover:text-zinc-700"
-                  )}>
+                  <a
+                    href={item.href}
+                    className={cn(
+                      "text-sm transition-colors",
+                      isDark
+                        ? "text-zinc-500 hover:text-zinc-300"
+                        : "text-zinc-500 hover:text-zinc-700"
+                    )}
+                  >
                     {item.name}
                   </a>
                 </li>
@@ -133,19 +149,26 @@ export const Footer = ({ isDark }: FooterProps) => {
 
           {/* Company */}
           <div>
-            <h4 className={cn(
-              "text-xs font-medium uppercase tracking-wider mb-4",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}>
+            <h4
+              className={cn(
+                "mb-4 text-xs font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
               Company
             </h4>
             <ul className="space-y-3">
               {footerLinks.company.map((item) => (
                 <li key={item.name}>
-                  <a href={item.href} className={cn(
-                    "text-sm transition-colors",
-                    isDark ? "text-zinc-500 hover:text-zinc-300" : "text-zinc-500 hover:text-zinc-700"
-                  )}>
+                  <a
+                    href={item.href}
+                    className={cn(
+                      "text-sm transition-colors",
+                      isDark
+                        ? "text-zinc-500 hover:text-zinc-300"
+                        : "text-zinc-500 hover:text-zinc-700"
+                    )}
+                  >
                     {item.name}
                   </a>
                 </li>
@@ -155,22 +178,25 @@ export const Footer = ({ isDark }: FooterProps) => {
         </div>
 
         {/* Bottom Bar */}
-        <div className={cn(
-          "mt-16 pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4",
-          isDark ? "border-zinc-800" : "border-zinc-200"
-        )}>
-          <p className={cn(
-            "text-xs",
-            isDark ? "text-zinc-600" : "text-zinc-400"
-          )}>
+        <div
+          className={cn(
+            "mt-16 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row",
+            isDark ? "border-zinc-800" : "border-zinc-200"
+          )}
+        >
+          <p className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
             &copy; {new Date().getFullYear()} StellarStack. Open source under MIT License.
           </p>
           <div className="flex items-center gap-6">
             {["Privacy", "Terms", "License"].map((item) => (
-              <a key={item} href="#" className={cn(
-                "text-xs transition-colors",
-                isDark ? "text-zinc-600 hover:text-zinc-400" : "text-zinc-400 hover:text-zinc-600"
-              )}>
+              <a
+                key={item}
+                href="#"
+                className={cn(
+                  "text-xs transition-colors",
+                  isDark ? "text-zinc-600 hover:text-zinc-400" : "text-zinc-400 hover:text-zinc-600"
+                )}
+              >
                 {item}
               </a>
             ))}
@@ -180,10 +206,10 @@ export const Footer = ({ isDark }: FooterProps) => {
 
       {/* Large Cut-off Text */}
       <div className="relative overflow-hidden" style={{ height: "clamp(40px, 8vw, 120px)" }}>
-        <div className="max-w-7xl mx-auto px-6 h-full relative">
+        <div className="relative mx-auto h-full max-w-7xl px-6">
           <div
             className={cn(
-              "absolute text-7xl lg:text-[7.25rem] bottom-10 left-6 right-6 translate-y-[50%] font-bold select-none pointer-events-none text-center whitespace-nowrap",
+              "pointer-events-none absolute right-6 bottom-10 left-6 translate-y-[50%] text-center text-7xl font-bold whitespace-nowrap select-none lg:text-[7.25rem]",
               isDark ? "text-zinc-800/50" : "text-zinc-200"
             )}
             style={{

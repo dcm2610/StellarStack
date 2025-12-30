@@ -6,7 +6,8 @@
       "Bash(npx tsc:*)",
       "Bash(npx prisma:*)",
       "Bash(find:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(pnpm install:*)"
     ]
   }
 }
