@@ -6,7 +6,13 @@ import type { Variables } from "../types";
 import type { SmtpConfig, EmailConfig } from "./settings.types";
 
 // Re-export types for backwards compatibility
-export type { SmtpConfig, EmailConfig, CloudflareSettings, SubdomainSettings, BrandingSettings } from "./settings.types";
+export type {
+  SmtpConfig,
+  EmailConfig,
+  CloudflareSettings,
+  SubdomainSettings,
+  BrandingSettings,
+} from "./settings.types";
 
 const settings = new Hono<{ Variables: Variables }>();
 
@@ -29,13 +35,15 @@ const emailSettingsSchema = z.object({
   provider: z.enum(["smtp", "resend", "sendgrid", "mailgun"]).optional(),
   fromEmail: z.string().email().optional(),
   fromName: z.string().optional(),
-  smtp: z.object({
-    host: z.string(),
-    port: z.number(),
-    secure: z.boolean(),
-    username: z.string(),
-    password: z.string(),
-  }).optional(),
+  smtp: z
+    .object({
+      host: z.string(),
+      port: z.number(),
+      secure: z.boolean(),
+      username: z.string(),
+      password: z.string(),
+    })
+    .optional(),
   apiKey: z.string().optional(),
 });
 
@@ -43,7 +51,10 @@ const brandingSettingsSchema = z.object({
   appName: z.string().min(1).max(50).optional(),
   logoUrl: z.string().url().optional().nullable(),
   faviconUrl: z.string().url().optional().nullable(),
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
   supportEmail: z.string().email().optional(),
   supportUrl: z.string().url().optional().nullable(),
   termsUrl: z.string().url().optional().nullable(),
@@ -64,7 +75,7 @@ const getSetting = async <T>(key: string, defaultValue: T): Promise<T> => {
 const setSetting = async <T>(key: string, value: T): Promise<void> => {
   await db.settings.upsert({
     where: { key },
-    create: { key, value: value as any },
+    create: { id: key, key, value: value as any },
     update: { value: value as any },
   });
 };
@@ -108,7 +119,10 @@ settings.patch("/cloudflare", requireAdmin, async (c) => {
     ...current,
     ...parsed.data,
     // Don't overwrite API token if masked value is sent
-    apiToken: parsed.data.apiToken === "********" ? current.apiToken : (parsed.data.apiToken ?? current.apiToken),
+    apiToken:
+      parsed.data.apiToken === "********"
+        ? current.apiToken
+        : (parsed.data.apiToken ?? current.apiToken),
   };
 
   await setSetting("cloudflare", updated);
@@ -145,7 +159,7 @@ settings.post("/cloudflare/test", requireAdmin, async (c) => {
       }
     );
 
-    const data = await response.json() as any;
+    const data = (await response.json()) as any;
 
     if (!data.success) {
       return c.json({
@@ -218,10 +232,12 @@ settings.get("/email", requireAdmin, async (c) => {
   // Mask sensitive data
   return c.json({
     ...email,
-    smtp: email.smtp ? {
-      ...email.smtp,
-      password: email.smtp.password ? "********" : "",
-    } : null,
+    smtp: email.smtp
+      ? {
+          ...email.smtp,
+          password: email.smtp.password ? "********" : "",
+        }
+      : null,
     apiKey: email.apiKey ? "********" : "",
     hasApiKey: !!email.apiKey,
   });
@@ -248,23 +264,29 @@ settings.patch("/email", requireAdmin, async (c) => {
     ...current,
     ...parsed.data,
     // Don't overwrite secrets if masked value is sent
-    apiKey: parsed.data.apiKey === "********" ? current.apiKey : (parsed.data.apiKey ?? current.apiKey),
-    smtp: parsed.data.smtp ? {
-      ...parsed.data.smtp,
-      password: parsed.data.smtp.password === "********"
-        ? (current.smtp?.password ?? "")
-        : parsed.data.smtp.password,
-    } : current.smtp,
+    apiKey:
+      parsed.data.apiKey === "********" ? current.apiKey : (parsed.data.apiKey ?? current.apiKey),
+    smtp: parsed.data.smtp
+      ? {
+          ...parsed.data.smtp,
+          password:
+            parsed.data.smtp.password === "********"
+              ? (current.smtp?.password ?? "")
+              : parsed.data.smtp.password,
+        }
+      : current.smtp,
   };
 
   await setSetting("email", updated);
 
   return c.json({
     ...updated,
-    smtp: updated.smtp ? {
-      ...updated.smtp,
-      password: updated.smtp.password ? "********" : "",
-    } : null,
+    smtp: updated.smtp
+      ? {
+          ...updated.smtp,
+          password: updated.smtp.password ? "********" : "",
+        }
+      : null,
     apiKey: updated.apiKey ? "********" : "",
     hasApiKey: !!updated.apiKey,
   });
