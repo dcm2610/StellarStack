@@ -3,6 +3,7 @@
 import { useState, useEffect, type JSX } from "react";
 import { useParams } from "next/navigation";
 import { useTheme as useNextTheme } from "next-themes";
+import { servers } from "@/lib/api";
 import { DragDropGrid, GridItem } from "@workspace/ui/components/drag-drop-grid";
 import { useGridStorage } from "@workspace/ui/hooks/useGridStorage";
 import { Console } from "@workspace/ui/components/console";

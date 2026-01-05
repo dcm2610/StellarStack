@@ -545,7 +545,7 @@ const FilesPage = (): JSX.Element | null => {
           {
             id: folderPath,
             name: folderName,
-            type: "folder",
+            type: "folder" as const,
             size: "--",
             sizeBytes: 0,
             modified: new Date().toLocaleString(),
@@ -591,7 +591,7 @@ const FilesPage = (): JSX.Element | null => {
           {
             id: filePath,
             name: fileName,
-            type: "file",
+            type: "file" as const,
             size: "0 B",
             sizeBytes: 0,
             modified: new Date().toLocaleString(),
@@ -1924,10 +1924,12 @@ const FilesPage = (): JSX.Element | null => {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        navigator.clipboard.writeText(
-                          `sftp://${server.id}.${user.email}@${server.node.host}:${server.node.sftpPort}`
-                        );
-                        toast.success("Connection string copied to clipboard");
+                        if (server.node) {
+                          navigator.clipboard.writeText(
+                            `sftp://${server.id}.${user.email}@${server.node.host}:${server.node.sftpPort}`
+                          );
+                          toast.success("Connection string copied to clipboard");
+                        }
                       }}
                       className={cn(
                         isDark

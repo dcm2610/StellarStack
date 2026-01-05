@@ -771,7 +771,7 @@ const SchedulesPage = (): JSX.Element | null => {
         isValid={isFormValid && !isSaving}
         size="lg"
       >
-        <ScheduleForm />
+        {ScheduleForm}
       </FormModal>
 
       {/* Edit Schedule Modal */}
@@ -786,7 +786,7 @@ const SchedulesPage = (): JSX.Element | null => {
         isValid={isFormValid && !isSaving}
         size="lg"
       >
-        <ScheduleForm />
+        {ScheduleForm}
       </FormModal>
 
       {/* Delete Schedule Modal */}
