@@ -451,7 +451,8 @@ servers.post("/", requireAdmin, async (c) => {
   const variablesEnvironment: Record<string, string> = {};
 
   for (const v of blueprintVariables) {
-    variablesEnvironment[v.env_variable] = variablesWithPort[v.env_variable] ?? v.default_value ?? "";
+    variablesEnvironment[v.env_variable] =
+      variablesWithPort[v.env_variable] ?? v.default_value ?? "";
   }
 
   // Determine which docker image to use
@@ -2160,7 +2161,7 @@ servers.patch("/:serverId/backups/lock", requireServerAccess, async (c) => {
       data: { isLocked: body.locked },
     });
 
-    await logActivityFromContext(c, ActivityEvents.BACKUP_UPDATE, {
+    await logActivityFromContext(c, ActivityEvents.BACKUP_LOCK, {
       serverId: server.id,
       metadata: { backupId: id, locked: body.locked },
     });
