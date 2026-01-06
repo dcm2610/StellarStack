@@ -217,6 +217,7 @@ export interface Server {
   config?: Record<string, unknown>;
   variables?: Record<string, string>;
   dockerImage?: string;
+  customStartupCommands?: string;
   nodeId: string;
   node?: Node;
   blueprintId: string;
@@ -311,27 +312,33 @@ export interface ScheduleTask {
   id?: string;
   action: string;
   payload?: string;
-  sequence_id: number;
-  time_offset: number;
+  sequence: number;
+  timeOffset: number;
 }
 
 export interface Schedule {
   id: string;
-  container_id: string;
   name: string;
-  cron: string;
+  cronExpression: string;
   tasks: ScheduleTask[];
-  enabled: boolean;
-  last_run?: string;
-  next_run?: string;
-  created_at: string;
+  isActive: boolean;
+  isProcessing?: boolean;
+  lastRunAt?: string;
+  nextRunAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateScheduleData {
   name: string;
-  cron: string;
-  tasks: ScheduleTask[];
-  enabled?: boolean;
+  cronExpression: string;
+  tasks: Array<{
+    action: string;
+    payload?: string;
+    sequence: number;
+    timeOffset: number;
+  }>;
+  isActive?: boolean;
 }
 
 export interface ConsoleInfo {
@@ -361,6 +368,7 @@ export interface StartupConfig {
   dockerImages: DockerImageOption[];
   selectedDockerImage: string;
   startupCommand: string;
+  customStartupCommands: string;
   features: string[];
   stopCommand: string;
 }
@@ -368,6 +376,7 @@ export interface StartupConfig {
 export interface UpdateStartupData {
   variables?: Record<string, string>;
   dockerImage?: string;
+  customStartupCommands?: string;
 }
 
 export interface DownloadToken {

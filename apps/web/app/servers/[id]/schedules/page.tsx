@@ -39,8 +39,8 @@ interface LocalTask {
   id: string;
   action: ActionType;
   payload?: string;
-  sequence_id: number;
-  time_offset: number;
+  sequence: number;
+  timeOffset: number;
 }
 
 const actionOptions: { value: ActionType; label: string; icon: JSX.Element }[] = [
@@ -153,12 +153,12 @@ const SchedulesPage = (): JSX.Element | null => {
         id: t.id || `task-${i}-${Date.now()}`,
         action: t.action as ActionType,
         payload: t.payload,
-        sequence_id: t.sequence_id,
-        time_offset: t.time_offset,
+        sequence: t.sequence,
+        timeOffset: t.timeOffset,
       }))
     );
-    setFormCron(schedule.cron);
-    setFormEnabled(schedule.enabled);
+    setFormCron(schedule.cronExpression);
+    setFormEnabled(schedule.isActive);
     setEditModalOpen(true);
   };
 
@@ -176,8 +176,8 @@ const SchedulesPage = (): JSX.Element | null => {
         id: `task-${Date.now()}`,
         action,
         payload: action === "command" ? "" : undefined,
-        sequence_id: prev.length,
-        time_offset: 0,
+        sequence: prev.length,
+        timeOffset: 0,
       };
       return [...prev, newTask];
     });
@@ -185,7 +185,7 @@ const SchedulesPage = (): JSX.Element | null => {
 
   const removeTask = useCallback((taskId: string) => {
     setFormTasks((prev) =>
-      prev.filter((t) => t.id !== taskId).map((t, i) => ({ ...t, sequence_id: i }))
+      prev.filter((t) => t.id !== taskId).map((t, i) => ({ ...t, sequence: i }))
     );
   }, []);
 
@@ -194,7 +194,7 @@ const SchedulesPage = (): JSX.Element | null => {
   }, []);
 
   const updateTaskOffset = useCallback((taskId: string, offset: number) => {
-    setFormTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, time_offset: offset } : t)));
+    setFormTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, timeOffset: offset } : t)));
   }, []);
 
   const handleCreate = async () => {
@@ -208,7 +208,7 @@ const SchedulesPage = (): JSX.Element | null => {
           action: t.action,
           payload: t.payload,
           sequence: i,
-          timeOffset: t.time_offset,
+          timeOffset: t.timeOffset,
         })),
       };
       await servers.schedules.create(serverId, data);
@@ -235,7 +235,7 @@ const SchedulesPage = (): JSX.Element | null => {
           action: t.action,
           payload: t.payload,
           sequence: i,
-          timeOffset: t.time_offset,
+          timeOffset: t.timeOffset,
         })),
       };
       await servers.schedules.update(serverId, selectedSchedule.id, data);
@@ -267,13 +267,13 @@ const SchedulesPage = (): JSX.Element | null => {
     try {
       await servers.schedules.update(serverId, schedule.id, {
         name: schedule.name,
-        cronExpression: schedule.cron,
-        isActive: !schedule.enabled,
+        cronExpression: schedule.cronExpression,
+        isActive: !schedule.isActive,
         tasks: schedule.tasks.map((t) => ({
           action: t.action,
           payload: t.payload,
-          sequence: t.sequence_id,
-          timeOffset: t.time_offset,
+          sequence: t.sequence,
+          timeOffset: t.timeOffset,
         })),
       });
       fetchSchedules();
@@ -293,15 +293,15 @@ const SchedulesPage = (): JSX.Element | null => {
   }, []);
 
   const formatNextRun = (schedule: Schedule): string => {
-    if (schedule.next_run) {
-      return new Date(schedule.next_run).toLocaleString();
+    if (schedule.nextRunAt) {
+      return new Date(schedule.nextRunAt).toLocaleString();
     }
     return "Not scheduled";
   };
 
   const formatLastRun = (schedule: Schedule): string => {
-    if (schedule.last_run) {
-      return new Date(schedule.last_run).toLocaleString();
+    if (schedule.lastRunAt) {
+      return new Date(schedule.lastRunAt).toLocaleString();
     }
     return "Never";
   };
@@ -334,6 +334,7 @@ const SchedulesPage = (): JSX.Element | null => {
             onChange={(e) => setFormName(e.target.value)}
             placeholder="e.g., Daily Maintenance"
             disabled={isSaving}
+            autoFocus
             className={cn(
               "transition-all",
               isDark
@@ -409,7 +410,7 @@ const SchedulesPage = (): JSX.Element | null => {
                       />
                       <Input
                         type="number"
-                        value={task.time_offset}
+                        value={task.timeOffset}
                         onChange={(e) => updateTaskOffset(task.id, parseInt(e.target.value) || 0)}
                         min={0}
                         disabled={isSaving}
@@ -616,7 +617,7 @@ const SchedulesPage = (): JSX.Element | null => {
                     isDark
                       ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
                       : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100",
-                    !schedule.enabled && "opacity-50"
+                    !schedule.isActive && "opacity-50"
                   )}
                 >
                   {/* Corner decorations */}
@@ -692,14 +693,14 @@ const SchedulesPage = (): JSX.Element | null => {
                             <span className={cn(isDark ? "text-zinc-300" : "text-zinc-700")}>
                               {getActionLabel(task.action)}
                             </span>
-                            {task.time_offset > 0 && (
+                            {task.timeOffset > 0 && (
                               <span
                                 className={cn(
                                   "text-[10px]",
                                   isDark ? "text-zinc-500" : "text-zinc-400"
                                 )}
                               >
-                                +{task.time_offset}s
+                                +{task.timeOffset}s
                               </span>
                             )}
                           </div>
@@ -712,7 +713,7 @@ const SchedulesPage = (): JSX.Element | null => {
                           isDark ? "text-zinc-500" : "text-zinc-500"
                         )}
                       >
-                        <span className="font-mono">{schedule.cron}</span>
+                        <span className="font-mono">{schedule.cronExpression}</span>
                         <span>-</span>
                         <span>Next: {formatNextRun(schedule)}</span>
                         <span>-</span>
@@ -721,7 +722,7 @@ const SchedulesPage = (): JSX.Element | null => {
                     </div>
                     <div className="ml-4 flex items-center gap-2">
                       <Switch
-                        checked={schedule.enabled}
+                        checked={schedule.isActive}
                         onCheckedChange={() => toggleSchedule(schedule)}
                         isDark={isDark}
                       />

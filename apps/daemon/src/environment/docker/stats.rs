@@ -70,7 +70,16 @@ pub async fn poll_stats(
                     let disk_limit = env.config().limits.disk_space;
 
                     // Calculate actual disk usage (synchronous to avoid blocking the stream)
-                    let disk_usage = calculate_dir_size_sync(data_dir).unwrap_or(0);
+                    let disk_usage = match calculate_dir_size_sync(data_dir) {
+                        Ok(size) => {
+                            debug!("Successfully calculated disk usage for {:?}: {} bytes", data_dir, size);
+                            size
+                        }
+                        Err(e) => {
+                            warn!("Failed to calculate disk usage for {:?}: {}, using 0", data_dir, e);
+                            0
+                        }
+                    };
                     (disk_usage, disk_limit)
                 } else {
                     (0, env.config().limits.disk_space)

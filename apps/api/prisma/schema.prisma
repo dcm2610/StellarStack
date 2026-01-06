@@ -286,6 +286,9 @@ model Server {
   // e.g., "ghcr.io/ptero-eggs/yolks:java_21"
   dockerImage  String?
 
+  // Custom startup commands to append to the generated startup command
+  customStartupCommands String?  @db.Text
+
   // Relations
   nodeId       String
   node         Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
@@ -307,6 +310,8 @@ model Server {
   webhooks      Webhook[]
   subdomain     Subdomain?
   customDomains CustomDomain[]
+  firewallRules FirewallRule[]
+  settings      ServerSettings?
 
   // Primary allocation for this server (first allocation by default)
   primaryAllocationId String?
@@ -600,6 +605,63 @@ model CustomDomain {
   updatedAt  DateTime @updatedAt
 
   @@map("custom_domains")
+}
+
+// ============================================
+// Firewall Tables
+// ============================================
+
+enum FirewallDirectionEnum {
+  INBOUND
+  OUTBOUND
+}
+
+enum FirewallActionEnum {
+  ALLOW
+  DENY
+}
+
+model FirewallRule {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+
+  direction   FirewallDirectionEnum
+
+  action      FirewallActionEnum
+
+  port        Int
+  protocol    String           @default("tcp")  // tcp, udp, both
+
+  sourceIp   String?          // Specific IP address to allow/deny (null = any)
+
+  isActive    Boolean          @default(true)
+
+  serverId    String
+  server      Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([serverId, port, protocol])
+  @@map("firewall_rules")
+}
+
+// ============================================
+// Server Settings Tables
+// ============================================
+
+model ServerSettings {
+  id        String   @id @default(cuid())
+  serverId  String   @unique
+  motd      String?  // Message of Day
+
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("server_settings")
 }
 
 // ============================================

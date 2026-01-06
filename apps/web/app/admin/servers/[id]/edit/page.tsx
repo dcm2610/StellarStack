@@ -22,7 +22,8 @@ import { useServer, useServerMutations } from "@/hooks/queries";
 import { useAdminTheme, CornerAccents } from "@/hooks/use-admin-theme";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { toast } from "sonner";
-import { servers, Allocation } from "@/lib/api";
+import { servers, Allocation, Blueprint, blueprints, nodes } from "@/lib/api";
+import type { Node } from "@/lib/api";
 
 export default function EditServerPage() {
   const router = useRouter();
@@ -48,6 +49,23 @@ export default function EditServerPage() {
   const [isAddingAllocation, setIsAddingAllocation] = useState(false);
   const [removingAllocationId, setRemovingAllocationId] = useState<string | null>(null);
 
+  // Blueprint state
+  const [blueprintList, setBlueprintList] = useState<Blueprint[]>([]);
+  const [isLoadingBlueprints, setIsLoadingBlueprints] = useState(false);
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState<string>("");
+  const [showBlueprintModal, setShowBlueprintModal] = useState(false);
+  const [reinstallOnBlueprintChange, setReinstallOnBlueprintChange] = useState(false);
+  const [isChangingBlueprint, setIsChangingBlueprint] = useState(false);
+
+  // Transfer state
+  const [nodesList, setNodesList] = useState<Node[]>([]);
+  const [isLoadingNodes, setIsLoadingNodes] = useState(false);
+  const [selectedTargetNodeId, setSelectedTargetNodeId] = useState<string>("");
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferStatus, setTransferStatus] = useState<any>(null);
+  const [showTransferHistory, setShowTransferHistory] = useState(false);
+
   // Track if form has been initialized to prevent polling from overwriting user edits
   const [formInitialized, setFormInitialized] = useState(false);
 
@@ -68,6 +86,7 @@ export default function EditServerPage() {
   useEffect(() => {
     if (server && !formInitialized) {
       setSelectedStatus(server.status);
+      setSelectedBlueprintId(server.blueprintId || "");
       setFormData({
         name: server.name,
         description: server.description || "",
@@ -86,6 +105,40 @@ export default function EditServerPage() {
       setFormInitialized(true);
     }
   }, [server, formInitialized]);
+
+  // Load blueprints
+  useEffect(() => {
+    const loadBlueprints = async () => {
+      setIsLoadingBlueprints(true);
+      try {
+        const list = await blueprints.list();
+        setBlueprintList(list);
+      } catch (error: any) {
+        toast.error("Failed to load blueprints");
+      } finally {
+        setIsLoadingBlueprints(false);
+      }
+    };
+
+    loadBlueprints();
+  }, []);
+
+  // Load nodes for transfer
+  useEffect(() => {
+    const loadNodes = async () => {
+      setIsLoadingNodes(true);
+      try {
+        const list = await nodes.list();
+        setNodesList(list);
+      } catch (error: any) {
+        toast.error("Failed to load nodes");
+      } finally {
+        setIsLoadingNodes(false);
+      }
+    };
+
+    loadNodes();
+  }, []);
 
   // Load allocations
   const loadAllocations = async () => {
@@ -144,6 +197,53 @@ export default function EditServerPage() {
     }
   };
 
+  // Transfer handlers
+  const handleStartTransfer = async () => {
+    if (!serverId || !selectedTargetNodeId) return;
+    setIsTransferring(true);
+    try {
+      await servers.transfer.start(serverId, selectedTargetNodeId);
+      toast.success("Transfer initiated successfully");
+      setShowTransferModal(false);
+      setSelectedTargetNodeId("");
+      fetchTransferStatus();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to initiate transfer");
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
+  const fetchTransferStatus = async () => {
+    if (!serverId) return;
+    try {
+      const status = await servers.transfer.get(serverId);
+      setTransferStatus(status);
+    } catch (error: any) {
+      console.error("Failed to fetch transfer status", error);
+    }
+  };
+
+  const handleCancelTransfer = async () => {
+    if (!serverId) return;
+    try {
+      await servers.transfer.cancel(serverId);
+      toast.success("Transfer cancelled");
+      setTransferStatus(null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to cancel transfer");
+    }
+  };
+
+  // Load transfer status when component mounts or modal opens
+  useEffect(() => {
+    if (showTransferModal && serverId) {
+      fetchTransferStatus();
+      const interval = setInterval(fetchTransferStatus, 5000); // Poll every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [showTransferModal, serverId]);
+
   const handleReinstall = async () => {
     setIsReinstalling(true);
     try {
@@ -166,6 +266,25 @@ export default function EditServerPage() {
       refetch();
     } catch (error: any) {
       toast.error(error.message || "Failed to update server status");
+    }
+  };
+
+  const handleChangeBlueprint = async () => {
+    if (!serverId || !selectedBlueprintId) return;
+    setIsChangingBlueprint(true);
+    try {
+      await servers.changeBlueprint(serverId, {
+        blueprintId: selectedBlueprintId,
+        reinstall: reinstallOnBlueprintChange,
+      });
+      toast.success("Server blueprint changed successfully");
+      setShowBlueprintModal(false);
+      setReinstallOnBlueprintChange(false);
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to change server blueprint");
+    } finally {
+      setIsChangingBlueprint(false);
     }
   };
 
@@ -490,6 +609,46 @@ export default function EditServerPage() {
                     </div>
                   </div>
 
+                  {/* Blueprint Change */}
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h3
+                          className={cn(
+                            "text-sm font-medium tracking-wider uppercase",
+                            isDark ? "text-zinc-300" : "text-zinc-700"
+                          )}
+                        >
+                          Game Type
+                        </h3>
+                        <p
+                          className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}
+                        >
+                          {server?.blueprint?.name || "No blueprint selected"}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBlueprintModal(true)}
+                        className={cn(
+                          "flex items-center gap-2 text-xs tracking-wider uppercase",
+                          isDark
+                            ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                            : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                        )}
+                      >
+                        Change Blueprint
+                      </Button>
+                    </div>
+                  </div>
+
                   {/* Allocations */}
                   <div
                     className={cn(
@@ -744,6 +903,161 @@ export default function EditServerPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Server Transfer */}
+                  <div
+                    className={cn(
+                      "border-t pt-4",
+                      isDark ? "border-zinc-700/50" : "border-zinc-200"
+                    )}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h3
+                          className={cn(
+                            "text-sm font-medium tracking-wider uppercase",
+                            isDark ? "text-zinc-300" : "text-zinc-700"
+                          )}
+                        >
+                          Server Transfer
+                        </h3>
+                        <p
+                          className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}
+                        >
+                          Transfer server to another node
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTransferHistory(!showTransferHistory)}
+                        className={cn(
+                          "flex items-center gap-2 text-xs tracking-wider uppercase",
+                          isDark
+                            ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                            : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                        )}
+                      >
+                        {showTransferHistory ? "Hide History" : "Show History"}
+                      </Button>
+                    </div>
+
+                    {/* Transfer History */}
+                    {showTransferHistory && transferStatus && (
+                      <div
+                        className={cn(
+                          "mb-4 border p-4",
+                          isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "mb-2 flex items-center justify-between",
+                            isDark ? "text-zinc-300" : "text-zinc-700"
+                          )}
+                        >
+                          <span className="text-sm">Transfer Status</span>
+                          <span
+                            className={cn(
+                              "text-xs font-medium",
+                              transferStatus.status === "PENDING"
+                                ? "text-yellow-400"
+                                : transferStatus.status === "COMPLETED"
+                                  ? "text-green-400"
+                                  : transferStatus.status === "FAILED"
+                                    ? "text-red-400"
+                                    : "text-zinc-500"
+                            )}
+                          >
+                            {transferStatus.status}
+                          </span>
+                        </div>
+                        {transferStatus.progress > 0 && (
+                          <div
+                            className={cn(
+                              "mb-2 h-2 overflow-hidden rounded-full",
+                              isDark ? "bg-zinc-800" : "bg-zinc-200"
+                            )}
+                          >
+                            <div
+                              className="h-full rounded-full bg-blue-500 transition-all"
+                              style={{ width: `${transferStatus.progress}%` }}
+                            />
+                          </div>
+                        )}
+                        <div className="space-y-2 text-xs">
+                          <div>
+                            <span className={cn(isDark ? "text-zinc-500" : "text-zinc-600")}>
+                              From:
+                            </span>{" "}
+                            <span className={cn(isDark ? "text-zinc-300" : "text-zinc-800")}>
+                              {transferStatus.sourceNode?.displayName || "Unknown"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className={cn(isDark ? "text-zinc-500" : "text-zinc-600")}>
+                              To:
+                            </span>{" "}
+                            <span className={cn(isDark ? "text-zinc-300" : "text-zinc-800")}>
+                              {transferStatus.targetNode?.displayName || "Unknown"}
+                            </span>
+                          </div>
+                          {transferStatus.error && (
+                            <div>
+                              <span className={cn(isDark ? "text-zinc-500" : "text-zinc-600")}>
+                                Error:
+                              </span>{" "}
+                              <span className="text-red-400">{transferStatus.error}</span>
+                            </div>
+                          )}
+                        </div>
+                        {transferStatus.status !== "COMPLETED" &&
+                          transferStatus.status !== "FAILED" && (
+                            <div className="flex gap-2 pt-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelTransfer}
+                                className={cn(
+                                  "text-xs tracking-wider uppercase",
+                                  isDark
+                                    ? "border-red-700/50 text-red-400 hover:border-red-600 hover:text-red-300"
+                                    : "border-red-200 text-red-600 hover:border-red-400"
+                                )}
+                              >
+                                Cancel Transfer
+                              </Button>
+                            </div>
+                          )}
+                      </div>
+                    )}
+
+                    {!showTransferHistory && (
+                      <div className="mt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowTransferModal(true)}
+                          disabled={
+                            !!transferStatus &&
+                            transferStatus.status !== "COMPLETED" &&
+                            transferStatus.status !== "FAILED"
+                          }
+                          className={cn(
+                            "flex w-full items-center gap-2 text-xs tracking-wider uppercase",
+                            isDark
+                              ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+                              : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+                          )}
+                        >
+                          Start Transfer
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -795,6 +1109,188 @@ export default function EditServerPage() {
         variant="danger"
         isLoading={isReinstalling}
       />
+
+      {/* Blueprint Change Modal */}
+      {showBlueprintModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            className={cn(
+              "w-full max-w-md border p-6 shadow-2xl",
+              isDark ? "border-zinc-800 bg-zinc-900" : "border-zinc-200 bg-white"
+            )}
+          >
+            <h2
+              className={cn("mb-4 text-lg font-medium", isDark ? "text-zinc-100" : "text-zinc-900")}
+            >
+              Change Game Type
+            </h2>
+            <p className={cn("mb-4 text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+              Select a new blueprint for this server. Changing the blueprint will update the
+              server's game type and configuration.
+            </p>
+
+            {isLoadingBlueprints ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner className="h-6 w-6" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClasses}>Blueprint</label>
+                  <select
+                    value={selectedBlueprintId}
+                    onChange={(e) => setSelectedBlueprintId(e.target.value)}
+                    className={inputClasses}
+                  >
+                    <option value="">Select blueprint...</option>
+                    {blueprintList.map((blueprint) => (
+                      <option key={blueprint.id} value={blueprint.id}>
+                        {blueprint.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <input
+                    type="checkbox"
+                    id="reinstallOnBlueprintChange"
+                    checked={reinstallOnBlueprintChange}
+                    onChange={(e) => setReinstallOnBlueprintChange(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <label
+                    htmlFor="reinstallOnBlueprintChange"
+                    className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}
+                  >
+                    Reinstall server after changing blueprint
+                  </label>
+                </div>
+                <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                  Warning: Reinstalling will wipe all server files. Uncheck if you only want to
+                  change the blueprint configuration.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowBlueprintModal(false);
+                  setSelectedBlueprintId(server?.blueprintId || "");
+                  setReinstallOnBlueprintChange(false);
+                }}
+                disabled={isChangingBlueprint}
+                className={cn(
+                  "text-xs tracking-wider uppercase",
+                  isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
+                )}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!selectedBlueprintId || isChangingBlueprint}
+                onClick={handleChangeBlueprint}
+                className={cn(
+                  "text-xs tracking-wider uppercase",
+                  isDark
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                )}
+              >
+                {isChangingBlueprint ? "Changing..." : "Change Blueprint"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            className={cn(
+              "w-full max-w-md border p-6 shadow-2xl",
+              isDark ? "border-zinc-800 bg-zinc-900" : "border-zinc-200 bg-white"
+            )}
+          >
+            <h2
+              className={cn("mb-4 text-lg font-medium", isDark ? "text-zinc-100" : "text-zinc-900")}
+            >
+              Transfer Server
+            </h2>
+            <p className={cn("mb-6 text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+              Select a target node to transfer this server to. The server will be archived and moved
+              to the new node.
+            </p>
+
+            {isLoadingNodes ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner className="h-6 w-6" />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className={labelClasses}>Target Node</label>
+                  <select
+                    value={selectedTargetNodeId}
+                    onChange={(e) => setSelectedTargetNodeId(e.target.value)}
+                    className={inputClasses}
+                  >
+                    <option value="">Select node...</option>
+                    {nodesList
+                      .filter((node) => node.id !== server?.nodeId)
+                      .map((node) => (
+                        <option key={node.id} value={node.id}>
+                          {node.displayName} ({node.location?.name || "Unknown"})
+                        </option>
+                      ))}
+                  </select>
+                  {server?.node && (
+                    <p className={cn("mt-2 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                      Current node: {server.node.displayName}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4 flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowTransferModal(false);
+                      setSelectedTargetNodeId("");
+                    }}
+                    disabled={isTransferring}
+                    className={cn(
+                      "text-xs tracking-wider uppercase",
+                      isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
+                    )}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!selectedTargetNodeId || isTransferring}
+                    onClick={handleStartTransfer}
+                    className={cn(
+                      "text-xs tracking-wider uppercase",
+                      isDark
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    )}
+                  >
+                    {isTransferring ? "Transferring..." : "Start Transfer"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -177,6 +177,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
   const { setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
   const [showConnectionBanner, setShowConnectionBanner] = useState(false);
+  const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
   const labels = useLabels();
 
   const {
@@ -245,8 +246,13 @@ const ServerOverviewPage = (): JSX.Element | null => {
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
-    if (wsEnabled && !wsConnected && !wsConnecting) {
-      // Wait 3 seconds before showing the banner
+    // Mark that we've attempted a connection after a brief delay
+    if (wsEnabled && !hasAttemptedConnection) {
+      setTimeout(() => setHasAttemptedConnection(true), 1000);
+    }
+
+    if (wsEnabled && !wsConnected && !wsConnecting && hasAttemptedConnection) {
+      // Wait 3 seconds before showing the banner (only after we've attempted connection)
       timeoutId = setTimeout(() => {
         setShowConnectionBanner(true);
       }, 3000);
@@ -260,7 +266,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
         clearTimeout(timeoutId);
       }
     };
-  }, [wsEnabled, wsConnected, wsConnecting]);
+  }, [wsEnabled, wsConnected, wsConnecting, hasAttemptedConnection]);
 
   const isDark = mounted ? resolvedTheme === "dark" : true;
 

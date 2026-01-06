@@ -12,6 +12,8 @@ import { ServerMaintenancePlaceholder } from "@/components/server-maintenance-pl
 import { ServerSuspendedPlaceholder } from "@/components/server-suspended-placeholder/server-suspended-placeholder";
 import { ServerRestoringPlaceholder } from "@/components/server-restoring-placeholder/server-restoring-placeholder";
 import { cn } from "@workspace/ui/lib/utils";
+import { UploadProvider } from "@/components/upload-provider";
+import { UploadProgressIndicator } from "@/components/upload-progress-indicator";
 
 // Memoized background component to prevent re-renders
 const PersistentBackground = memo(function PersistentBackground({ isDark }: { isDark: boolean }) {
@@ -24,13 +26,7 @@ const PersistentBackground = memo(function PersistentBackground({ isDark }: { is
 });
 
 // Wrapper component that checks server status and shows placeholder if needed
-function ServerStatusWrapper({
-  children,
-  isDark,
-}: {
-  children: React.ReactNode;
-  isDark: boolean;
-}) {
+function ServerStatusWrapper({ children, isDark }: { children: React.ReactNode; isDark: boolean }) {
   const { server } = useServer();
 
   // Show suspended placeholder if server is suspended
@@ -80,18 +76,21 @@ export default function ServerLayout({
   const isDark = mounted ? resolvedTheme === "dark" : true;
 
   return (
-    <ServerProvider serverId={serverId}>
-      {/* Persistent background that doesn't re-render on navigation */}
-      <PersistentBackground isDark={isDark} />
+    <UploadProvider>
+      <ServerProvider serverId={serverId}>
+        {/* Persistent background that doesn't re-render on navigation */}
+        <PersistentBackground isDark={isDark} />
 
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <ServerStatusWrapper isDark={isDark}>
-            {children}
-          </ServerStatusWrapper>
-        </SidebarInset>
-      </SidebarProvider>
-    </ServerProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <ServerStatusWrapper isDark={isDark}>
+              {children}
+              <UploadProgressIndicator />
+            </ServerStatusWrapper>
+          </SidebarInset>
+        </SidebarProvider>
+      </ServerProvider>
+    </UploadProvider>
   );
 }

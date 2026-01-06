@@ -33,6 +33,8 @@ const StartupPage = (): JSX.Element | null => {
   const [originalDockerImage, setOriginalDockerImage] = useState("");
   const [startupCommand, setStartupCommand] = useState("");
   const [features, setFeatures] = useState<string[]>([]);
+  const [customStartupCommands, setCustomStartupCommands] = useState("");
+  const [originalCustomStartupCommands, setOriginalCustomStartupCommands] = useState("");
 
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [reinstallModalOpen, setReinstallModalOpen] = useState(false);
@@ -60,6 +62,8 @@ const StartupPage = (): JSX.Element | null => {
       setOriginalDockerImage(config.selectedDockerImage);
       setStartupCommand(config.startupCommand);
       setFeatures(config.features);
+      setCustomStartupCommands(config.customStartupCommands || "");
+      setOriginalCustomStartupCommands(config.customStartupCommands || "");
     } catch (error) {
       toast.error("Failed to load startup configuration");
     } finally {
@@ -98,9 +102,15 @@ const StartupPage = (): JSX.Element | null => {
     setSaved(false);
   };
 
+  const handleCustomStartupCommandsChange = (value: string) => {
+    setCustomStartupCommands(value);
+    setSaved(false);
+  };
+
   const hasChanges =
     JSON.stringify(variables) !== JSON.stringify(originalVariables) ||
-    selectedDockerImage !== originalDockerImage;
+    selectedDockerImage !== originalDockerImage ||
+    customStartupCommands !== originalCustomStartupCommands;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -116,10 +126,12 @@ const StartupPage = (): JSX.Element | null => {
       await servers.startup.update(serverId, {
         variables: variablesMap,
         dockerImage: selectedDockerImage,
+        customStartupCommands: customStartupCommands,
       });
 
       setOriginalVariables(JSON.parse(JSON.stringify(variables)));
       setOriginalDockerImage(selectedDockerImage);
+      setOriginalCustomStartupCommands(customStartupCommands);
       setSaveModalOpen(false);
       setSaved(true);
       toast.success("Startup configuration saved");
@@ -137,6 +149,7 @@ const StartupPage = (): JSX.Element | null => {
   const handleReset = () => {
     setVariables(JSON.parse(JSON.stringify(originalVariables)));
     setSelectedDockerImage(originalDockerImage);
+    setCustomStartupCommands(originalCustomStartupCommands);
   };
 
   const handleReinstall = async () => {
@@ -403,6 +416,69 @@ const StartupPage = (): JSX.Element | null => {
             >
               {getStartupCommandPreview() || "No startup command configured"}
             </div>
+          </div>
+
+          {/* Custom Startup Commands */}
+          <div
+            className={cn(
+              "relative mb-6 border p-4",
+              isDark
+                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 right-0 h-2 w-2 border-b border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <label
+              className={cn(
+                "text-[10px] font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-500" : "text-zinc-400"
+              )}
+            >
+              Custom Startup Commands
+            </label>
+            <p
+              className={cn(
+                "mt-1 mb-3 text-xs",
+                isDark ? "text-zinc-400" : "text-zinc-500"
+              )}
+            >
+              Additional commands to append to the startup command. These will be executed after the main command.
+            </p>
+            <textarea
+              value={customStartupCommands}
+              onChange={(e) => handleCustomStartupCommandsChange(e.target.value)}
+              placeholder="e.g., && echo 'Server started' || --additional-flag"
+              rows={3}
+              className={cn(
+                "w-full resize-y border p-3 font-mono text-xs outline-none transition-colors",
+                isDark
+                  ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-300 placeholder:text-zinc-600 focus:border-zinc-500"
+                  : "border-zinc-200 bg-zinc-100 text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400"
+              )}
+            />
           </div>
 
           {/* Variables */}

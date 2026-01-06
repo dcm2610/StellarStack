@@ -165,6 +165,7 @@ const updateServerSchema = z.object({
 const updateStartupSchema = z.object({
   variables: z.record(z.string()).optional(), // { "MINECRAFT_VERSION": "1.20.4", ... }
   dockerImage: z.string().optional(), // Selected docker image from blueprint
+  customStartupCommands: z.string().optional(), // Custom commands to append
 });
 
 // Helper to communicate with daemon
@@ -395,6 +396,13 @@ servers.post("/", requireAdmin, async (c) => {
   }
 
   // Create server
+  const primaryAllocationPort = allocations[0]?.port;
+  const variablesData = (parsed.data.variables as Record<string, string>) || {};
+  const variablesWithPort = { ...variablesData };
+  if (primaryAllocationPort && !variablesWithPort.SERVER_PORT) {
+    variablesWithPort.SERVER_PORT = String(primaryAllocationPort);
+  }
+
   let server = await db.server.create({
     data: {
       name: parsed.data.name,
@@ -411,7 +419,7 @@ servers.post("/", requireAdmin, async (c) => {
       backupLimit: parsed.data.backupLimit,
       allocationLimit: parsed.data.allocationLimit,
       config: parsed.data.config as any,
-      variables: parsed.data.variables as any,
+      variables: variablesWithPort as any,
       dockerImage: parsed.data.dockerImage,
       status: "INSTALLING",
     },
@@ -440,11 +448,10 @@ servers.post("/", requireAdmin, async (c) => {
 
   // Build environment from blueprint variables + server overrides
   const blueprintVariables = (blueprint.variables as any[]) || [];
-  const serverVariables = (parsed.data.variables as Record<string, string>) || {};
   const variablesEnvironment: Record<string, string> = {};
 
   for (const v of blueprintVariables) {
-    variablesEnvironment[v.env_variable] = serverVariables[v.env_variable] ?? v.default_value ?? "";
+    variablesEnvironment[v.env_variable] = variablesWithPort[v.env_variable] ?? v.default_value ?? "";
   }
 
   // Determine which docker image to use
@@ -1356,6 +1363,7 @@ servers.get("/:serverId/startup", requireServerAccess, async (c) => {
     dockerImages: dockerImageOptions,
     selectedDockerImage,
     startupCommand,
+    customStartupCommands: fullServer.customStartupCommands || "",
     features: (blueprint.features as string[]) || [],
     stopCommand: blueprint.stopCommand || "stop",
   });
@@ -1414,6 +1422,11 @@ servers.patch("/:serverId/startup", requireServerAccess, async (c) => {
     }
   }
 
+  // Update custom startup commands
+  if (parsed.data.customStartupCommands !== undefined) {
+    updateData.customStartupCommands = parsed.data.customStartupCommands;
+  }
+
   const updated = await db.server.update({
     where: { id: server.id },
     data: updateData,
@@ -1428,6 +1441,7 @@ servers.patch("/:serverId/startup", requireServerAccess, async (c) => {
     success: true,
     variables: updated.variables,
     dockerImage: updated.dockerImage,
+    customStartupCommands: updated.customStartupCommands,
   });
 });
 
@@ -2118,7 +2132,7 @@ servers.delete("/:serverId/backups/delete", requireServerAccess, requireNotSuspe
   }
 });
 
-// Lock/unlock backup - not yet implemented in new daemon
+// Lock/unlock backup
 servers.patch("/:serverId/backups/lock", requireServerAccess, async (c) => {
   const server = c.get("server");
   const id = c.req.query("id");
@@ -2128,8 +2142,34 @@ servers.patch("/:serverId/backups/lock", requireServerAccess, async (c) => {
     return c.json({ error: "Backup ID required" }, 400);
   }
 
-  // TODO: Add backup lock endpoint to daemon
-  return c.json({ success: true, locked: body.locked || false });
+  if (typeof body.locked !== "boolean") {
+    return c.json({ error: "locked field must be a boolean" }, 400);
+  }
+
+  try {
+    const backup = await db.backup.findUnique({
+      where: { id },
+    });
+
+    if (!backup || backup.serverId !== server.id) {
+      return c.json({ error: "Backup not found" }, 404);
+    }
+
+    const updated = await db.backup.update({
+      where: { id },
+      data: { isLocked: body.locked },
+    });
+
+    await logActivityFromContext(c, ActivityEvents.BACKUP_UPDATE, {
+      serverId: server.id,
+      metadata: { backupId: id, locked: body.locked },
+    });
+
+    return c.json({ success: true, locked: updated.isLocked });
+  } catch (error: any) {
+    console.error(`[Backup Lock] Failed to update backup ${id}:`, error.message);
+    return c.json({ error: error.message }, 500);
+  }
 });
 
 // === Schedules ===
@@ -3172,6 +3212,207 @@ servers.get("/:serverId/transfer/history", requireServerAccess, async (c) => {
       completedAt: t.completedAt,
     }))
   );
+});
+
+// === Server Settings (MOTD) ===
+
+const serverSettingsSchema = z.object({
+  motd: z.string().max(500).optional(),
+});
+
+// Get server settings
+servers.get("/:serverId/settings", requireServerAccess, async (c) => {
+  const server = c.get("server");
+
+  const settings = await db.serverSettings.findUnique({
+    where: { serverId: server.id },
+  });
+
+  return c.json({
+    motd: settings?.motd || null,
+  });
+});
+
+// Update server settings
+servers.patch("/:serverId/settings", requireServerAccess, async (c) => {
+  const server = c.get("server");
+  const user = c.get("user");
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Only administrators can manage server settings" }, 403);
+  }
+
+  const body = await c.req.json();
+  const parsed = serverSettingsSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.errors }, 400);
+  }
+
+  const settings = await db.serverSettings.upsert({
+    where: { serverId: server.id },
+    create: {
+      serverId: server.id,
+      ...parsed.data,
+    },
+    update: parsed.data,
+  });
+
+  await logActivityFromContext(c, ActivityEvents.SERVER_UPDATE, {
+    serverId: server.id,
+    metadata: { settingsUpdate: parsed.data },
+  });
+
+  return c.json(settings);
+});
+
+// === Firewall Management ===
+
+const firewallRuleSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  direction: z.enum(["INBOUND", "OUTBOUND"]),
+  action: z.enum(["ALLOW", "DENY"]),
+  port: z.number().int().min(1).max(65535),
+  protocol: z.enum(["tcp", "udp", "both"]),
+  sourceIp: z.string().ip().optional().or(z.literal("")),
+  isActive: z.boolean().optional(),
+});
+
+const firewallRuleUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  direction: z.enum(["INBOUND", "OUTBOUND"]).optional(),
+  action: z.enum(["ALLOW", "DENY"]).optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  protocol: z.enum(["tcp", "udp", "both"]).optional(),
+  sourceIp: z.string().ip().optional().or(z.literal("")).optional(),
+  isActive: z.boolean().optional(),
+});
+
+// List firewall rules
+servers.get("/:serverId/firewall", requireServerAccess, async (c) => {
+  const server = c.get("server");
+
+  const rules = await db.firewallRule.findMany({
+    where: { serverId: server.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return c.json(rules);
+});
+
+// Create firewall rule
+servers.post("/:serverId/firewall", requireServerAccess, async (c) => {
+  const server = c.get("server");
+  const user = c.get("user");
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Only administrators can manage firewall rules" }, 403);
+  }
+
+  const body = await c.req.json();
+  const parsed = firewallRuleSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.errors }, 400);
+  }
+
+  // Clean up sourceIp if empty string
+  const data = {
+    ...parsed.data,
+    sourceIp: parsed.data.sourceIp === "" ? null : parsed.data.sourceIp,
+  };
+
+  const rule = await db.firewallRule.create({
+    data: {
+      serverId: server.id,
+      ...data,
+    },
+  });
+
+  await logActivityFromContext(c, ActivityEvents.SERVER_UPDATE, {
+    serverId: server.id,
+    metadata: { firewallRuleCreated: rule.id },
+  });
+
+  return c.json({ success: true, rule });
+});
+
+// Update firewall rule
+servers.patch("/:serverId/firewall/:ruleId", requireServerAccess, async (c) => {
+  const server = c.get("server");
+  const user = c.get("user");
+  const { ruleId } = c.req.param();
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Only administrators can manage firewall rules" }, 403);
+  }
+
+  const body = await c.req.json();
+  const parsed = firewallRuleUpdateSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "Validation failed", details: parsed.error.errors }, 400);
+  }
+
+  // Verify rule belongs to this server
+  const existingRule = await db.firewallRule.findUnique({
+    where: { id: ruleId },
+  });
+
+  if (!existingRule || existingRule.serverId !== server.id) {
+    return c.json({ error: "Firewall rule not found" }, 404);
+  }
+
+  // Clean up sourceIp if empty string
+  const data = {
+    ...parsed.data,
+    sourceIp: parsed.data.sourceIp === "" ? null : parsed.data.sourceIp,
+  };
+
+  const rule = await db.firewallRule.update({
+    where: { id: ruleId },
+    data,
+  });
+
+  await logActivityFromContext(c, ActivityEvents.SERVER_UPDATE, {
+    serverId: server.id,
+    metadata: { firewallRuleUpdated: rule.id },
+  });
+
+  return c.json({ success: true, rule });
+});
+
+// Delete firewall rule
+servers.delete("/:serverId/firewall/:ruleId", requireServerAccess, async (c) => {
+  const server = c.get("server");
+  const user = c.get("user");
+  const { ruleId } = c.req.param();
+
+  if (user.role !== "admin") {
+    return c.json({ error: "Only administrators can manage firewall rules" }, 403);
+  }
+
+  // Verify rule belongs to this server
+  const existingRule = await db.firewallRule.findUnique({
+    where: { id: ruleId },
+  });
+
+  if (!existingRule || existingRule.serverId !== server.id) {
+    return c.json({ error: "Firewall rule not found" }, 404);
+  }
+
+  await db.firewallRule.delete({
+    where: { id: ruleId },
+  });
+
+  await logActivityFromContext(c, ActivityEvents.SERVER_UPDATE, {
+    serverId: server.id,
+    metadata: { firewallRuleDeleted: ruleId },
+  });
+
+  return c.json({ success: true });
 });
 
 export { servers };

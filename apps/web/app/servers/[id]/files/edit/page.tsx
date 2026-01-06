@@ -48,10 +48,13 @@ export default function FileEditPage() {
   }, [originalContent]);
 
   // Track changes
-  const handleContentChange = useCallback((newContent: string) => {
-    setContent(newContent);
-    setHasChanges(newContent !== originalContent);
-  }, [originalContent]);
+  const handleContentChange = useCallback(
+    (newContent: string) => {
+      setContent(newContent);
+      setHasChanges(newContent !== originalContent);
+    },
+    [originalContent]
+  );
 
   // Handle save
   const handleSave = async () => {
@@ -93,20 +96,32 @@ export default function FileEditPage() {
   const isDark = mounted ? resolvedTheme === "dark" : true;
   const language = detectLanguage(fileName);
 
+  const fileExtension = fileName.split(".").pop()?.toLowerCase() || "";
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"].includes(
+    fileExtension
+  );
+  const isVideo = ["mp4", "webm", "mov", "avi", "mkv", "flv", "wmv", "m4v", "3gp", "ogv"].includes(
+    fileExtension
+  );
+  const isAudio = ["mp3", "wav", "ogg", "flac", "aac", "m4a", "wma", "opus", "aiff", "au"].includes(
+    fileExtension
+  );
+  const isMedia = isImage || isVideo || isAudio;
+
   if (!mounted) {
     return null;
   }
 
   return (
-    <div className={cn("min-h-screen relative", isDark ? "bg-black" : "bg-zinc-50")}>
+    <div className={cn("relative min-h-screen", isDark ? "bg-black" : "bg-zinc-50")}>
       {/* Background is now rendered in the layout for persistence */}
 
-      <div className="relative z-10 h-screen flex flex-col">
+      <div className="relative z-10 flex h-screen flex-col">
         {/* Header */}
         <FadeIn>
           <header
             className={cn(
-              "border-b px-6 py-4 flex items-center justify-between",
+              "flex items-center justify-between border-b px-6 py-4",
               isDark ? "border-zinc-800 bg-black/50" : "border-zinc-200 bg-white/50"
             )}
           >
@@ -116,55 +131,53 @@ export default function FileEditPage() {
                 className={cn(
                   "p-2 transition-colors",
                   isDark
-                    ? "hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200"
-                    : "hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900"
+                    ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 )}
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
 
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "p-2 border",
-                    isDark ? "bg-zinc-800 border-zinc-700" : "bg-zinc-100 border-zinc-300"
+                    "border p-2",
+                    isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-300 bg-zinc-100"
                   )}
                 >
-                  <File className={cn("w-5 h-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
+                  <File className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
                 </div>
                 <div>
-                  <h1 className={cn(
-                    "text-lg font-medium",
-                    isDark ? "text-white" : "text-zinc-900"
-                  )}>
+                  <h1
+                    className={cn("text-lg font-medium", isDark ? "text-white" : "text-zinc-900")}
+                  >
                     {fileName}
                   </h1>
-                  <p className={cn(
-                    "text-xs",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}>
+                  <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
                     {filePath}
                   </p>
                 </div>
               </div>
 
               {hasChanges && (
-                <span className={cn(
-                  "px-2 py-1 text-xs border",
-                  isDark
-                    ? "border-zinc-600 text-zinc-400"
-                    : "border-zinc-400 text-zinc-600"
-                )}>
+                <span
+                  className={cn(
+                    "border px-2 py-1 text-xs",
+                    isDark ? "border-zinc-600 text-zinc-400" : "border-zinc-400 text-zinc-600"
+                  )}
+                >
                   Unsaved changes
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-3">
-              <span className={cn(
-                "text-xs px-2 py-1 border uppercase tracking-wider",
-                isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
-              )}>
+              <span
+                className={cn(
+                  "border px-2 py-1 text-xs tracking-wider uppercase",
+                  isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
+                )}
+              >
                 {language}
               </span>
 
@@ -178,14 +191,14 @@ export default function FileEditPage() {
                       ? "bg-white text-black hover:bg-zinc-200"
                       : "bg-zinc-900 text-white hover:bg-zinc-800"
                     : isDark
-                      ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                      : "bg-zinc-200 text-zinc-400 cursor-not-allowed"
+                      ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
+                      : "cursor-not-allowed bg-zinc-200 text-zinc-400"
                 )}
               >
                 {write.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
                 )}
                 Save
               </button>
@@ -196,11 +209,11 @@ export default function FileEditPage() {
         {/* Editor */}
         <div className="flex-1 overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <Spinner className="w-8 h-8" />
+            <div className="flex h-full items-center justify-center">
+              <Spinner className="h-8 w-8" />
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
+            <div className="flex h-full flex-col items-center justify-center gap-4">
               <p className={cn("text-lg", isDark ? "text-red-400" : "text-red-600")}>
                 Failed to load file
               </p>
@@ -215,6 +228,50 @@ export default function FileEditPage() {
               >
                 Go back
               </button>
+            </div>
+          ) : isMedia ? (
+            <div className="flex h-full items-center justify-center p-8">
+              <div className="flex flex-col items-center gap-6">
+                {isImage && (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="relative max-h-[70vh] max-w-full overflow-auto rounded-lg border-2 border-zinc-700/30">
+                      <img
+                        src={`data:${fileExtension === "svg" ? "image/svg+xml" : `image/${fileExtension}`};base64,${btoa(originalContent || "")}`}
+                        alt={fileName}
+                        className="h-auto max-w-full"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {isVideo && (
+                  <div className="flex w-full max-w-4xl flex-col items-center gap-4">
+                    <div className="w-full overflow-hidden rounded-lg border-2 border-zinc-700/30">
+                      <video controls className="w-full" preload="metadata">
+                        <source
+                          src={`data:video/${fileExtension};base64,${originalContent || ""}`}
+                          type={`video/${fileExtension}`}
+                        />
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  </div>
+                )}
+
+                {isAudio && (
+                  <div className="flex w-full max-w-2xl flex-col items-center gap-6">
+                    <div className="w-full rounded-xl border-2 border-zinc-700/30 p-12">
+                      <audio controls className="w-full" preload="metadata">
+                        <source
+                          src={`data:audio/${fileExtension};base64,${originalContent || ""}`}
+                          type={`audio/${fileExtension}`}
+                        />
+                        Your browser does not support the audio tag.
+                      </audio>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <CodeEditor

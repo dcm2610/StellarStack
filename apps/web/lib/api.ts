@@ -372,6 +372,80 @@ export const servers = {
         body: data,
       }),
   },
+
+  // Transfer
+  transfer: {
+    start: (serverId: string, targetNodeId: string) =>
+      request<{ success: boolean; message: string; transferId: string }>(
+        `/api/servers/${serverId}/transfer`,
+        { method: "POST", body: { targetNodeId } }
+      ),
+    get: (serverId: string) =>
+      request<{
+        status: string;
+        progress: number;
+        error?: string;
+        sourceNode: { displayName: string };
+        targetNode: { displayName: string };
+        createdAt: string;
+      } | null>(`/api/servers/${serverId}/transfer`),
+    cancel: (serverId: string) =>
+      request(`/api/servers/${serverId}/transfer`, { method: "DELETE" }),
+    history: (serverId: string) =>
+      request<
+        {
+          id: string;
+          status: string;
+          progress: number;
+          sourceNode: { displayName: string };
+          targetNode: { displayName: string };
+          createdAt: string;
+          completedAt?: string;
+        }[]
+      >(`/api/servers/${serverId}/transfer/history`),
+  },
+
+  // Firewall rules
+  firewall: {
+    list: (serverId: string) => request<any[]>(`/api/servers/${serverId}/firewall`),
+    create: (
+      serverId: string,
+      data: {
+        name: string;
+        description?: string;
+        direction: "INBOUND" | "OUTBOUND";
+        action: "ALLOW" | "DENY";
+        port: number;
+        protocol: "tcp" | "udp" | "both";
+        sourceIp?: string;
+        isActive?: boolean;
+      }
+    ) =>
+      request<{ success: boolean; rule: any }>(`/api/servers/${serverId}/firewall`, {
+        method: "POST",
+        body: data,
+      }),
+    update: (
+      serverId: string,
+      ruleId: string,
+      data: Partial<{
+        name?: string;
+        description?: string;
+        direction?: "INBOUND" | "OUTBOUND";
+        action?: "ALLOW" | "DENY";
+        port?: number;
+        protocol?: "tcp" | "udp" | "both";
+        sourceIp?: string;
+        isActive?: boolean;
+      }>
+    ) =>
+      request<{ success: boolean; rule: any }>(`/api/servers/${serverId}/firewall/${ruleId}`, {
+        method: "PATCH",
+        body: data,
+      }),
+    delete: (serverId: string, ruleId: string) =>
+      request(`/api/servers/${serverId}/firewall/${ruleId}`, { method: "DELETE" }),
+  },
 };
 
 // Invitation endpoints (not server-scoped)

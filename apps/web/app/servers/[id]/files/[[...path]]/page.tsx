@@ -85,6 +85,7 @@ import { ServerInstallingPlaceholder } from "@/components/server-installing-plac
 import { ServerSuspendedPlaceholder } from "@/components/server-suspended-placeholder";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { toast } from "sonner";
+import { useUploads, type UploadProgress } from "@/components/upload-provider";
 
 interface FileItem {
   id: string;
@@ -155,6 +156,7 @@ const FilesPage = (): JSX.Element | null => {
   const { server, isInstalling } = useServer();
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
+  const { uploads, addUpload, updateUpload, removeUpload } = useUploads();
 
   // Derive current path from URL params
   const currentPath = pathSegments && pathSegments.length > 0 ? "/" + pathSegments.join("/") : "/";
@@ -650,11 +652,28 @@ const FilesPage = (): JSX.Element | null => {
     if (uploadFiles.length === 0) return;
     setIsUploading(true);
     const newFiles: FileItem[] = [];
-    try {
-      for (const file of uploadFiles) {
+    setUploadModalOpen(false);
+
+    const startTime = Date.now();
+    const totalSize = uploadFiles.reduce((sum, file) => sum + file.size, 0);
+
+    for (const file of uploadFiles) {
+      const fileId = `upload-${Date.now()}-${Math.random()}`;
+
+      addUpload({
+        id: fileId,
+        name: file.name,
+        progress: 0,
+        speed: "0 KB/s",
+        size: file.size,
+        uploaded: 0,
+      });
+
+      try {
         const content = await file.text();
         const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
         await servers.files.create(serverId, filePath, "file", content);
+
         newFiles.push({
           id: filePath,
           name: file.name,
@@ -664,32 +683,45 @@ const FilesPage = (): JSX.Element | null => {
           modified: new Date().toLocaleString(),
           path: filePath,
         });
-      }
-      // Optimistically add new files and sort
-      if (newFiles.length > 0) {
-        setFiles((prev) => {
-          const existingPaths = new Set(prev.map((f) => f.path));
-          const uniqueNewFiles = newFiles.filter((f) => !existingPaths.has(f.path));
-          const updatedFiles = [...prev, ...uniqueNewFiles];
-          // Sort: folders first (alphabetically), then files (alphabetically)
-          return updatedFiles.sort((a, b) => {
-            if (a.type === b.type) {
-              return a.name.localeCompare(b.name);
-            }
-            return a.type === "folder" ? -1 : 1;
-          });
+
+        updateUpload(fileId, {
+          progress: 100,
+          speed: calculateSpeed(startTime, file.size, Date.now()),
         });
+        removeUpload(fileId);
+      } catch (error) {
+        removeUpload(fileId);
+        throw error;
       }
-      playSound("copy");
-      toast.success(`Uploaded ${uploadFiles.length} file(s)`);
-      setUploadModalOpen(false);
-      setUploadFiles([]);
-      fetchDiskUsage();
-    } catch (error) {
-      toast.error(parseDaemonError(error));
-    } finally {
-      setIsUploading(false);
     }
+
+    if (newFiles.length > 0) {
+      setFiles((prev) => {
+        const existingPaths = new Set(prev.map((f) => f.path));
+        const uniqueNewFiles = newFiles.filter((f) => !existingPaths.has(f.path));
+        const updatedFiles = [...prev, ...uniqueNewFiles];
+        return updatedFiles.sort((a, b) => {
+          if (a.type === b.type) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.type === "folder" ? -1 : 1;
+        });
+      });
+    }
+
+    playSound("copy");
+    toast.success(`Uploaded ${uploadFiles.length} file(s)`);
+    setUploadFiles([]);
+    fetchDiskUsage();
+    setIsUploading(false);
+  };
+
+  const calculateSpeed = (startTime: number, totalBytes: number, currentTime: number): string => {
+    const elapsed = (currentTime - startTime) / 1000;
+    if (elapsed === 0) return "0 KB/s";
+    const speed = totalBytes / elapsed / 1024;
+    if (speed < 1024) return `${speed.toFixed(1)} KB/s`;
+    return `${(speed / 1024).toFixed(1)} MB/s`;
   };
 
   const columns: ColumnDef<FileItem>[] = useMemo(

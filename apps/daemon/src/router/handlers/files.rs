@@ -294,10 +294,19 @@ pub async fn disk_usage(
     Extension(server): Extension<Arc<Server>>,
 ) -> Result<Json<DiskUsageResponse>, ApiError> {
     let fs = get_filesystem(&server)?;
+    let data_dir = server.data_dir();
 
     // Calculate actual disk usage
-    let used = fs.disk_usage().calculate(server.data_dir()).await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let used = match fs.disk_usage().calculate(&data_dir).await {
+        Ok(size) => {
+            debug!("Successfully calculated disk usage for {:?}: {} bytes", data_dir, size);
+            size
+        }
+        Err(e) => {
+            warn!("Failed to calculate disk usage for {:?}: {}", data_dir, e);
+            0
+        }
+    };
 
     let limit = server.config().disk_bytes();
 
