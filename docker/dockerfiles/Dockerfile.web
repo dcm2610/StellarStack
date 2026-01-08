@@ -1,0 +1,98 @@
+# syntax=docker/dockerfile:1
+
+# ============================================
+# Stage 1: Base with pnpm
+# ============================================
+FROM node:20-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
+
+WORKDIR /app
+
+# ============================================
+# Stage 2: Install dependencies
+# ============================================
+FROM base AS deps
+
+# Copy workspace configuration files
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+
+# Copy package.json files for workspace packages
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/ui/package.json ./packages/ui/
+
+# Copy Web package.json
+COPY apps/web/package.json ./apps/web/
+
+# Install dependencies with frozen lockfile
+# Use --filter to install web and all its workspace dependencies
+RUN pnpm install --frozen-lockfile --filter=web...
+
+# ============================================
+# Stage 3: Build
+# ============================================
+FROM base AS builder
+
+# Build arguments for Next.js
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_GIT_COMMIT_HASH=unknown
+
+# Set build-time environment variables
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_GIT_COMMIT_HASH=$NEXT_PUBLIC_GIT_COMMIT_HASH
+
+# Copy installed dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+
+# Copy workspace packages source
+COPY packages ./packages
+
+# Copy web application source
+COPY apps/web ./apps/web
+
+# Copy Turborepo config
+COPY turbo.json ./
+
+# Build the application using pnpm (which uses Turborepo)
+# This will build @workspace/ui first, then web
+RUN pnpm --filter=web build
+
+# ============================================
+# Stage 4: Production runtime
+# ============================================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=::
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy standalone output from builder
+# Next.js standalone output includes all necessary dependencies
+COPY --from=builder --chown=nodejs:nodejs /app/apps/web/.next/standalone ./
+
+# Copy static assets to the correct location in standalone
+COPY --from=builder --chown=nodejs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+
+# Copy public directory to the correct location in standalone
+COPY --from=builder --chown=nodejs:nodejs /app/apps/web/public ./apps/web/public
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3000
+
+# Start the Next.js server
+# The standalone output places server.js at the root
+CMD ["node", "server.js"]

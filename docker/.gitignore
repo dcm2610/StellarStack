@@ -1,0 +1,38 @@
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Backup files
+*.backup
+*.backup.*
+.env.backup*
+
+# SSL certificates and keys
+ssl/
+nginx/ssl/
+*.pem
+*.key
+*.crt
+*.csr
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

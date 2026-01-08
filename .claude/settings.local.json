@@ -58,7 +58,12 @@
       "Bash(fi)",
       "Bash(done)",
       "Bash(git diff:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(test:*)",
+      "Bash(docker build:*)",
+      "Bash(podman run:*)",
+      "Bash(podman build:*)",
+      "Bash(podman images:*)"
     ],
     "deny": [],
     "ask": []

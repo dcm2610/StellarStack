@@ -1,0 +1,185 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: stellarstack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stellar}
+      POSTGRES_USER: ${POSTGRES_USER:-stellar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - stellarstack
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stellar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================
+  # API Service
+  # ============================================
+  api:
+    image: stellarstackoss/stellarstack-api:latest
+    container_name: stellarstack-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stellar}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-stellar}?schema=public
+
+      # Authentication
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      DOWNLOAD_TOKEN_SECRET: ${DOWNLOAD_TOKEN_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+
+      # URLs
+      FRONTEND_URL: https://${PANEL_DOMAIN}
+      API_URL: https://${API_DOMAIN}
+
+      # Passkey configuration
+      PASSKEY_RP_ID: ${API_DOMAIN}
+
+      # Optional OAuth (GitHub)
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+
+      # Optional OAuth (Google)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # Optional OAuth (Discord)
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+
+      # Optional Email Configuration
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+      EMAIL_SECURE: ${EMAIL_SECURE:-false}
+
+      # Runtime Configuration
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: '::'
+    networks:
+      - stellarstack
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Web Service (Next.js)
+  # ============================================
+  web:
+    image: stellarstackoss/stellarstack-web:latest
+    container_name: stellarstack-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: '::'
+    networks:
+      - stellarstack
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # nginx Reverse Proxy
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: stellarstack-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # nginx configuration
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # nginx templates (will be processed with envsubst)
+      - ./nginx/templates:/etc/nginx/templates:ro
+      # Certbot volumes
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    networks:
+      - stellarstack
+    environment:
+      - API_DOMAIN=${API_DOMAIN}
+      - PANEL_DOMAIN=${PANEL_DOMAIN}
+    command: >
+      /bin/sh -c "
+      apk add --no-cache gettext &&
+      envsubst '$${API_DOMAIN} $${PANEL_DOMAIN}' < /etc/nginx/templates/api.conf.template > /etc/nginx/conf.d/api.conf &&
+      envsubst '$${API_DOMAIN} $${PANEL_DOMAIN}' < /etc/nginx/templates/web.conf.template > /etc/nginx/conf.d/web.conf &&
+      nginx -g 'daemon off;'
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # Certbot for Let's Encrypt SSL
+  # ============================================
+  certbot:
+    image: certbot/certbot:latest
+    container_name: stellarstack-certbot
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: >
+      /bin/sh -c "
+      trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done
+      "
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  stellarstack:
+    driver: bridge
+    name: stellarstack
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  certbot_www:
+    driver: local
+  certbot_conf:
+    driver: local

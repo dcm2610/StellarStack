@@ -1,15 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "provider": {
-    "lmstudio": {
+    "ollama": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "LM Studio (local)",
+      "name": "Ollama (local)",
       "options": {
-        "baseURL": "http://127.0.0.1:1234/v1"
+        "baseURL": "http://localhost:11434/v1"
       },
       "models": {
-        "deepseek/deepseek-r1-0528-qwen3-8b": {
-          "name": "Deepseek R1 Local"
+        "deepseek-r1:8b": {
+          "name": "Deepseek R1"
         }
       }
     }

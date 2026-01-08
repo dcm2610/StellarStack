@@ -1,0 +1,329 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - master
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 1.0.0)'
+        required: false
+        type: string
+
+env:
+  DOCKER_HUB_ORG: stellarstackoss
+  REGISTRY: docker.io
+
+jobs:
+  build-and-push:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, web]
+        include:
+          - service: api
+            dockerfile: docker/dockerfiles/Dockerfile.api
+            image_name: stellarstack-api
+            context: .
+
+          - service: web
+            dockerfile: docker/dockerfiles/Dockerfile.web
+            image_name: stellarstack-web
+            context: .
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            VERSION=${TAG#v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "version=edge" >> $GITHUB_OUTPUT
+            echo "tag=edge" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_HUB_ORG }}/${{ matrix.image_name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') || startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.description=StellarStack ${{ matrix.service }} service
+            org.opencontainers.image.vendor=StellarStack
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            ${{ matrix.service == 'web' && format('NEXT_PUBLIC_API_URL={0}', secrets.NEXT_PUBLIC_API_URL) || '' }}
+            ${{ matrix.service == 'web' && format('NEXT_PUBLIC_GIT_COMMIT_HASH={0}', github.sha) || '' }}
+
+      - name: Generate image digest
+        id: digest
+        run: |
+          echo "digest=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-metadata
+          path: |
+            /tmp/${{ matrix.service }}-tags.txt
+          if-no-files-found: ignore
+
+      - name: Image build summary
+        run: |
+          echo "### ${{ matrix.service }} Image Built Successfully :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.DOCKER_HUB_ORG }}/${{ matrix.image_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+
+  # Create GitHub Release with deployment instructions
+  create-release:
+    name: Create Release
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create deployment guide
+        run: |
+          cat > DEPLOYMENT.md << 'EOF'
+          # StellarStack v${{ steps.version.outputs.version }} Deployment Guide
+
+          ## Quick Start
+
+          ### Using Docker Compose (Recommended)
+
+          ```bash
+          # Clone the repository
+          git clone https://github.com/${{ github.repository }}.git
+          cd stellarstack/docker
+
+          # Run the setup script
+          ./setup.sh
+
+          # Or manually configure
+          cp .env.example .env
+          # Edit .env with your configuration
+          docker-compose up -d
+          ```
+
+          ### Using Docker Images Directly
+
+          ```bash
+          # Pull the images
+          docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-api:v${{ steps.version.outputs.version }}
+          docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-web:v${{ steps.version.outputs.version }}
+
+          # Run the containers
+          docker run -d --name stellarstack-api \
+            -e DATABASE_URL=postgresql://... \
+            -e BETTER_AUTH_SECRET=... \
+            -p 3001:3001 \
+            ${{ env.DOCKER_HUB_ORG }}/stellarstack-api:v${{ steps.version.outputs.version }}
+
+          docker run -d --name stellarstack-web \
+            -e NEXT_PUBLIC_API_URL=https://api.example.com \
+            -p 3000:3000 \
+            ${{ env.DOCKER_HUB_ORG }}/stellarstack-web:v${{ steps.version.outputs.version }}
+          ```
+
+          ## Docker Images
+
+          | Service | Image | Platforms |
+          |---------|-------|-----------|
+          | API | `${{ env.DOCKER_HUB_ORG }}/stellarstack-api:v${{ steps.version.outputs.version }}` | linux/amd64, linux/arm64 |
+          | Web | `${{ env.DOCKER_HUB_ORG }}/stellarstack-web:v${{ steps.version.outputs.version }}` | linux/amd64, linux/arm64 |
+
+          ## Updating from Previous Version
+
+          ```bash
+          cd stellarstack/docker
+
+          # Pull latest images
+          docker-compose pull
+
+          # Restart services
+          docker-compose up -d
+
+          # Run database migrations (if any)
+          docker-compose exec api npx prisma migrate deploy
+          ```
+
+          ## Documentation
+
+          - **Full Documentation**: [docker/README.md](https://github.com/${{ github.repository }}/blob/master/docker/README.md)
+          - **Environment Variables**: [docker/.env.example](https://github.com/${{ github.repository }}/blob/master/docker/.env.example)
+          - **Troubleshooting**: [docker/README.md#troubleshooting](https://github.com/${{ github.repository }}/blob/master/docker/README.md#troubleshooting)
+
+          ## Support
+
+          - **Issues**: https://github.com/${{ github.repository }}/issues
+          - **Discussions**: https://github.com/${{ github.repository }}/discussions
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: StellarStack v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            DEPLOYMENT.md
+          body: |
+            ## StellarStack v${{ steps.version.outputs.version }}
+
+            ### What's New
+
+            See the [CHANGELOG](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) for details.
+
+            ### Docker Images
+
+            | Service | Image | Platforms |
+            |---------|-------|-----------|
+            | API | `${{ env.DOCKER_HUB_ORG }}/stellarstack-api:v${{ steps.version.outputs.version }}` | linux/amd64, linux/arm64 |
+            | Web | `${{ env.DOCKER_HUB_ORG }}/stellarstack-web:v${{ steps.version.outputs.version }}` | linux/amd64, linux/arm64 |
+
+            ### Quick Start
+
+            ```bash
+            # Clone and deploy
+            git clone https://github.com/${{ github.repository }}.git
+            cd stellarstack/docker
+            ./setup.sh
+            ```
+
+            ### Pull Images
+
+            ```bash
+            docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-api:v${{ steps.version.outputs.version }}
+            docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-web:v${{ steps.version.outputs.version }}
+            ```
+
+            ### Latest Tags
+
+            The `latest` tag is also updated to point to this version:
+
+            ```bash
+            docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-api:latest
+            docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-web:latest
+            ```
+
+            ### Documentation
+
+            - [Deployment Guide](https://github.com/${{ github.repository }}/blob/master/docker/README.md)
+            - [Environment Configuration](https://github.com/${{ github.repository }}/blob/master/docker/.env.example)
+
+            ---
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/...v${{ steps.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Summary job
+  summary:
+    name: Build Summary
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.build-and-push.result }}" == "success" ]; then
+            echo "✅ All Docker images built and pushed successfully!"
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## 🎉 Deployment Ready" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All Docker images have been built and pushed to Docker Hub." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Available images:**" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${{ env.DOCKER_HUB_ORG }}/stellarstack-api:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${{ env.DOCKER_HUB_ORG }}/stellarstack-web:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Quick Deploy" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```bash' >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-api:latest" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${{ env.DOCKER_HUB_ORG }}/stellarstack-web:latest" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Docker image build failed!"
+            exit 1
+          fi
