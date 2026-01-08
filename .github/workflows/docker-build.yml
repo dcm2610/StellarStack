@@ -15,11 +15,11 @@ env:
   REGISTRY: docker.io
 
 jobs:
-  build:
+  build-and-release:
     name: Build ${{ matrix.service }}
     runs-on: self-hosted
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
 
@@ -112,6 +112,7 @@ jobs:
           image: ${{ env.DOCKER_HUB_ORG }}/${{ matrix.image_name }}:v${{ steps.version.outputs.version }}
           format: spdx-json
           output-file: ${{ matrix.service }}-sbom.spdx.json
+          upload-release-assets: false
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -120,8 +121,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign sign \
-            --yes \
+          cosign sign --yes \
             ${{ env.DOCKER_HUB_ORG }}/${{ matrix.image_name }}:v${{ steps.version.outputs.version }}
 
       - name: Upload release assets
@@ -134,10 +134,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build summary
+      - name: Release summary
         run: |
           echo "### ${{ matrix.service }} released 🚀" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** ${{ env.DOCKER_HUB_ORG }}/${{ matrix.image_name }}:v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
           echo "**Signed:** cosign" >> $GITHUB_STEP_SUMMARY
+          echo "**SBOM:** SPDX JSON" >> $GITHUB_STEP_SUMMARY
