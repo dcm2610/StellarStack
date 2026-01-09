@@ -17,7 +17,6 @@
     "start:web": "pnpm --filter web start",
     "start:docs": "pnpm --filter docs start -p 8080",
     "start:home": "pnpm --filter home start -p 8080",
-    "prepare": "husky",
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {
