@@ -21,23 +21,27 @@ By participating in this project, you agree to maintain a respectful and inclusi
 1. **Fork the repository** on GitHub
 
 2. **Clone your fork:**
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/stellarstack.git
 cd stellarstack/stack
 ```
 
 3. **Install dependencies:**
+
 ```bash
 pnpm install
 ```
 
 4. **Set up environment variables:**
+
 ```bash
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
 5. **Set up the database:**
+
 ```bash
 cd apps/api
 pnpm db:push
@@ -46,6 +50,7 @@ cd ../..
 ```
 
 6. **Start development servers:**
+
 ```bash
 pnpm dev
 ```
@@ -75,38 +80,90 @@ stack/
 
 ### Branch Naming
 
-Use descriptive branch names:
-- `feature/add-backup-encryption` - New features
+Branch names should use descriptive names. Including Linear ticket IDs is recommended but optional:
+
+**With Linear tickets (recommended):**
+
+```
+<type>/STE-<number>-<description>
+```
+
+Examples:
+
+- `feat/STE-123-add-backup-encryption` - New features
+- `fix/STE-456-console-reconnect-issue` - Bug fixes
+- `docs/STE-789-update-api-reference` - Documentation
+- `refactor/STE-321-cleanup-auth-middleware` - Code improvements
+
+**Without Linear tickets (also valid):**
+
+- `feat/add-backup-encryption` - New features
 - `fix/console-reconnect-issue` - Bug fixes
 - `docs/update-api-reference` - Documentation
 - `refactor/cleanup-auth-middleware` - Code improvements
 
 ### Commit Messages
 
-Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+We use [Conventional Commits](https://www.conventionalcommits.org/) with **optional Linear ticket IDs**. Linear tickets are strongly recommended for tracking but not required.
+
+**Format:**
 
 ```
-<type>(<scope>): <description>
+<type>: [STE-<number>] <description>
 
 [optional body]
 
 [optional footer]
 ```
 
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+**Commit Types:**
 
-Examples:
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation changes
+- `style` - Code formatting (no logic change)
+- `refactor` - Code restructuring
+- `test` - Test additions or updates
+- `chore` - Maintenance tasks
+- `perf` - Performance improvements
+- `ci` - CI/CD changes
+- `build` - Build system changes
+
+**Examples with Linear tickets (recommended):**
+
+```bash
+feat: STE-123 add webhook retry with exponential backoff
+fix: STE-456 resolve console disconnect on browser tab switch
+docs: STE-789 update installation instructions
+chore: STE-321 upgrade dependencies to latest versions
 ```
-feat(api): add webhook retry with exponential backoff
-fix(web): resolve console disconnect on browser tab switch
-docs(readme): update installation instructions
+
+**Examples without Linear tickets (also valid):**
+
+```bash
+feat: add dark mode support
+fix: resolve memory leak in WebSocket handler
+docs: update API documentation
+chore: upgrade dependencies
+```
+
+**Getting Linear Tickets:**
+
+- View tickets at: https://linear.app/stellarstack
+- Create a new issue for your work before committing (recommended)
+- Reference the ticket ID in your commit message for better tracking
+
+**Commit Validation:**
+Git hooks will automatically validate your commit messages. Invalid commits will be rejected with a helpful error message. The hook checks:
+
+- Commit type is valid (feat, fix, docs, etc.)
+- Description is not empty
+
+If you see a validation error, fix your commit message:
+
+```bash
+# Fix the last commit message
+git commit --amend -m "feat: correct message format"
 ```
 
 ### Code Style
@@ -121,6 +178,7 @@ docs(readme): update installation instructions
 Before submitting a PR:
 
 1. **Run type checking:**
+
 ```bash
 pnpm typecheck
 # or
@@ -128,6 +186,7 @@ npx tsc --noEmit
 ```
 
 2. **Run linting:**
+
 ```bash
 pnpm lint
 ```
@@ -139,6 +198,7 @@ pnpm lint
 ### Before Submitting
 
 1. **Update from main:**
+
 ```bash
 git fetch upstream
 git rebase upstream/main
@@ -159,21 +219,26 @@ git rebase upstream/main
 
 ```markdown
 ## Description
+
 Brief description of the changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 How did you test these changes?
 
 ## Screenshots (if applicable)
+
 Add screenshots here
 
 ## Checklist
+
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review
 - [ ] I have added comments for hard-to-understand code
@@ -181,6 +246,38 @@ Add screenshots here
 - [ ] My changes don't generate new warnings
 - [ ] I have tested my changes locally
 ```
+
+## Releases
+
+StellarStack uses automated releases powered by [release-please](https://github.com/googleapis/release-please). You don't need to worry about versioning or changelogs—they're generated automatically.
+
+### How It Works
+
+1. **Commit with Conventional Format**: Your commits following the conventional format drive the release process
+   - `feat:` commits trigger a **minor** version bump (0.1.0 → 0.2.0)
+   - `fix:` commits trigger a **patch** version bump (0.1.0 → 0.1.1)
+   - `BREAKING CHANGE:` in commit body triggers a **major** version bump (0.1.0 → 1.0.0)
+
+2. **Release PR Created**: When commits are merged to `master`, release-please automatically:
+   - Analyzes commits since last release
+   - Determines the next version number
+   - Generates a CHANGELOG.md with categorized changes
+   - Creates a pull request with these updates
+
+3. **Merge to Release**: When the release PR is merged:
+   - A GitHub release is created with the new version tag
+   - Linear ticket IDs in the changelog are automatically linked
+   - Docker images are built and pushed to Docker Hub
+   - The manifest file is updated with the new version
+
+### Linear Ticket Links
+
+Release notes automatically link Linear tickets. For example:
+
+- Commit: `feat: STE-123 add backup encryption`
+- Changelog: `feat: [STE-123](https://linear.app/stellarstack/issue/STE-123) add backup encryption`
+
+This makes it easy to trace changes back to their original issues.
 
 ## Areas for Contribution
 
@@ -199,6 +296,7 @@ Look for issues labeled `good first issue` - these are beginner-friendly tasks.
 ### Feature Requests
 
 Before starting work on a new feature:
+
 1. Check if an issue already exists
 2. Create an issue to discuss the feature
 3. Wait for maintainer feedback before starting
@@ -215,26 +313,32 @@ Before starting work on a new feature:
 
 ```markdown
 ## Description
+
 Clear description of the bug
 
 ## Steps to Reproduce
+
 1. Go to '...'
 2. Click on '...'
 3. See error
 
 ## Expected Behavior
+
 What should happen
 
 ## Actual Behavior
+
 What actually happens
 
 ## Environment
+
 - OS: [e.g., macOS 14.0]
 - Browser: [e.g., Chrome 120]
 - Node.js: [e.g., 20.10.0]
 - StellarStack version: [e.g., 0.1.0-alpha]
 
 ## Screenshots/Logs
+
 Add relevant screenshots or error logs
 ```
 
@@ -243,6 +347,7 @@ Add relevant screenshots or error logs
 **Do not** report security vulnerabilities through public GitHub issues.
 
 Instead, please email security@stellarstack.dev (or the maintainer directly) with:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
