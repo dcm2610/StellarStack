@@ -76,7 +76,9 @@
       "Bash(git add:*)",
       "Bash(podman machine start:*)",
       "Bash(podman-compose:*)",
-      "Bash(podman compose:*)"
+      "Bash(podman compose:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

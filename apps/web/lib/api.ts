@@ -46,7 +46,7 @@ import {
 
 // Re-export all types
 export * from "./api.types";
-import { getApiEndpoint } from "./api-url";
+import { getApiEndpoint } from "@/lib/api-url";
 
 const request = async <T>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
   const { method = "GET", body, headers = {} } = options;
