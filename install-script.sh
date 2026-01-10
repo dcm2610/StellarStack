@@ -1600,6 +1600,12 @@ pull_and_start() {
 
     cd "${INSTALL_DIR}"
 
+    # Check if postgres volume exists
+    local postgres_volume_exists=false
+    if docker volume inspect stellarstack_postgres_data &>/dev/null; then
+        postgres_volume_exists=true
+    fi
+
     # Stop and remove existing containers if they exist
     # NOTE: This does NOT remove volumes, so database data is preserved
     if [ -f "${DOCKER_COMPOSE_FILE}" ]; then
@@ -1613,6 +1619,28 @@ pull_and_start() {
             echo -e "\r  ${MUTED}[ ]${NC} ${MUTED}No existing containers to stop${NC}    "
         fi
         echo ""
+    fi
+
+    # If this is update mode and postgres volume exists, skip volume cleanup
+    # If this is NOT update mode but postgres volume exists, it's likely from failed install attempts
+    if [ "$postgres_volume_exists" = true ] && [ "$update_mode" = "n" ]; then
+        echo ""
+        print_warning "Found existing PostgreSQL data volume from previous installation attempt"
+        echo ""
+        echo -e "${SECONDARY}  This volume may contain corrupted authentication data that causes login failures.${NC}"
+        echo ""
+        if ask_yes_no "Remove the existing database volume and start fresh?" "y"; then
+            print_task "Removing existing PostgreSQL volume"
+            docker compose down -v > /dev/null 2>&1 || true
+            docker volume rm stellarstack_postgres_data > /dev/null 2>&1 || true
+            print_task_done "Removing existing PostgreSQL volume"
+            print_success "Clean slate ready for fresh installation"
+            echo ""
+        else
+            print_warning "Keeping existing volume - authentication issues may persist"
+            print_info "If you encounter password errors, you'll need to manually fix them"
+            echo ""
+        fi
     fi
 
     # Pull images

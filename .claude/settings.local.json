@@ -72,7 +72,8 @@
       "Bash(podman exec:*)",
       "Bash(node:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,39 +1,27 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 
-# ============================================
-# Stage 1: Base with pnpm
-# ============================================
+# --- Base
 FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm" \
+    PATH="/pnpm:$PATH"
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
+RUN apk add --no-cache libc6-compat \
+ && corepack enable \
+ && pnpm add -g turbo
 
-WORKDIR /app
+WORKDIR /repo
 
-# ============================================
-# Stage 2: Install dependencies
-# ============================================
-FROM base AS deps
+# --- Prune
+FROM base AS pruner
 
-# Copy workspace configuration files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY . .
 
-# Copy package.json files for workspace packages
-COPY packages/typescript-config/package.json ./packages/typescript-config/
-COPY packages/eslint-config/package.json ./packages/eslint-config/
-COPY packages/ui/package.json ./packages/ui/
+RUN turbo prune --scope=web --docker \
+ && sed -i '/^settings:/a \  injectWorkspacePackages: true' ./out/pnpm-lock.yaml
 
-# Copy Web package.json
-COPY apps/web/package.json ./apps/web/
-
-# Install dependencies with frozen lockfile
-# Use --filter to install web and all its workspace dependencies
-RUN pnpm install --frozen-lockfile --filter=web...
-
-# ============================================
-# Stage 3: Build
-# ============================================
+# --- Install + Build
 FROM base AS builder
+WORKDIR /app
 
 # Build arguments for Next.js
 ARG NEXT_PUBLIC_API_URL
@@ -43,56 +31,36 @@ ARG NEXT_PUBLIC_GIT_COMMIT_HASH=unknown
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_GIT_COMMIT_HASH=$NEXT_PUBLIC_GIT_COMMIT_HASH
 
-# Copy installed dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /repo/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /repo/out/json/ ./
 
-# Copy workspace packages source
-COPY packages ./packages
+RUN pnpm install --frozen-lockfile
 
-# Copy web application source
-COPY apps/web ./apps/web
+COPY --from=pruner /repo/out/full/ ./
 
-# Copy Turborepo config
-COPY turbo.json ./
+RUN pnpm turbo run build --filter=web
 
-# Build the application using pnpm (which uses Turborepo)
-# This will build @workspace/ui first, then web
-RUN pnpm --filter=web build
-
-# ============================================
-# Stage 4: Production runtime
-# ============================================
+# --- Runtime
 FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-# Set production environment
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=::
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+WORKDIR /app/apps/web
 
-# Copy standalone output from builder
-# Next.js standalone output includes all necessary dependencies
-COPY --from=builder --chown=nodejs:nodejs /app/apps/web/.next/standalone ./
+RUN apk add --no-cache libc6-compat \
+ && addgroup -g 1001 -S nodejs \
+ && adduser -S nodejs -u 1001
 
-# Copy static assets to the correct location in standalone
-COPY --from=builder --chown=nodejs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# Copy the entire workspace as-is from builder
+COPY --from=builder --chown=nodejs:nodejs /app /app
 
-# Copy public directory to the correct location in standalone
-COPY --from=builder --chown=nodejs:nodejs /app/apps/web/public ./apps/web/public
+WORKDIR /app/apps/web
 
-# Switch to non-root user
 USER nodejs
 
-# Expose port
 EXPOSE 3000
 
-# Start the Next.js server
-# The standalone output places server.js at the root
-CMD ["node", "server.js"]
+# Start Next.js production server
+CMD ["node_modules/.bin/next", "start"]

@@ -14,7 +14,6 @@ const getGitCommitHash = () => {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone", // Required for Railway/Docker deployments
   reactStrictMode: false, // Disable to prevent double WebSocket connections in dev
   transpilePackages: ["@workspace/ui"],
   env: {
