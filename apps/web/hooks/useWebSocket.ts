@@ -1,16 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { serverKeys } from "@/hooks/queries";
-import { getApiUrl, getApiEndpoint } from "@/lib/api-url";
+import { getApiEndpoint } from "@/lib/api-url";
 
-// Convert HTTP URL to WebSocket URL
 const getWebSocketUrl = (): string => {
-  const apiUrl = getApiUrl();
-
-  const url = new URL(apiUrl);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  url.pathname = "/api/ws";
-  return url.toString();
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}://${window.location.host}/api/ws`;
 };
 
 // Fetch WebSocket auth token from API

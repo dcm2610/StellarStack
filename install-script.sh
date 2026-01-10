@@ -963,7 +963,7 @@ NODE_ENV=production
 # Note: NEXT_PUBLIC_API_URL is baked into the Docker image at build time as "/api"
 # nginx proxies panel.domain.com/api/* to the API container
 # This variable is only used for local development or custom builds
-NEXT_PUBLIC_API_URL=https://${api_domain}
+NEXT_PUBLIC_API_URL=/api
 FRONTEND_URL=https://${panel_domain}
 
 # Monitoring (if enabled)
