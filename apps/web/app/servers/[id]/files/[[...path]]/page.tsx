@@ -937,7 +937,7 @@ const FilesPage = (): JSX.Element | null => {
                           file.path
                         );
                         window.open(
-                          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`,
+                          `${typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" ? window.location.origin : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`,
                           "_blank"
                         );
                       } catch (error) {
@@ -1550,7 +1550,7 @@ const FilesPage = (): JSX.Element | null => {
                                         const { downloadUrl } =
                                           await servers.files.getDownloadToken(serverId, file.path);
                                         window.open(
-                                          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`,
+                                          `${typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" ? window.location.origin : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`,
                                           "_blank"
                                         );
                                       } catch (error) {

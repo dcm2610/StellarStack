@@ -1,8 +1,11 @@
 import { createAuthClient } from "better-auth/react";
 import { twoFactorClient } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
+import { getApiUrl } from "./api-url";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Create auth client with runtime URL - this is safe because Better Auth client
+// only validates URL format, not connectivity, during initialization
+const API_URL = typeof window !== "undefined" ? getApiUrl() : "http://localhost:3001";
 
 export const authClient = createAuthClient({
   baseURL: API_URL,
@@ -17,10 +20,4 @@ export const authClient = createAuthClient({
   ],
 });
 
-export const {
-  signIn,
-  signOut,
-  signUp,
-  useSession,
-  getSession,
-} = authClient;
+export const { signIn, signOut, signUp, useSession, getSession } = authClient;

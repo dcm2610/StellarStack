@@ -11,7 +11,18 @@ import { SidebarTrigger } from "@workspace/ui/components/sidebar";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import { Input } from "@workspace/ui/components/input";
-import { BsSun, BsMoon, BsKey, BsShieldCheck, BsTrash, BsPlus, BsCheckCircle, BsGoogle, BsGithub, BsDiscord } from "react-icons/bs";
+import {
+  BsSun,
+  BsMoon,
+  BsKey,
+  BsShieldCheck,
+  BsTrash,
+  BsPlus,
+  BsCheckCircle,
+  BsGoogle,
+  BsGithub,
+  BsDiscord,
+} from "react-icons/bs";
 import { authClient, useSession } from "@/lib/auth-client";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -64,7 +75,7 @@ const AccountPage = (): JSX.Element | null => {
       };
       setProfile(userData);
       setOriginalProfile(userData);
-      setTwoFactorEnabled(session.user.twoFactorEnabled || false);
+      setTwoFactorEnabled((session.user as any).twoFactorEnabled || false);
     }
   }, [session]);
 
@@ -214,33 +225,36 @@ const AccountPage = (): JSX.Element | null => {
   };
 
   return (
-    <div className={cn(
-      "min-h-svh transition-colors relative",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
+    <div
+      className={cn(
+        "relative min-h-svh transition-colors",
+        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+      )}
+    >
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={15} />
 
       <div className="relative p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className={cn(
-                "transition-all hover:scale-110 active:scale-95",
-                isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-              )} />
+              <SidebarTrigger
+                className={cn(
+                  "transition-all hover:scale-110 active:scale-95",
+                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                )}
+              />
               <div>
-                <h1 className={cn(
-                  "text-2xl font-light tracking-wider",
-                  isDark ? "text-zinc-100" : "text-zinc-800"
-                )}>
+                <h1
+                  className={cn(
+                    "text-2xl font-light tracking-wider",
+                    isDark ? "text-zinc-100" : "text-zinc-800"
+                  )}
+                >
                   ACCOUNT SETTINGS
                 </h1>
-                <p className={cn(
-                  "text-sm mt-1",
-                  isDark ? "text-zinc-500" : "text-zinc-500"
-                )}>
+                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
                   Manage your account and security
                 </p>
               </div>
@@ -250,60 +264,88 @@ const AccountPage = (): JSX.Element | null => {
               size="sm"
               onClick={() => setTheme(isDark ? "light" : "dark")}
               className={cn(
-                "transition-all hover:scale-110 active:scale-95 p-2",
+                "p-2 transition-all hover:scale-110 active:scale-95",
                 isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                  ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
               )}
             >
-              {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
+              {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
             </Button>
           </div>
 
           {/* Profile Section */}
-          <div className={cn(
-            "relative p-6 border mb-6",
-            isDark
-              ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10"
-              : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300"
-          )}>
-            <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+          <div
+            className={cn(
+              "relative mb-6 border p-6",
+              isDark
+                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
 
-            <h2 className={cn(
-              "text-sm font-medium uppercase tracking-wider mb-6",
-              isDark ? "text-zinc-300" : "text-zinc-700"
-            )}>
+            <h2
+              className={cn(
+                "mb-6 text-sm font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-300" : "text-zinc-700"
+              )}
+            >
               Profile
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={profile.name}
-                  onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, name: e.target.value }))}
                   className={cn(
-                    "w-full mt-2 px-3 py-2 text-sm border outline-none transition-colors",
+                    "mt-2 w-full border px-3 py-2 text-sm transition-colors outline-none",
                     isDark
-                      ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200 focus:border-zinc-500"
-                      : "bg-white border-zinc-300 text-zinc-800 focus:border-zinc-400"
+                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
+                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
                   )}
                 />
               </div>
               <div>
-                <label className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}>
+                <label
+                  className={cn(
+                    "text-[10px] font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-500" : "text-zinc-400"
+                  )}
+                >
                   Email Address
                 </label>
                 <input
@@ -311,13 +353,13 @@ const AccountPage = (): JSX.Element | null => {
                   value={profile.email}
                   disabled
                   className={cn(
-                    "w-full mt-2 px-3 py-2 text-sm border outline-none transition-colors opacity-50",
+                    "mt-2 w-full border px-3 py-2 text-sm opacity-50 transition-colors outline-none",
                     isDark
-                      ? "bg-zinc-900/50 border-zinc-700/50 text-zinc-200"
-                      : "bg-white border-zinc-300 text-zinc-800"
+                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200"
+                      : "border-zinc-300 bg-white text-zinc-800"
                   )}
                 />
-                <p className={cn("text-xs mt-1", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
                   Email changes are not yet supported
                 </p>
               </div>
@@ -329,50 +371,71 @@ const AccountPage = (): JSX.Element | null => {
               onClick={handleSaveProfile}
               disabled={!hasProfileChanges}
               className={cn(
-                "mt-6 transition-all gap-2",
+                "mt-6 gap-2 transition-all",
                 saved
                   ? isDark
                     ? "border-green-500/50 text-green-400"
                     : "border-green-400 text-green-600"
                   : isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500 disabled:opacity-40"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400 disabled:opacity-40"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-40"
               )}
             >
               {saved ? (
                 <>
-                  <BsCheckCircle className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wider">Saved</span>
+                  <BsCheckCircle className="h-4 w-4" />
+                  <span className="text-xs tracking-wider uppercase">Saved</span>
                 </>
               ) : (
-                <span className="text-xs uppercase tracking-wider">Update Profile</span>
+                <span className="text-xs tracking-wider uppercase">Update Profile</span>
               )}
             </Button>
           </div>
 
           {/* Connected Accounts Section */}
-          <div className={cn(
-            "relative p-6 border mb-6",
-            isDark
-              ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10"
-              : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300"
-          )}>
-            <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+          <div
+            className={cn(
+              "relative mb-6 border p-6",
+              isDark
+                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
 
-            <h2 className={cn(
-              "text-sm font-medium uppercase tracking-wider mb-6",
-              isDark ? "text-zinc-300" : "text-zinc-700"
-            )}>
+            <h2
+              className={cn(
+                "mb-6 text-sm font-medium tracking-wider uppercase",
+                isDark ? "text-zinc-300" : "text-zinc-700"
+              )}
+            >
               Connected Accounts
             </h2>
 
-            <p className={cn(
-              "text-xs mb-4",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
+            <p className={cn("mb-4 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
               Connect your social accounts for quick sign-in.
             </p>
 
@@ -382,65 +445,89 @@ const AccountPage = (): JSX.Element | null => {
                 size="sm"
                 onClick={() => handleSocialSignIn("google")}
                 className={cn(
-                  "transition-all gap-2",
+                  "gap-2 transition-all",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                <BsGoogle className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">Google</span>
+                <BsGoogle className="h-4 w-4" />
+                <span className="text-xs tracking-wider uppercase">Google</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleSocialSignIn("github")}
                 className={cn(
-                  "transition-all gap-2",
+                  "gap-2 transition-all",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                <BsGithub className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">GitHub</span>
+                <BsGithub className="h-4 w-4" />
+                <span className="text-xs tracking-wider uppercase">GitHub</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleSocialSignIn("discord")}
                 className={cn(
-                  "transition-all gap-2",
+                  "gap-2 transition-all",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                <BsDiscord className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">Discord</span>
+                <BsDiscord className="h-4 w-4" />
+                <span className="text-xs tracking-wider uppercase">Discord</span>
               </Button>
             </div>
           </div>
 
           {/* Passkeys Section */}
-          <div className={cn(
-            "relative p-6 border mb-6",
-            isDark
-              ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10"
-              : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300"
-          )}>
-            <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+          <div
+            className={cn(
+              "relative mb-6 border p-6",
+              isDark
+                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BsKey className={cn("w-4 h-4", isDark ? "text-zinc-400" : "text-zinc-600")} />
-                <h2 className={cn(
-                  "text-sm font-medium uppercase tracking-wider",
-                  isDark ? "text-zinc-300" : "text-zinc-700"
-                )}>
+                <BsKey className={cn("h-4 w-4", isDark ? "text-zinc-400" : "text-zinc-600")} />
+                <h2
+                  className={cn(
+                    "text-sm font-medium tracking-wider uppercase",
+                    isDark ? "text-zinc-300" : "text-zinc-700"
+                  )}
+                >
                   Passkeys
                 </h2>
               </div>
@@ -449,21 +536,18 @@ const AccountPage = (): JSX.Element | null => {
                 size="sm"
                 onClick={() => setAddPasskeyModalOpen(true)}
                 className={cn(
-                  "transition-all gap-2",
+                  "gap-2 transition-all",
                   isDark
-                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                 )}
               >
-                <BsPlus className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">Add Passkey</span>
+                <BsPlus className="h-4 w-4" />
+                <span className="text-xs tracking-wider uppercase">Add Passkey</span>
               </Button>
             </div>
 
-            <p className={cn(
-              "text-xs mb-4",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
+            <p className={cn("mb-4 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
               Passkeys provide a more secure and convenient way to sign in without passwords.
             </p>
 
@@ -477,21 +561,22 @@ const AccountPage = (): JSX.Element | null => {
                   <div
                     key={passkey.id}
                     className={cn(
-                      "flex items-center justify-between p-4 border",
+                      "flex items-center justify-between border p-4",
                       isDark ? "border-zinc-700/50 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
                     )}
                   >
                     <div>
-                      <div className={cn(
-                        "text-sm font-medium",
-                        isDark ? "text-zinc-200" : "text-zinc-700"
-                      )}>
+                      <div
+                        className={cn(
+                          "text-sm font-medium",
+                          isDark ? "text-zinc-200" : "text-zinc-700"
+                        )}
+                      >
                         {passkey.name || "Unnamed Passkey"}
                       </div>
-                      <div className={cn(
-                        "text-xs mt-1",
-                        isDark ? "text-zinc-500" : "text-zinc-500"
-                      )}>
+                      <div
+                        className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}
+                      >
                         Added {new Date(passkey.createdAt).toLocaleDateString()}
                       </div>
                     </div>
@@ -500,13 +585,13 @@ const AccountPage = (): JSX.Element | null => {
                       size="sm"
                       onClick={() => openDeletePasskeyModal(passkey)}
                       className={cn(
-                        "transition-all p-2",
+                        "p-2 transition-all",
                         isDark
-                          ? "border-red-900/60 text-red-400/80 hover:text-red-300 hover:border-red-700"
-                          : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"
+                          ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
+                          : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
                       )}
                     >
-                      <BsTrash className="w-4 h-4" />
+                      <BsTrash className="h-4 w-4" />
                     </Button>
                   </div>
                 ))
@@ -515,50 +600,75 @@ const AccountPage = (): JSX.Element | null => {
           </div>
 
           {/* Two-Factor Authentication Section */}
-          <div className={cn(
-            "relative p-6 border",
-            isDark
-              ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10"
-              : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300"
-          )}>
-            <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-            <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+          <div
+            className={cn(
+              "relative border p-6",
+              isDark
+                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
+                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0 left-0 h-2 w-2 border-t border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute top-0 right-0 h-2 w-2 border-t border-r",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
+            <div
+              className={cn(
+                "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
+                isDark ? "border-zinc-500" : "border-zinc-400"
+              )}
+            />
 
-            <div className="flex items-center gap-2 mb-6">
-              <BsShieldCheck className={cn("w-4 h-4", isDark ? "text-zinc-400" : "text-zinc-600")} />
-              <h2 className={cn(
-                "text-sm font-medium uppercase tracking-wider",
-                isDark ? "text-zinc-300" : "text-zinc-700"
-              )}>
+            <div className="mb-6 flex items-center gap-2">
+              <BsShieldCheck
+                className={cn("h-4 w-4", isDark ? "text-zinc-400" : "text-zinc-600")}
+              />
+              <h2
+                className={cn(
+                  "text-sm font-medium tracking-wider uppercase",
+                  isDark ? "text-zinc-300" : "text-zinc-700"
+                )}
+              >
                 Two-Factor Authentication
               </h2>
             </div>
 
-            <p className={cn(
-              "text-xs mb-4",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
-              Add an extra layer of security to your account by requiring a second form of verification.
+            <p className={cn("mb-4 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+              Add an extra layer of security to your account by requiring a second form of
+              verification.
             </p>
 
             {!showTotpSetup ? (
-              <div className={cn(
-                "flex items-center justify-between p-4 border",
-                isDark ? "border-zinc-700/50 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center justify-between border p-4",
+                  isDark ? "border-zinc-700/50 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
+                )}
+              >
                 <div>
-                  <div className={cn(
-                    "text-sm font-medium",
-                    isDark ? "text-zinc-200" : "text-zinc-700"
-                  )}>
+                  <div
+                    className={cn(
+                      "text-sm font-medium",
+                      isDark ? "text-zinc-200" : "text-zinc-700"
+                    )}
+                  >
                     Authenticator App
                   </div>
-                  <div className={cn(
-                    "text-xs mt-1",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}>
+                  <div className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
                     {twoFactorEnabled
                       ? "Two-factor authentication is enabled"
                       : "Use an app like Google Authenticator or Authy"}
@@ -572,11 +682,11 @@ const AccountPage = (): JSX.Element | null => {
                     className={cn(
                       "transition-all",
                       isDark
-                        ? "border-red-900/60 text-red-400/80 hover:text-red-300 hover:border-red-700"
-                        : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400"
+                        ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
+                        : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
                     )}
                   >
-                    <span className="text-xs uppercase tracking-wider">Disable</span>
+                    <span className="text-xs tracking-wider uppercase">Disable</span>
                   </Button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -586,10 +696,10 @@ const AccountPage = (): JSX.Element | null => {
                       value={passwordForAction}
                       onChange={(e) => setPasswordForAction(e.target.value)}
                       className={cn(
-                        "w-40 h-8 text-sm",
+                        "h-8 w-40 text-sm",
                         isDark
-                          ? "bg-zinc-900 border-zinc-700 text-zinc-100"
-                          : "bg-white border-zinc-300 text-zinc-900"
+                          ? "border-zinc-700 bg-zinc-900 text-zinc-100"
+                          : "border-zinc-300 bg-white text-zinc-900"
                       )}
                     />
                     <Button
@@ -600,36 +710,40 @@ const AccountPage = (): JSX.Element | null => {
                       className={cn(
                         "transition-all",
                         isDark
-                          ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                          : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                       )}
                     >
-                      <span className="text-xs uppercase tracking-wider">Enable</span>
+                      <span className="text-xs tracking-wider uppercase">Enable</span>
                     </Button>
                   </div>
                 )}
               </div>
             ) : (
               <div className="space-y-4">
-                <div className={cn(
-                  "p-4 border",
-                  isDark ? "border-zinc-700/50 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
-                )}>
-                  <p className={cn("text-sm mb-4", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div
+                  className={cn(
+                    "border p-4",
+                    isDark ? "border-zinc-700/50 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
+                  )}
+                >
+                  <p className={cn("mb-4 text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
                     Scan this QR code with your authenticator app:
                   </p>
                   {totpQrCode && (
-                    <div className="flex justify-center mb-4">
-                      <img src={totpQrCode} alt="TOTP QR Code" className="w-48 h-48" />
+                    <div className="mb-4 flex justify-center">
+                      <img src={totpQrCode} alt="TOTP QR Code" className="h-48 w-48" />
                     </div>
                   )}
-                  <p className={cn("text-xs mb-2", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  <p className={cn("mb-2 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
                     Or enter this code manually:
                   </p>
-                  <code className={cn(
-                    "block p-2 text-xs break-all",
-                    isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700"
-                  )}>
+                  <code
+                    className={cn(
+                      "block p-2 text-xs break-all",
+                      isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700"
+                    )}
+                  >
                     {totpUri?.split("secret=")[1]?.split("&")[0] || ""}
                   </code>
                 </div>
@@ -641,10 +755,10 @@ const AccountPage = (): JSX.Element | null => {
                     onChange={(e) => setVerifyCode(e.target.value)}
                     maxLength={6}
                     className={cn(
-                      "w-40 h-8 text-sm",
+                      "h-8 w-40 text-sm",
                       isDark
-                        ? "bg-zinc-900 border-zinc-700 text-zinc-100"
-                        : "bg-white border-zinc-300 text-zinc-900"
+                        ? "border-zinc-700 bg-zinc-900 text-zinc-100"
+                        : "border-zinc-300 bg-white text-zinc-900"
                     )}
                   />
                   <Button
@@ -655,11 +769,11 @@ const AccountPage = (): JSX.Element | null => {
                     className={cn(
                       "transition-all",
                       isDark
-                        ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                        : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                        : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                     )}
                   >
-                    <span className="text-xs uppercase tracking-wider">Verify</span>
+                    <span className="text-xs tracking-wider uppercase">Verify</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -674,11 +788,11 @@ const AccountPage = (): JSX.Element | null => {
                     className={cn(
                       "transition-all",
                       isDark
-                        ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                        : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
+                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                        : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                     )}
                   >
-                    <span className="text-xs uppercase tracking-wider">Cancel</span>
+                    <span className="text-xs tracking-wider uppercase">Cancel</span>
                   </Button>
                 </div>
               </div>
@@ -706,7 +820,7 @@ const AccountPage = (): JSX.Element | null => {
             <div
               key={index}
               className={cn(
-                "font-mono text-sm p-2 text-center",
+                "p-2 text-center font-mono text-sm",
                 isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700"
               )}
             >
@@ -729,10 +843,12 @@ const AccountPage = (): JSX.Element | null => {
       >
         <div className="space-y-4">
           <div>
-            <label className={cn(
-              "text-xs uppercase tracking-wider mb-2 block",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}>
+            <label
+              className={cn(
+                "mb-2 block text-xs tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
               Passkey Name
             </label>
             <Input
@@ -742,14 +858,11 @@ const AccountPage = (): JSX.Element | null => {
               className={cn(
                 "transition-all",
                 isDark
-                  ? "bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-                  : "bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                  ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
+                  : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
               )}
             />
-            <p className={cn(
-              "text-xs mt-1",
-              isDark ? "text-zinc-500" : "text-zinc-500"
-            )}>
+            <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
               Enter a name to identify this passkey
             </p>
           </div>
@@ -761,7 +874,7 @@ const AccountPage = (): JSX.Element | null => {
         open={deletePasskeyModalOpen}
         onOpenChange={setDeletePasskeyModalOpen}
         title="Delete Passkey"
-        description={`Are you sure you want to delete "${selectedPasskey?.name || 'this passkey'}"? You will no longer be able to sign in using this passkey.`}
+        description={`Are you sure you want to delete "${selectedPasskey?.name || "this passkey"}"? You will no longer be able to sign in using this passkey.`}
         onConfirm={handleDeletePasskey}
         confirmLabel="Delete"
         variant="danger"
@@ -781,10 +894,12 @@ const AccountPage = (): JSX.Element | null => {
       >
         <div className="space-y-4">
           <div>
-            <label className={cn(
-              "text-xs uppercase tracking-wider mb-2 block",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}>
+            <label
+              className={cn(
+                "mb-2 block text-xs tracking-wider uppercase",
+                isDark ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
               Password
             </label>
             <Input
@@ -795,8 +910,8 @@ const AccountPage = (): JSX.Element | null => {
               className={cn(
                 "transition-all",
                 isDark
-                  ? "bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-                  : "bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                  ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
+                  : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
               )}
             />
           </div>

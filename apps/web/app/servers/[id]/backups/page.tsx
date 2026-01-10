@@ -161,10 +161,14 @@ const BackupsPage = (): JSX.Element | null => {
   const handleDownload = async (backup: Backup) => {
     try {
       const { downloadUrl } = await getDownloadToken.mutateAsync(backup.id);
-      window.open(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}${downloadUrl}`,
-        "_blank"
-      );
+      // downloadUrl already includes /api prefix, just add the origin
+      const apiUrl =
+        typeof window !== "undefined" &&
+        window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      window.open(`${apiUrl}${downloadUrl}`, "_blank");
     } catch (error) {
       toast.error("Failed to generate download link");
     }

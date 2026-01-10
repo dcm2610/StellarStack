@@ -46,8 +46,7 @@ import {
 
 // Re-export all types
 export * from "./api.types";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { getApiEndpoint } from "./api-url";
 
 const request = async <T>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
   const { method = "GET", body, headers = {} } = options;
@@ -65,7 +64,7 @@ const request = async <T>(endpoint: string, options: RequestOptions = {}): Promi
     config.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, config);
+  const response = await fetch(getApiEndpoint(endpoint), config);
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));

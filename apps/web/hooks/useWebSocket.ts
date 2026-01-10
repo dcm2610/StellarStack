@@ -1,19 +1,13 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { serverKeys } from "./queries/use-servers";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { getApiUrl, getApiEndpoint } from "@/lib/api-url";
 
 // Convert HTTP URL to WebSocket URL
 const getWebSocketUrl = (): string => {
-  // If API_URL is a relative path (e.g., "/api" for nginx proxy), construct full URL from window.location
-  if (API_URL.startsWith("/")) {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.host}${API_URL}/ws`;
-  }
+  const apiUrl = getApiUrl();
 
-  // Otherwise, API_URL is a full URL (e.g., "http://localhost:3001" for local dev)
-  const url = new URL(API_URL);
+  const url = new URL(apiUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = "/api/ws";
   return url.toString();
@@ -22,7 +16,7 @@ const getWebSocketUrl = (): string => {
 // Fetch WebSocket auth token from API
 const fetchWsToken = async (): Promise<{ token: string; userId: string } | null> => {
   try {
-    const response = await fetch(`${API_URL}/api/ws/token`, {
+    const response = await fetch(getApiEndpoint("/ws/token"), {
       credentials: "include",
     });
     if (!response.ok) return null;

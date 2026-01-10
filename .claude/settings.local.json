@@ -73,7 +73,10 @@
       "Bash(node:*)",
       "Bash(taskkill:*)",
       "Bash(powershell:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(podman machine start:*)",
+      "Bash(podman-compose:*)",
+      "Bash(podman compose:*)"
     ],
     "deny": [],
     "ask": []

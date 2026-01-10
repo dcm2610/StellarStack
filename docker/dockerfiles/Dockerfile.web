@@ -24,8 +24,8 @@ FROM base AS builder
 WORKDIR /app
 
 # Build arguments for Next.js
-# Default to /api for production nginx proxy, can be overridden for custom deployments
-ARG NEXT_PUBLIC_API_URL=/api
+# Use placeholder URL for build - actual URL is resolved at runtime via nginx proxy
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 ARG NEXT_PUBLIC_GIT_COMMIT_HASH=unknown
 
 # Set build-time environment variables
