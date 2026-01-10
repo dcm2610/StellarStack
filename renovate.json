@@ -5,7 +5,7 @@
 
   "dependencyDashboard": true,
 
-  "commitMessagePrefix": "chore(deps):",
+  "commitMessagePrefix": "chore:",
 
   "labels": ["dependencies", "renovate"]
 }
