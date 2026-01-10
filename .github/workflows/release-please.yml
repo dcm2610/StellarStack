@@ -1,0 +1,67 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Link Linear Tickets in Changelog
+        if: steps.release.outputs.release_created
+        run: |
+          # Replace STE-XXX with linked format in CHANGELOG.md
+          sed -E 's/STE-([0-9]+)/[STE-\1](https:\/\/linear.app\/stellarstack\/issue\/STE-\1)/g' CHANGELOG.md > CHANGELOG.tmp
+          mv CHANGELOG.tmp CHANGELOG.md
+
+          # Commit the updated changelog
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: add Linear ticket links to CHANGELOG" || echo "No changes to commit"
+          git push origin master || echo "Nothing to push"
+
+          # Update the release with linked changelog
+          gh release edit ${{ steps.release.outputs.tag_name }} --notes-file CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Docker Build
+        if: steps.release.outputs.release_created
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: release-created
+          client-payload: |
+            {
+              "tag": "${{ steps.release.outputs.tag_name }}",
+              "version": "${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}"
+            }
+
+      - name: Output release information
+        if: steps.release.outputs.release_created
+        run: |
+          echo "### Release Created 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.release.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ steps.release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
