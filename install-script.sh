@@ -952,6 +952,7 @@ DATABASE_URL=postgresql://${postgres_user}:${postgres_password}@postgres:5432/${
 # API Configuration
 PORT=3001
 HOSTNAME=::
+API_URL=https://${api_domain}
 JWT_SECRET=${jwt_secret}
 BETTER_AUTH_SECRET=${better_auth_secret}
 DOWNLOAD_TOKEN_SECRET=${download_token_secret}
@@ -974,6 +975,36 @@ EOF
 
     chmod 600 "${ENV_FILE}"
     print_task_done "Creating environment file"
+}
+
+# Generate PostgreSQL initialization script
+generate_postgres_init_script() {
+    print_task "Creating PostgreSQL initialization script"
+
+    # Create initialization script that explicitly sets the password
+    # This ensures the password hash is created correctly for SCRAM-SHA-256 authentication
+    cat > "${INSTALL_DIR}/init-postgres.sh" << 'INIT_EOF'
+#!/bin/bash
+set -e
+
+# Wait a moment for PostgreSQL to fully initialize
+sleep 2
+
+# Explicitly set the password to ensure proper SCRAM-SHA-256 hash generation
+# This fixes authentication issues that sometimes occur with environment variable initialization
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    -- Ensure the password is set correctly with proper SCRAM-SHA-256 hash
+    ALTER USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';
+
+    -- Grant all privileges
+    GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;
+EOSQL
+
+echo "PostgreSQL user password has been explicitly set and verified"
+INIT_EOF
+
+    chmod +x "${INSTALL_DIR}/init-postgres.sh"
+    print_task_done "Creating PostgreSQL initialization script"
 }
 
 # Generate Docker Compose file
@@ -1006,6 +1037,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
@@ -1027,6 +1059,7 @@ COMPOSE_EOF
       - DATABASE_URL=${DATABASE_URL}
       - PORT=${PORT}
       - HOSTNAME=${HOSTNAME}
+      - API_URL=${API_URL}
       - JWT_SECRET=${JWT_SECRET}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - DOWNLOAD_TOKEN_SECRET=${DOWNLOAD_TOKEN_SECRET}
@@ -1780,6 +1813,7 @@ main() {
 
     # Generate configuration files
     generate_env_file
+    generate_postgres_init_script
     generate_docker_compose
     generate_monitoring_configs
 
