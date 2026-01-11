@@ -84,16 +84,16 @@ impl SftpAuthenticator {
 
     /// Authenticate a user
     ///
-    /// Username format: `server_uuid.user_uuid`
+    /// Username format: `server_uuid.user_uuid` or `server_uuid.email`
     pub async fn authenticate(&self, username: &str, password: &str) -> SftpResult<SftpUser> {
         debug!("SFTP auth attempt for user: {}", username);
 
-        // Parse username
-        let parts: Vec<&str> = username.split('.').collect();
+        // Parse username - split only on FIRST dot to support emails with dots
+        let parts: Vec<&str> = username.splitn(2, '.').collect();
         if parts.len() != 2 {
             warn!("Invalid SFTP username format: {}", username);
             return Err(SftpError::AuthFailed(
-                "Invalid username format. Expected: server_uuid.user_uuid".into()
+                "Invalid username format. Expected: server_uuid.user_uuid or server_uuid.email".into()
             ));
         }
 

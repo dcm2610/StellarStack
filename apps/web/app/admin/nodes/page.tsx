@@ -24,7 +24,17 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@workspace/ui/components/context-menu";
-import { CpuIcon, PlusIcon, TrashIcon, EditIcon, CopyIcon, CheckIcon, SettingsIcon, ArrowLeftIcon, SearchIcon } from "lucide-react";
+import {
+  CpuIcon,
+  PlusIcon,
+  TrashIcon,
+  EditIcon,
+  CopyIcon,
+  CheckIcon,
+  SettingsIcon,
+  ArrowLeftIcon,
+  SearchIcon,
+} from "lucide-react";
 import { useNodes, useNodeMutations, useLocations } from "@/hooks/queries";
 import { useAdminTheme, CornerAccents } from "@/hooks/use-admin-theme";
 import type { Node, CreateNodeData } from "@/lib/api";
@@ -115,19 +125,21 @@ export default function NodesPage() {
     }
   };
 
-  const formatBytes = (bytes: number) => {
-    const gb = bytes / 1073741824;
-    return gb >= 1 ? `${gb.toFixed(0)} GB` : `${(bytes / 1048576).toFixed(0)} MB`;
+  const formatBytes = (bytes: number | string) => {
+    const numBytes = typeof bytes === "string" ? parseInt(bytes, 10) : bytes;
+    const gb = numBytes / 1073741824;
+    return gb >= 1 ? `${gb.toFixed(0)} GB` : `${(numBytes / 1048576).toFixed(0)} MB`;
   };
 
   // Filter nodes based on search query
   const filteredNodes = useMemo(() => {
     if (!searchQuery) return nodesList;
     const query = searchQuery.toLowerCase();
-    return nodesList.filter((node) =>
-      node.displayName.toLowerCase().includes(query) ||
-      node.host.toLowerCase().includes(query) ||
-      node.location?.name?.toLowerCase().includes(query)
+    return nodesList.filter(
+      (node) =>
+        node.displayName.toLowerCase().includes(query) ||
+        node.host.toLowerCase().includes(query) ||
+        node.location?.name?.toLowerCase().includes(query)
     );
   }, [nodesList, searchQuery]);
 
@@ -136,15 +148,20 @@ export default function NodesPage() {
   if (!mounted) return null;
 
   return (
-    <div className={cn("min-h-svh transition-colors relative", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
+    <div
+      className={cn(
+        "relative min-h-svh transition-colors",
+        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+      )}
+    >
       <AnimatedBackground isDark={isDark} />
       <FloatingDots isDark={isDark} count={15} />
 
       <div className="relative p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           <FadeIn delay={0}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="mb-8 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
@@ -152,56 +169,62 @@ export default function NodesPage() {
                   onClick={() => router.push("/admin")}
                   className={cn(
                     "p-2 transition-all hover:scale-110 active:scale-95",
-                    isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                    isDark
+                      ? "text-zinc-400 hover:text-zinc-100"
+                      : "text-zinc-600 hover:text-zinc-900"
                   )}
                 >
-                  <ArrowLeftIcon className="w-4 h-4" />
+                  <ArrowLeftIcon className="h-4 w-4" />
                 </Button>
                 <div>
-                  <h1 className={cn(
-                    "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
-                  )}>
+                  <h1
+                    className={cn(
+                      "text-2xl font-light tracking-wider",
+                      isDark ? "text-zinc-100" : "text-zinc-800"
+                    )}
+                  >
                     NODES
                   </h1>
-                  <p className={cn(
-                    "text-sm mt-1",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}>
+                  <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
                     Manage daemon nodes
                   </p>
                 </div>
               </div>
               <Button
-                onClick={() => { resetForm(); setIsModalOpen(true); }}
+                onClick={() => {
+                  resetForm();
+                  setIsModalOpen(true);
+                }}
                 className={cn(
-                  "flex items-center gap-2 text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95",
+                  "flex items-center gap-2 text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-95",
                   isDark
                     ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
                     : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
                 )}
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="h-4 w-4" />
                 Add Node
               </Button>
             </div>
 
             {/* Search Bar */}
             <div className="relative mb-6">
-              <SearchIcon className={cn(
-                "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
-                isDark ? "text-zinc-500" : "text-zinc-400"
-              )} />
+              <SearchIcon
+                className={cn(
+                  "absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2",
+                  isDark ? "text-zinc-500" : "text-zinc-400"
+                )}
+              />
               <input
                 type="text"
                 placeholder="Search nodes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border text-sm transition-colors focus:outline-none",
+                  "w-full border py-2.5 pr-4 pl-10 text-sm transition-colors focus:outline-none",
                   isDark
-                    ? "bg-zinc-900/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
-                    : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
+                    ? "border-zinc-700 bg-zinc-900/50 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                    : "border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400"
                 )}
               />
             </div>
@@ -212,14 +235,18 @@ export default function NodesPage() {
             <div className="space-y-3">
               {isLoading ? (
                 <div className="flex justify-center py-12">
-                  <Spinner className="w-6 h-6" />
+                  <Spinner className="h-6 w-6" />
                 </div>
               ) : filteredNodes.length === 0 ? (
-                <div className={cn(
-                  "text-center py-12 border",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
-                )}>
-                  {searchQuery ? "No nodes match your search." : "No nodes configured. Add your first node to get started."}
+                <div
+                  className={cn(
+                    "border py-12 text-center",
+                    isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  )}
+                >
+                  {searchQuery
+                    ? "No nodes match your search."
+                    : "No nodes configured. Add your first node to get started."}
                 </div>
               ) : (
                 filteredNodes.map((node, index) => (
@@ -228,46 +255,72 @@ export default function NodesPage() {
                       <ContextMenuTrigger asChild>
                         <div
                           className={cn(
-                            "relative p-5 border transition-all hover:scale-[1.005] group cursor-context-menu",
+                            "group relative cursor-context-menu border p-5 transition-all hover:scale-[1.005]",
                             isDark
-                              ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] border-zinc-200/10 shadow-lg shadow-black/20 hover:border-zinc-700"
-                              : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 border-zinc-300 shadow-lg shadow-zinc-400/20 hover:border-zinc-400"
+                              ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-lg shadow-black/20 hover:border-zinc-700"
+                              : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 shadow-lg shadow-zinc-400/20 hover:border-zinc-400"
                           )}
                         >
                           <CornerAccents isDark={isDark} size="sm" />
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <CpuIcon className={cn(
-                                "w-8 h-8",
-                                node.isOnline
-                                  ? (isDark ? "text-zinc-300" : "text-zinc-700")
-                                  : (isDark ? "text-zinc-600" : "text-zinc-400")
-                              )} />
+                              <CpuIcon
+                                className={cn(
+                                  "h-8 w-8",
+                                  node.isOnline
+                                    ? isDark
+                                      ? "text-zinc-300"
+                                      : "text-zinc-700"
+                                    : isDark
+                                      ? "text-zinc-600"
+                                      : "text-zinc-400"
+                                )}
+                              />
                               <div>
-                                <div className={cn(
-                                  "font-medium flex items-center gap-2",
-                                  isDark ? "text-zinc-100" : "text-zinc-800"
-                                )}>
+                                <div
+                                  className={cn(
+                                    "flex items-center gap-2 font-medium",
+                                    isDark ? "text-zinc-100" : "text-zinc-800"
+                                  )}
+                                >
                                   {node.displayName}
-                                  <span className={cn(
-                                    "text-[10px] px-1.5 py-0.5 uppercase tracking-wider border",
-                                    node.isOnline
-                                      ? (isDark ? "border-zinc-600 text-zinc-300" : "border-zinc-400 text-zinc-600")
-                                      : (isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-300 text-zinc-500")
-                                  )}>
+                                  <span
+                                    className={cn(
+                                      "border px-1.5 py-0.5 text-[10px] tracking-wider uppercase",
+                                      node.isOnline
+                                        ? isDark
+                                          ? "border-zinc-600 text-zinc-300"
+                                          : "border-zinc-400 text-zinc-600"
+                                        : isDark
+                                          ? "border-zinc-700 text-zinc-500"
+                                          : "border-zinc-300 text-zinc-500"
+                                    )}
+                                  >
                                     {node.isOnline ? "Online" : "Offline"}
                                   </span>
                                 </div>
-                                <div className={cn("text-xs mt-1", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                                <div
+                                  className={cn(
+                                    "mt-1 text-xs",
+                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                  )}
+                                >
                                   {node.protocol.toLowerCase()}://{node.host}:{node.port}
                                 </div>
-                                <div className={cn("text-xs mt-1 flex gap-4", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                                <div
+                                  className={cn(
+                                    "mt-1 flex gap-4 text-xs",
+                                    isDark ? "text-zinc-600" : "text-zinc-400"
+                                  )}
+                                >
                                   <span>CPU: {node.cpuLimit} cores</span>
                                   <span>RAM: {formatBytes(node.memoryLimit)}</span>
                                   <span>Disk: {formatBytes(node.diskLimit)}</span>
                                   {node.heartbeatLatency && (
-                                    <span className={cn(isDark ? "text-zinc-400" : "text-zinc-600")}>
+                                    <span
+                                      className={cn(isDark ? "text-zinc-400" : "text-zinc-600")}
+                                    >
                                       {node.heartbeatLatency}ms
                                     </span>
                                   )}
@@ -280,63 +333,71 @@ export default function NodesPage() {
                                 size="sm"
                                 onClick={() => router.push(`/admin/nodes/${node.id}`)}
                                 className={cn(
-                                  "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                  isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
+                                  "p-2 text-xs transition-all hover:scale-110 active:scale-95",
+                                  isDark
+                                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100"
+                                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                                 )}
                               >
-                                <SettingsIcon className="w-3.5 h-3.5" />
+                                <SettingsIcon className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => router.push(`/admin/nodes/${node.id}/edit`)}
                                 className={cn(
-                                  "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                  isDark ? "border-zinc-700 text-zinc-400 hover:text-zinc-100" : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
+                                  "p-2 text-xs transition-all hover:scale-110 active:scale-95",
+                                  isDark
+                                    ? "border-zinc-700 text-zinc-400 hover:text-zinc-100"
+                                    : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
                                 )}
                               >
-                                <EditIcon className="w-3.5 h-3.5" />
+                                <EditIcon className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setDeleteConfirmNode(node)}
                                 className={cn(
-                                  "text-xs p-2 transition-all hover:scale-110 active:scale-95",
-                                  isDark ? "border-red-900/50 text-red-400 hover:bg-red-900/20" : "border-red-200 text-red-600 hover:bg-red-50"
+                                  "p-2 text-xs transition-all hover:scale-110 active:scale-95",
+                                  isDark
+                                    ? "border-red-900/50 text-red-400 hover:bg-red-900/20"
+                                    : "border-red-200 text-red-600 hover:bg-red-50"
                                 )}
                               >
-                                <TrashIcon className="w-3.5 h-3.5" />
+                                <TrashIcon className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
                         </div>
                       </ContextMenuTrigger>
-                      <ContextMenuContent className={cn(
-                        "min-w-[160px]",
-                        isDark ? "bg-zinc-900 border-zinc-700" : "bg-white border-zinc-200"
-                      )}>
+                      <ContextMenuContent
+                        className={cn(
+                          "min-w-[160px]",
+                          isDark ? "border-zinc-700 bg-zinc-900" : "border-zinc-200 bg-white"
+                        )}
+                      >
                         <ContextMenuItem
                           onClick={() => router.push(`/admin/nodes/${node.id}`)}
-                          className="gap-2 cursor-pointer"
+                          className="cursor-pointer gap-2"
                         >
-                          <SettingsIcon className="w-4 h-4" />
+                          <SettingsIcon className="h-4 w-4" />
                           Configure
                         </ContextMenuItem>
                         <ContextMenuItem
                           onClick={() => router.push(`/admin/nodes/${node.id}/edit`)}
-                          className="gap-2 cursor-pointer"
+                          className="cursor-pointer gap-2"
                         >
-                          <EditIcon className="w-4 h-4" />
+                          <EditIcon className="h-4 w-4" />
                           Edit
                         </ContextMenuItem>
                         <ContextMenuSeparator className={isDark ? "bg-zinc-700" : "bg-zinc-200"} />
                         <ContextMenuItem
                           onClick={() => setDeleteConfirmNode(node)}
-                          className="gap-2 cursor-pointer"
+                          className="cursor-pointer gap-2"
                           variant="destructive"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          <TrashIcon className="h-4 w-4" />
                           Delete
                         </ContextMenuItem>
                       </ContextMenuContent>
@@ -393,7 +454,9 @@ export default function NodesPage() {
               <input
                 type="number"
                 value={formData.port}
-                onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) || 3001 })}
+                onChange={(e) =>
+                  setFormData({ ...formData, port: parseInt(e.target.value) || 3001 })
+                }
                 className={inputClasses}
                 required
               />
@@ -405,7 +468,12 @@ export default function NodesPage() {
               <label className={labelClasses}>Protocol</label>
               <select
                 value={formData.protocol}
-                onChange={(e) => setFormData({ ...formData, protocol: e.target.value as "HTTP" | "HTTPS" | "HTTPS_PROXY" })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    protocol: e.target.value as "HTTP" | "HTTPS" | "HTTPS_PROXY",
+                  })
+                }
                 className={selectClasses}
               >
                 <option value="HTTP">HTTP</option>
@@ -417,12 +485,16 @@ export default function NodesPage() {
               <label className={labelClasses}>Location</label>
               <select
                 value={formData.locationId || ""}
-                onChange={(e) => setFormData({ ...formData, locationId: e.target.value || undefined })}
+                onChange={(e) =>
+                  setFormData({ ...formData, locationId: e.target.value || undefined })
+                }
                 className={selectClasses}
               >
                 <option value="">No Location</option>
                 {locationsList.map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -434,7 +506,9 @@ export default function NodesPage() {
               <input
                 type="number"
                 value={formData.cpuLimit}
-                onChange={(e) => setFormData({ ...formData, cpuLimit: parseInt(e.target.value) || 1 })}
+                onChange={(e) =>
+                  setFormData({ ...formData, cpuLimit: parseInt(e.target.value) || 1 })
+                }
                 className={inputClasses}
                 required
               />
@@ -444,7 +518,12 @@ export default function NodesPage() {
               <input
                 type="number"
                 value={formData.memoryLimit / 1073741824}
-                onChange={(e) => setFormData({ ...formData, memoryLimit: (parseFloat(e.target.value) || 1) * 1073741824 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    memoryLimit: (parseFloat(e.target.value) || 1) * 1073741824,
+                  })
+                }
                 className={inputClasses}
                 required
               />
@@ -454,7 +533,12 @@ export default function NodesPage() {
               <input
                 type="number"
                 value={formData.diskLimit / 1073741824}
-                onChange={(e) => setFormData({ ...formData, diskLimit: (parseFloat(e.target.value) || 1) * 1073741824 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    diskLimit: (parseFloat(e.target.value) || 1) * 1073741824,
+                  })
+                }
                 className={inputClasses}
                 required
               />
@@ -467,7 +551,9 @@ export default function NodesPage() {
               <input
                 type="number"
                 value={formData.sftpPort}
-                onChange={(e) => setFormData({ ...formData, sftpPort: parseInt(e.target.value) || 2022 })}
+                onChange={(e) =>
+                  setFormData({ ...formData, sftpPort: parseInt(e.target.value) || 2022 })
+                }
                 className={inputClasses}
               />
             </div>
@@ -476,7 +562,12 @@ export default function NodesPage() {
               <input
                 type="number"
                 value={(formData.uploadLimit ?? 104857600) / 1048576}
-                onChange={(e) => setFormData({ ...formData, uploadLimit: (parseFloat(e.target.value) || 100) * 1048576 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    uploadLimit: (parseFloat(e.target.value) || 100) * 1048576,
+                  })
+                }
                 className={inputClasses}
               />
             </div>
@@ -486,27 +577,39 @@ export default function NodesPage() {
 
       {/* Token Modal */}
       <Dialog open={!!showToken} onOpenChange={(open) => !open && setShowToken(null)}>
-        <DialogContent className={cn(
-          "sm:max-w-lg",
-          isDark ? "bg-zinc-900 border-zinc-700" : "bg-white border-zinc-200"
-        )}>
+        <DialogContent
+          className={cn(
+            "sm:max-w-lg",
+            isDark ? "border-zinc-700 bg-zinc-900" : "border-zinc-200 bg-white"
+          )}
+        >
           <DialogHeader>
             <DialogTitle className={cn(isDark ? "text-zinc-100" : "text-zinc-900")}>
               Node Credentials
             </DialogTitle>
             <DialogDescription className={cn(isDark ? "text-zinc-400" : "text-zinc-600")}>
-              Copy these credentials and use them to configure the daemon. They will only be shown once.
+              Copy these credentials and use them to configure the daemon. They will only be shown
+              once.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className={cn("text-xs uppercase tracking-wider mb-1 block", isDark ? "text-zinc-400" : "text-zinc-600")}>
+              <label
+                className={cn(
+                  "mb-1 block text-xs tracking-wider uppercase",
+                  isDark ? "text-zinc-400" : "text-zinc-600"
+                )}
+              >
                 Token ID
               </label>
-              <div className={cn(
-                "p-3 font-mono text-xs break-all border flex items-center justify-between gap-2",
-                isDark ? "bg-zinc-950 border-zinc-700 text-zinc-300" : "bg-zinc-50 border-zinc-200 text-zinc-700"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-2 border p-3 font-mono text-xs break-all",
+                  isDark
+                    ? "border-zinc-700 bg-zinc-950 text-zinc-300"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-700"
+                )}
+              >
                 <span className="flex-1">{showToken?.token_id}</span>
                 <Button
                   variant="outline"
@@ -514,18 +617,33 @@ export default function NodesPage() {
                   onClick={copyTokenId}
                   className={cn("shrink-0", isDark ? "border-zinc-700" : "border-zinc-300")}
                 >
-                  {copiedTokenId ? <CheckIcon className={cn("w-4 h-4", isDark ? "text-zinc-300" : "text-zinc-700")} /> : <CopyIcon className="w-4 h-4" />}
+                  {copiedTokenId ? (
+                    <CheckIcon
+                      className={cn("h-4 w-4", isDark ? "text-zinc-300" : "text-zinc-700")}
+                    />
+                  ) : (
+                    <CopyIcon className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
             <div>
-              <label className={cn("text-xs uppercase tracking-wider mb-1 block", isDark ? "text-zinc-400" : "text-zinc-600")}>
+              <label
+                className={cn(
+                  "mb-1 block text-xs tracking-wider uppercase",
+                  isDark ? "text-zinc-400" : "text-zinc-600"
+                )}
+              >
                 Token
               </label>
-              <div className={cn(
-                "p-3 font-mono text-xs break-all border flex items-center justify-between gap-2",
-                isDark ? "bg-zinc-950 border-zinc-700 text-zinc-300" : "bg-zinc-50 border-zinc-200 text-zinc-700"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-2 border p-3 font-mono text-xs break-all",
+                  isDark
+                    ? "border-zinc-700 bg-zinc-950 text-zinc-300"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-700"
+                )}
+              >
                 <span className="flex-1">{showToken?.token}</span>
                 <Button
                   variant="outline"
@@ -533,16 +651,22 @@ export default function NodesPage() {
                   onClick={copyToken}
                   className={cn("shrink-0", isDark ? "border-zinc-700" : "border-zinc-300")}
                 >
-                  {copiedToken ? <CheckIcon className={cn("w-4 h-4", isDark ? "text-zinc-300" : "text-zinc-700")} /> : <CopyIcon className="w-4 h-4" />}
+                  {copiedToken ? (
+                    <CheckIcon
+                      className={cn("h-4 w-4", isDark ? "text-zinc-300" : "text-zinc-700")}
+                    />
+                  ) : (
+                    <CopyIcon className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
           </div>
-          <div className="flex justify-end mt-4">
+          <div className="mt-4 flex justify-end">
             <Button
               onClick={() => setShowToken(null)}
               className={cn(
-                "text-xs uppercase tracking-wider",
+                "text-xs tracking-wider uppercase",
                 isDark
                   ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
                   : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"

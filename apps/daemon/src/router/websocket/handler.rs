@@ -191,26 +191,62 @@ async fn handle_socket(socket: WebSocket, state: AppState, server: Arc<Server>, 
             }
 
             // Forward console output from console_sink (buffered)
-            Ok(data) = console_rx.recv() => {
-                let line = String::from_utf8_lossy(&data).to_string();
-                debug!("WebSocket forwarding console line for {}: {} chars", server.uuid(), line.len());
-                let timestamp = chrono::Utc::now().timestamp_millis();
-                let msg = WsOutgoing::new("console output", json!({ "line": line, "timestamp": timestamp }));
-                let _ = sender.send(Message::Text(msg.to_json())).await;
+            result = console_rx.recv() => {
+                match result {
+                    Ok(data) => {
+                        let line = String::from_utf8_lossy(&data).to_string();
+                        let line_preview: String = line.chars().take(80).collect();
+                        info!("WebSocket forwarding console line for {}: {} chars - {}", server.uuid(), line.len(), line_preview);
+                        let timestamp = chrono::Utc::now().timestamp_millis();
+                        let msg = WsOutgoing::new("console output", json!({ "line": line, "timestamp": timestamp }));
+                        if let Err(e) = sender.send(Message::Text(msg.to_json())).await {
+                            warn!("Failed to send console output to WebSocket for {}: {}", server.uuid(), e);
+                            break;
+                        }
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        warn!("WebSocket console_rx lagged by {} messages for {}, continuing", n, server.uuid());
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        warn!("WebSocket console_rx closed for {}", server.uuid());
+                        break;
+                    }
+                }
             }
 
             // Forward install output (if permitted)
-            Ok(data) = install_rx.recv() => {
-                if handler.claims.has_permission("admin.websocket.install") {
-                    let line = String::from_utf8_lossy(&data).to_string();
-                    let timestamp = chrono::Utc::now().timestamp_millis();
-                    let msg = WsOutgoing::new("install output", json!({ "line": line, "timestamp": timestamp }));
-                    let _ = sender.send(Message::Text(msg.to_json())).await;
+            result = install_rx.recv() => {
+                match result {
+                    Ok(data) => {
+                        if handler.claims.has_permission("admin.websocket.install") {
+                            let line = String::from_utf8_lossy(&data).to_string();
+                            let timestamp = chrono::Utc::now().timestamp_millis();
+                            let msg = WsOutgoing::new("install output", json!({ "line": line, "timestamp": timestamp }));
+                            let _ = sender.send(Message::Text(msg.to_json())).await;
+                        }
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        warn!("WebSocket install_rx lagged by {} messages for {}, continuing", n, server.uuid());
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        warn!("WebSocket install_rx closed for {}", server.uuid());
+                    }
                 }
             }
 
             // Forward server events (state changes, stats, etc. - NOT console output)
-            Ok(event) = events_rx.recv() => {
+            result = events_rx.recv() => {
+                let event = match result {
+                    Ok(e) => e,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        warn!("WebSocket events_rx lagged by {} messages for {}, continuing", n, server.uuid());
+                        continue;
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        warn!("WebSocket events_rx closed for {}", server.uuid());
+                        break;
+                    }
+                };
                 // Skip ConsoleOutput since we handle it via console_rx above
                 if !matches!(event, Event::ConsoleOutput(_)) {
                     // Log state changes specifically

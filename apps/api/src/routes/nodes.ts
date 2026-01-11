@@ -10,7 +10,8 @@ const nodes = new Hono<{ Variables: Variables }>();
 // Heartbeat timeout in milliseconds (45 seconds - allows 1 missed heartbeat at 30s interval)
 const HEARTBEAT_TIMEOUT_MS = 45 * 1000;
 
-// Helper to convert BigInt fields to Number for JSON serialization
+// Helper to convert BigInt fields to string for JSON serialization
+// BigInt values can lose precision when converted to Number for large values
 // Also checks if node is actually online based on heartbeat
 const serializeNode = (node: any) => {
   // Check if heartbeat is stale (older than timeout)
@@ -18,7 +19,7 @@ const serializeNode = (node: any) => {
   if (isOnline && node.lastHeartbeat) {
     const lastHeartbeat = new Date(node.lastHeartbeat).getTime();
     const now = Date.now();
-    isOnline = (now - lastHeartbeat) < HEARTBEAT_TIMEOUT_MS;
+    isOnline = now - lastHeartbeat < HEARTBEAT_TIMEOUT_MS;
   } else if (isOnline && !node.lastHeartbeat) {
     // No heartbeat recorded yet, consider offline
     isOnline = false;
@@ -27,9 +28,9 @@ const serializeNode = (node: any) => {
   return {
     ...node,
     isOnline,
-    memoryLimit: Number(node.memoryLimit),
-    diskLimit: Number(node.diskLimit),
-    uploadLimit: Number(node.uploadLimit),
+    memoryLimit: node.memoryLimit?.toString(),
+    diskLimit: node.diskLimit?.toString(),
+    uploadLimit: node.uploadLimit?.toString(),
   };
 };
 
@@ -157,7 +158,8 @@ nodes.post("/", requireAdmin, async (c) => {
       // Daemon config values - use these in config.toml
       token_id: node.id,
       token: token,
-      message: "Store token_id and token securely for your daemon config.toml. They will not be shown again.",
+      message:
+        "Store token_id and token securely for your daemon config.toml. They will not be shown again.",
     },
     201
   );
@@ -188,7 +190,8 @@ nodes.post("/:id/regenerate-token", requireAdmin, async (c) => {
   return c.json({
     token_id: id,
     token,
-    message: "Store token_id and token securely for your daemon config.toml. They will not be shown again.",
+    message:
+      "Store token_id and token securely for your daemon config.toml. They will not be shown again.",
   });
 });
 

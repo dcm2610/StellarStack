@@ -618,15 +618,18 @@ impl Server {
                         match result {
                             Ok(Event::ConsoleOutput(data)) => {
                                 line_count += 1;
+
+                                // Log EVERY line for debugging
+                                let preview = String::from_utf8_lossy(&data);
+                                let preview_short: String = preview.chars().take(80).collect();
+                                info!("Console forwarder [{}] line {}: {} (pushing to sink, {} subscribers)",
+                                    uuid, line_count, preview_short, console_sink.subscriber_count());
+
                                 // Push to console_sink for buffering (WebSocket clients can get history)
                                 console_sink.push(data.clone());
 
-                                // Log every 10th line to avoid spam but confirm data is flowing
-                                if line_count <= 3 || line_count % 10 == 0 {
-                                    let preview = String::from_utf8_lossy(&data);
-                                    let preview_short: String = preview.chars().take(80).collect();
-                                    debug!("Console forwarder [{}] line {}: {}", uuid, line_count, preview_short);
-                                }
+                                debug!("Console forwarder [{}] pushed line {} to sink (buffer len: {})",
+                                    uuid, line_count, console_sink.buffer_len());
 
                                 // Save to Redis for persistence across daemon restarts
                                 if let Some(ref store) = state_store {
@@ -637,10 +640,10 @@ impl Server {
                             Ok(_) => {} // Ignore other events
                             Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                                 // Subscriber fell behind, log but continue
-                                debug!("Console forwarder [{}] lagged by {} messages, continuing", uuid, n);
+                                warn!("Console forwarder [{}] lagged by {} messages, continuing", uuid, n);
                             }
                             Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                                info!("Console forwarder stopped for server {} after {} lines (channel closed)", uuid, line_count);
+                                warn!("Console forwarder stopped for server {} after {} lines (channel closed)", uuid, line_count);
                                 return;
                             }
                         }

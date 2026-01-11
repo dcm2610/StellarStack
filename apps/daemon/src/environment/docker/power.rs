@@ -440,23 +440,33 @@ pub async fn attach_container(
     let event_bus = env.events().clone();
 
     tokio::spawn(async move {
+        info!("Attach output task started for {}", container_name_clone);
+        let mut line_count = 0u64;
+
         // Handle output
         while let Some(result) = output.next().await {
             match result {
                 Ok(log_output) => {
                     let bytes = log_output.into_bytes();
                     if !bytes.is_empty() {
+                        line_count += 1;
+
+                        // Log every line for debugging (with preview)
+                        let preview = String::from_utf8_lossy(&bytes);
+                        let preview_short: String = preview.chars().take(100).collect();
+                        debug!("Attach output [{}] line {}: {}", container_name_clone, line_count, preview_short);
+
                         // Publish to event bus
                         event_bus.publish(crate::events::Event::ConsoleOutput(bytes.to_vec()));
                     }
                 }
                 Err(e) => {
-                    warn!("Error reading output from {}: {}", container_name_clone, e);
+                    warn!("Error reading output from {} after {} lines: {}", container_name_clone, line_count, e);
                     break;
                 }
             }
         }
-        debug!("Output stream ended for {}", container_name_clone);
+        warn!("Output stream ended for {} after {} lines", container_name_clone, line_count);
     });
 
     // Spawn task to handle input

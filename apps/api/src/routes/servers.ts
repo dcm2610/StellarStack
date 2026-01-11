@@ -104,13 +104,14 @@ const verifyDownloadToken = (
   }
 };
 
-// Helper to convert BigInt fields to Number for JSON serialization
+// Helper to convert BigInt fields to string for JSON serialization
+// BigInt values can lose precision when converted to Number for large values
 const serializeServer = (server: any) => {
   return {
     ...server,
-    memory: Number(server.memory),
-    disk: Number(server.disk),
-    swap: Number(server.swap),
+    memory: server.memory != null ? server.memory.toString() : null,
+    disk: server.disk != null ? server.disk.toString() : null,
+    swap: server.swap != null ? server.swap.toString() : null,
   };
 };
 

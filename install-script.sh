@@ -376,10 +376,23 @@ check_dependencies() {
     if command -v docker &> /dev/null; then
         print_success "Docker is installed"
 
-        # Create a docker network called "Stellar" if it doesn't exist
-
-        if ! docker network ls | grep -q stellar_network; then
+        # Create Docker networks for StellarStack
+        # 1. stellar_network - for Docker Compose services (panel, API, database)
+        if ! docker network ls | grep -q "stellar_network"; then
+          print_task "Creating Docker network 'stellar_network' for services"
           docker network create stellar_network
+          print_task_done "Creating Docker network 'stellar_network'"
+        else
+          print_success "Docker network 'stellar_network' already exists"
+        fi
+
+        # 2. stellar - for game server containers (daemon-managed)
+        if ! docker network ls | grep -qw "stellar"; then
+          print_task "Creating Docker network 'stellar' for game servers"
+          docker network create stellar --subnet=172.18.0.0/16 --gateway=172.18.0.1
+          print_task_done "Creating Docker network 'stellar'"
+        else
+          print_success "Docker network 'stellar' already exists"
         fi
 
 

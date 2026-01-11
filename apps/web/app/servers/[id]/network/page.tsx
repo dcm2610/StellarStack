@@ -25,6 +25,7 @@ import { useServer } from "@/components/server-provider";
 import { ServerInstallingPlaceholder } from "@/components/server-installing-placeholder";
 import { ServerSuspendedPlaceholder } from "@/components/server-suspended-placeholder";
 import { servers, features, type Allocation, type SubdomainFeatureStatus } from "@/lib/api";
+import { useSession } from "@/lib/auth-client";
 
 interface Subdomain {
   id: string;
@@ -47,6 +48,9 @@ const NetworkPage = (): JSX.Element | null => {
 
   // Get server data for SFTP details and primary allocation
   const { server, consoleInfo, isInstalling, refetch } = useServer();
+
+  // Get user session for SFTP username
+  const { data: session } = useSession();
 
   // Modal states
   const [deletePortModalOpen, setDeletePortModalOpen] = useState(false);
@@ -295,12 +299,7 @@ const NetworkPage = (): JSX.Element | null => {
                     Port Allocations
                   </h2>
                 </div>
-                <span
-                  className={cn(
-                    "text-xs",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}
-                >
+                <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
                   {allocations.length} / {allocationLimit} used
                 </span>
               </div>
@@ -309,11 +308,7 @@ const NetworkPage = (): JSX.Element | null => {
                 size="sm"
                 onClick={openAddAllocationModal}
                 disabled={!canAddAllocation}
-                title={
-                  canAddAllocation
-                    ? "Add a new allocation"
-                    : "Allocation limit reached"
-                }
+                title={canAddAllocation ? "Add a new allocation" : "Allocation limit reached"}
                 className={cn(
                   "gap-2 transition-all",
                   !canAddAllocation && "cursor-not-allowed opacity-50",
@@ -659,7 +654,9 @@ const NetworkPage = (): JSX.Element | null => {
                   <div
                     className={cn("font-mono text-sm", isDark ? "text-zinc-100" : "text-zinc-800")}
                   >
-                    {server?.node?.host || "—"}
+                    {server?.node?.host || (
+                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>Loading...</span>
+                    )}
                   </div>
                 </div>
 
@@ -675,7 +672,7 @@ const NetworkPage = (): JSX.Element | null => {
                   <div
                     className={cn("font-mono text-sm", isDark ? "text-zinc-100" : "text-zinc-800")}
                   >
-                    {server?.node?.sftpPort || 2022}
+                    {server?.node?.sftpPort ?? 2022}
                   </div>
                 </div>
 
@@ -689,9 +686,16 @@ const NetworkPage = (): JSX.Element | null => {
                     Username
                   </label>
                   <div
-                    className={cn("font-mono text-sm", isDark ? "text-zinc-100" : "text-zinc-800")}
+                    className={cn(
+                      "font-mono text-sm break-all",
+                      isDark ? "text-zinc-100" : "text-zinc-800"
+                    )}
                   >
-                    {server?.shortId || serverId}
+                    {server && session?.user ? (
+                      `${server.id}.${session.user.email}`
+                    ) : (
+                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>Loading...</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -700,17 +704,19 @@ const NetworkPage = (): JSX.Element | null => {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const host = server?.node?.host || "localhost";
-                    const port = server?.node?.sftpPort || 2022;
-                    const username = server?.shortId || serverId;
+                    if (!server || !session?.user) return;
+                    const host = server.node?.host || "localhost";
+                    const port = server.node?.sftpPort || 2022;
+                    const username = `${server.id}.${session.user.email}`;
                     // Try to open SFTP URL - this will work if user has an SFTP handler installed
                     window.open(`sftp://${username}@${host}:${port}`, "_blank");
                   }}
+                  disabled={!server || !session?.user}
                   className={cn(
                     "gap-2 transition-all",
                     isDark
-                      ? "border-purple-900/50 text-purple-400 hover:border-purple-700 hover:bg-purple-900/20 hover:text-purple-300"
-                      : "border-purple-300 text-purple-600 hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700"
+                      ? "border-purple-900/50 text-purple-400 hover:border-purple-700 hover:bg-purple-900/20 hover:text-purple-300 disabled:opacity-30"
+                      : "border-purple-300 text-purple-600 hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-30"
                   )}
                 >
                   <BsKey className="h-4 w-4" />
@@ -720,16 +726,18 @@ const NetworkPage = (): JSX.Element | null => {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const host = server?.node?.host || "localhost";
-                    const port = server?.node?.sftpPort || 2022;
-                    const username = server?.shortId || serverId;
+                    if (!server || !session?.user) return;
+                    const host = server.node?.host || "localhost";
+                    const port = server.node?.sftpPort || 2022;
+                    const username = `${server.id}.${session.user.email}`;
                     navigator.clipboard.writeText(`sftp://${username}@${host}:${port}`);
                   }}
+                  disabled={!server || !session?.user}
                   className={cn(
                     "gap-2 transition-all",
                     isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-30"
+                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-30"
                   )}
                 >
                   <span className="text-xs tracking-wider uppercase">Copy Connection URL</span>

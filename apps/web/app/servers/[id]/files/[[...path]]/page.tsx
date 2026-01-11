@@ -211,7 +211,11 @@ const FilesPage = (): JSX.Element | null => {
   // Storage info - total from server allocation, used from actual disk usage
   const storageUsedGB = diskUsage.used / (1024 * 1024 * 1024);
   const storageTotalGB =
-    diskUsage.total > 0 ? diskUsage.total / (1024 * 1024 * 1024) : server ? server.disk / 1024 : 10; // fallback to server.disk (in MB) if no limit set
+    diskUsage.total > 0
+      ? diskUsage.total / (1024 * 1024 * 1024)
+      : server
+        ? (typeof server.disk === "string" ? parseInt(server.disk, 10) : server.disk) / 1024
+        : 10; // fallback to server.disk (in MiB) if no limit set
   const storagePercentage = storageTotalGB > 0 ? (storageUsedGB / storageTotalGB) * 100 : 0;
 
   useEffect(() => {
@@ -1235,8 +1239,8 @@ const FilesPage = (): JSX.Element | null => {
               )}
             />
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1250,7 +1254,7 @@ const FilesPage = (): JSX.Element | null => {
                   )}
                 >
                   <BsArrowLeft className="h-4 w-4" />
-                  <span className="text-xs tracking-wider uppercase">Back</span>
+                  <span className="hidden text-xs tracking-wider uppercase sm:inline">Back</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -1264,7 +1268,9 @@ const FilesPage = (): JSX.Element | null => {
                   )}
                 >
                   <BsPlus className="h-4 w-4" />
-                  <span className="text-xs tracking-wider uppercase">New Folder</span>
+                  <span className="hidden text-xs tracking-wider uppercase sm:inline">
+                    New Folder
+                  </span>
                 </Button>
                 <Button
                   variant="outline"
@@ -1278,7 +1284,9 @@ const FilesPage = (): JSX.Element | null => {
                   )}
                 >
                   <BsFileText className="h-4 w-4" />
-                  <span className="text-xs tracking-wider uppercase">New File</span>
+                  <span className="hidden text-xs tracking-wider uppercase sm:inline">
+                    New File
+                  </span>
                 </Button>
                 {selectedCount > 0 && (
                   <span className={cn("ml-2 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
@@ -1286,7 +1294,7 @@ const FilesPage = (): JSX.Element | null => {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Search Input */}
                 <div className="relative">
                   <BsSearch
@@ -1299,9 +1307,9 @@ const FilesPage = (): JSX.Element | null => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search files..."
+                    placeholder="Search..."
                     className={cn(
-                      "h-9 w-48 border pr-8 pl-9 text-xs transition-colors outline-none",
+                      "h-9 w-32 border pr-8 pl-9 text-xs transition-colors outline-none sm:w-48",
                       isDark
                         ? "border-zinc-700 bg-zinc-900/50 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500"
                         : "border-zinc-300 bg-white text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400"
@@ -1331,9 +1339,10 @@ const FilesPage = (): JSX.Element | null => {
                       ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                       : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                   )}
+                  title="SFTP Connection"
                 >
                   <BsTerminal className="h-4 w-4" />
-                  <span className="text-xs tracking-wider uppercase">SFTP</span>
+                  <span className="hidden text-xs tracking-wider uppercase md:inline">SFTP</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -1345,9 +1354,10 @@ const FilesPage = (): JSX.Element | null => {
                       ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                       : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
                   )}
+                  title="Upload Files"
                 >
                   <BsUpload className="h-4 w-4" />
-                  <span className="text-xs tracking-wider uppercase">Upload</span>
+                  <span className="hidden text-xs tracking-wider uppercase md:inline">Upload</span>
                 </Button>
                 <Button
                   variant="outline"
