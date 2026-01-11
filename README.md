@@ -1,6 +1,5 @@
 <p align="center">
-  <!-- TODO: Add logo once provided -->
-  <!-- <img width="150" height="150" src="assets/logo/stellarstack-logo.png" alt="StellarStack Logo"> -->
+  <img width="150" height="150" src="https://f005.backblazeb2.com/file/stellarstack/stellar-stack.png" alt="StellarStack Logo">
   <h1 align="center">StellarStack</h1>
   <p align="center">
     A modern, open-source game server management panel
