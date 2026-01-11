@@ -858,6 +858,84 @@ collect_domain_config() {
     wait_for_enter
 }
 
+# Collect admin credentials
+collect_admin_credentials() {
+    clear_screen
+    echo -e "${PRIMARY}  > ADMIN ACCOUNT SETUP${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Create the initial administrator account.${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    # Admin Email
+    local email_valid=false
+    while [ "$email_valid" = false ]; do
+        echo -e "${SECONDARY}  Admin Email Address:${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r admin_email </dev/tty
+
+        if [ -z "$admin_email" ]; then
+            print_error "Email address is required"
+            echo ""
+            continue
+        fi
+
+        # Basic email validation
+        if [[ ! "$admin_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+            print_error "Invalid email format"
+            echo ""
+            continue
+        fi
+
+        email_valid=true
+    done
+
+    echo ""
+
+    # Admin Password
+    local password_valid=false
+    while [ "$password_valid" = false ]; do
+        echo -e "${SECONDARY}  Admin Password ${MUTED}(minimum 8 characters)${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -s -r admin_password </dev/tty
+        echo ""
+
+        if [ -z "$admin_password" ]; then
+            print_error "Password is required"
+            echo ""
+            continue
+        fi
+
+        if [ ${#admin_password} -lt 8 ]; then
+            print_error "Password must be at least 8 characters"
+            echo ""
+            continue
+        fi
+
+        echo ""
+        echo -e "${SECONDARY}  Confirm Password:${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -s -r admin_password_confirm </dev/tty
+        echo ""
+
+        if [ "$admin_password" != "$admin_password_confirm" ]; then
+            print_error "Passwords do not match"
+            echo ""
+            continue
+        fi
+
+        password_valid=true
+    done
+
+    echo ""
+    print_success "Admin account configured"
+    print_info "Email: ${admin_email}"
+    echo ""
+
+    wait_for_enter
+}
+
 # Install dependencies
 install_dependencies() {
     print_step "INSTALLING DEPENDENCIES"
@@ -965,6 +1043,10 @@ NODE_ENV=production
 NEXT_PUBLIC_API_URL=https://${api_domain}
 FRONTEND_URL=https://${panel_domain}
 
+# Admin Account (Initial Setup)
+ADMIN_EMAIL=${admin_email}
+ADMIN_PASSWORD=${admin_password}
+
 # Monitoring (if enabled)
 EOF
 
@@ -1068,6 +1150,8 @@ COMPOSE_EOF
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - NODE_ENV=${NODE_ENV}
       - FRONTEND_URL=${FRONTEND_URL}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     ports:
       - "127.0.0.1:3001:3001"
     depends_on:
@@ -1734,6 +1818,96 @@ pull_and_start() {
             else
                 exit 1
             fi
+        else
+            # API is healthy - seed admin account if this is a fresh install
+            if [ "$update_mode" != "y" ] && [ -n "$admin_email" ] && [ -n "$admin_password" ]; then
+                echo ""
+                print_task "Creating admin account in database"
+
+                # Create a temporary seeding script that uses better-auth to hash the password
+                cat > "${INSTALL_DIR}/seed-admin.js" << 'SEED_EOF'
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+
+const prisma = new PrismaClient();
+
+async function seedAdmin() {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    console.error('ADMIN_EMAIL and ADMIN_PASSWORD must be set');
+    process.exit(1);
+  }
+
+  // Check if admin already exists
+  const existing = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (existing) {
+    console.log('Admin user already exists');
+    process.exit(0);
+  }
+
+  // Hash password using bcrypt (same as better-auth)
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Create admin user
+  await prisma.user.create({
+    data: {
+      email,
+      emailVerified: true,
+      name: 'Administrator',
+      role: 'admin',
+      password: hashedPassword,
+    }
+  });
+
+  console.log('Admin user created successfully');
+  await prisma.$disconnect();
+}
+
+seedAdmin().catch((error) => {
+  console.error('Error seeding admin:', error);
+  process.exit(1);
+});
+SEED_EOF
+
+                # Copy the seeding script into the API container and run it
+                docker cp "${INSTALL_DIR}/seed-admin.js" stellarstack-api:/tmp/seed-admin.js > /dev/null 2>&1
+
+                # Run the seeding script inside the API container
+                if docker exec stellarstack-api node /tmp/seed-admin.js > /dev/null 2>&1; then
+                    print_task_done "Creating admin account in database"
+                    print_success "Admin account created: ${admin_email}"
+                else
+                    # Try direct database insertion as fallback
+                    print_task "Creating admin account in database (fallback method)"
+
+                    # Generate bcrypt hash using the API container's bcrypt
+                    local password_hash
+                    password_hash=$(docker exec stellarstack-api node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('${admin_password}', 10).then(h => console.log(h));" 2>/dev/null)
+
+                    if [ -n "$password_hash" ]; then
+                        # Insert directly into database
+                        docker exec stellarstack-postgres psql -U "${postgres_user}" -d "${postgres_db}" -c \
+                            "INSERT INTO \"user\" (id, email, \"emailVerified\", name, role, password, \"createdAt\", \"updatedAt\")
+                             VALUES (gen_random_uuid(), '${admin_email}', true, 'Administrator', 'admin', '${password_hash}', NOW(), NOW())
+                             ON CONFLICT (email) DO NOTHING;" > /dev/null 2>&1
+
+                        print_task_done "Creating admin account in database (fallback method)"
+                        print_success "Admin account created: ${admin_email}"
+                    else
+                        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not create admin account automatically${NC}    "
+                        print_info "Please create an admin account manually after installation"
+                    fi
+                fi
+
+                # Cleanup temp scripts
+                rm -f "${INSTALL_DIR}/seed-admin.js"
+                docker exec stellarstack-api rm -f /tmp/seed-admin.js > /dev/null 2>&1 || true
+            fi
         fi
     fi
 
@@ -1802,6 +1976,20 @@ show_complete() {
     echo ""
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
+
+    # Show admin credentials if they were set
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]] && [ -n "$admin_email" ]; then
+        echo -e "${PRIMARY}  ADMIN ACCOUNT:${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}Email:${NC}    ${PRIMARY}${admin_email}${NC}"
+        echo -e "    ${SECONDARY}Password:${NC} ${PRIMARY}${admin_password}${NC}"
+        echo ""
+        echo -e "    ${WARNING}[!]${NC} ${WARNING}Save these credentials securely!${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    fi
+
     echo -e "${PRIMARY}  USEFUL COMMANDS:${NC}"
     echo ""
     echo -e "    ${SECONDARY}cd ${INSTALL_DIR}${NC}"
@@ -1881,6 +2069,13 @@ main() {
     check_existing_installation
     check_dependencies
     collect_domain_config
+
+    # Collect admin credentials (only for fresh installations or if API is being installed)
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+        if [ "$update_mode" != "y" ]; then
+            collect_admin_credentials
+        fi
+    fi
 
     # Install system dependencies
     install_dependencies

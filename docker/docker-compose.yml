@@ -74,6 +74,10 @@ services:
       NODE_ENV: production
       PORT: 3001
       HOSTNAME: '::'
+
+      # Admin Account (Initial Setup)
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     networks:
       - stellarstack
     healthcheck:
