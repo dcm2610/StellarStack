@@ -26,9 +26,9 @@ error_handler() {
 
 trap 'error_handler ${LINENO}' ERR
 
-# Version info
+# Version info (auto-updated by release-please workflow)
 INSTALLER_VERSION="1.0.0"
-INSTALLER_DATE=$(date +%Y-%m-%d)
+INSTALLER_DATE="2026-01-11"
 
 # Colors
 GREEN='\033[0;32m'
@@ -1876,36 +1876,54 @@ seedAdmin().catch((error) => {
 SEED_EOF
 
                 # Copy the seeding script into the API container and run it
-                docker cp "${INSTALL_DIR}/seed-admin.js" stellarstack-api:/tmp/seed-admin.js > /dev/null 2>&1
-
-                # Run the seeding script inside the API container
-                if docker exec stellarstack-api node /tmp/seed-admin.js > /dev/null 2>&1; then
-                    print_task_done "Creating admin account in database"
-                    print_success "Admin account created: ${admin_email}"
+                if ! docker cp "${INSTALL_DIR}/seed-admin.js" stellarstack-api:/tmp/seed-admin.js 2>/tmp/seed-copy-error.log; then
+                    echo ""
+                    echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Failed to copy seed script to container${NC}    "
+                    cat /tmp/seed-copy-error.log | sed 's/^/    /'
+                    print_info "You can create an admin account manually after installation"
                 else
-                    # Try direct database insertion as fallback
-                    print_task "Creating admin account in database (fallback method)"
+                    # Run the seeding script inside the API container
+                    local seed_output
+                    seed_output=$(docker exec stellarstack-api node /tmp/seed-admin.js 2>&1)
+                    local seed_status=$?
 
-                    # Generate bcrypt hash using the API container's bcrypt
-                    local password_hash
-                    password_hash=$(docker exec stellarstack-api node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('${admin_password}', 10).then(h => console.log(h));" 2>/dev/null)
-
-                    if [ -n "$password_hash" ]; then
-                        # Insert directly into database
-                        docker exec stellarstack-postgres psql -U "${postgres_user}" -d "${postgres_db}" -c \
-                            "INSERT INTO \"user\" (id, email, \"emailVerified\", name, role, password, \"createdAt\", \"updatedAt\")
-                             VALUES (gen_random_uuid(), '${admin_email}', true, 'Administrator', 'admin', '${password_hash}', NOW(), NOW())
-                             ON CONFLICT (email) DO NOTHING;" > /dev/null 2>&1
-
-                        print_task_done "Creating admin account in database (fallback method)"
+                    if [ $seed_status -eq 0 ]; then
+                        print_task_done "Creating admin account in database"
                         print_success "Admin account created: ${admin_email}"
+                    elif echo "$seed_output" | grep -q "already exists"; then
+                        print_task_done "Creating admin account in database"
+                        print_info "Admin user already exists"
                     else
-                        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not create admin account automatically${NC}    "
-                        print_info "Please create an admin account manually after installation"
+                        echo ""
+                        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Seed script failed${NC}    "
+                        echo ""
+                        echo -e "${MUTED}  Error output:${NC}"
+                        echo "$seed_output" | sed 's/^/    /'
+                        echo ""
+                        # Try direct database insertion as fallback
+                        print_task "Creating admin account in database (fallback method)"
+
+                        # Generate bcrypt hash using the API container's bcrypt
+                        local password_hash
+                        password_hash=$(docker exec stellarstack-api node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('${admin_password}', 10).then(h => console.log(h));" 2>/dev/null)
+
+                        if [ -n "$password_hash" ]; then
+                            # Insert directly into database
+                            docker exec stellarstack-postgres psql -U "${postgres_user}" -d "${postgres_db}" -c \
+                                "INSERT INTO \"user\" (id, email, \"emailVerified\", name, role, password, \"createdAt\", \"updatedAt\")
+                                 VALUES (gen_random_uuid(), '${admin_email}', true, 'Administrator', 'admin', '${password_hash}', NOW(), NOW())
+                                 ON CONFLICT (email) DO NOTHING;" > /dev/null 2>&1
+
+                            print_task_done "Creating admin account in database (fallback method)"
+                            print_success "Admin account created: ${admin_email}"
+                        else
+                            echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not create admin account automatically${NC}    "
+                            print_info "Please create an admin account manually after installation"
+                        fi
                     fi
                 fi
 
-                # Cleanup temp scripts
+                # Cleanup temp scripts (always run)
                 rm -f "${INSTALL_DIR}/seed-admin.js"
                 docker exec stellarstack-api rm -f /tmp/seed-admin.js > /dev/null 2>&1 || true
             fi
@@ -2156,7 +2174,8 @@ uninstall() {
 
 # Show usage information
 show_usage() {
-    echo -e "${PRIMARY}StellarStack Installer${NC}"
+    echo -e "${PRIMARY}StellarStack Installer${NC} ${MUTED}v${INSTALLER_VERSION}${NC}"
+    echo -e "${MUTED}Built: ${INSTALLER_DATE}${NC}"
     echo ""
     echo -e "${SECONDARY}Usage:${NC}"
     echo -e "  ${PRIMARY}sudo $0${NC}                 ${MUTED}# Install or update StellarStack${NC}"
@@ -2166,11 +2185,20 @@ show_usage() {
     echo -e "${SECONDARY}Options:${NC}"
     echo -e "  ${PRIMARY}--uninstall, --remove, -u${NC}  ${MUTED}Remove all StellarStack components${NC}"
     echo -e "  ${PRIMARY}--help, -h${NC}                 ${MUTED}Display this help message${NC}"
+    echo -e "  ${PRIMARY}--version, -v${NC}              ${MUTED}Show version information${NC}"
     echo ""
 }
 
 # Main function
 main() {
+    # Check for version flag
+    if [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
+        echo -e "${PRIMARY}StellarStack Installer${NC}"
+        echo -e "${SECONDARY}Version:${NC} ${INSTALLER_VERSION}"
+        echo -e "${SECONDARY}Built:${NC}   ${INSTALLER_DATE}"
+        exit 0
+    fi
+
     # Check for help flag
     if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
         show_usage

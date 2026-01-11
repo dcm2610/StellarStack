@@ -46,6 +46,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Update install-script.sh version and timestamp
+        if: steps.release.outputs.release_created
+        run: |
+          # Extract version without 'v' prefix
+          VERSION="${{ steps.release.outputs.tag_name }}"
+          VERSION="${VERSION#v}"
+
+          # Get current timestamp
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          # Update version and timestamp in install-script.sh
+          sed -i 's/^INSTALLER_VERSION=.*/INSTALLER_VERSION="'"${VERSION}"'"/' install-script.sh
+          sed -i 's/^INSTALLER_DATE=.*/INSTALLER_DATE="'"${TIMESTAMP}"'"/' install-script.sh
+
+          # Commit and push changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add install-script.sh
+          git commit -m "chore: update install-script.sh to version ${VERSION}" || echo "No changes to commit"
+          git push origin master || echo "Nothing to push"
+
+          echo "Updated install-script.sh to version ${VERSION} at ${TIMESTAMP}"
+
       - name: Trigger Docker Build
         if: steps.release.outputs.release_created
         uses: peter-evans/repository-dispatch@v3
@@ -65,3 +88,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.release.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Release URL:** ${{ steps.release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Install Script:** Updated to version ${{ steps.release.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
