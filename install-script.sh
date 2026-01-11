@@ -1834,9 +1834,9 @@ pull_and_start() {
                 set +e
 
                 # Create a temporary seeding script with hardcoded credentials
-                cat > "${INSTALL_DIR}/seed-admin.js" << SEED_EOF
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+                cat > "${INSTALL_DIR}/seed-admin.ts" << SEED_EOF
+import { PrismaClient } from '@prisma/client';
+import { auth } from './src/lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -1844,52 +1844,68 @@ async function seedAdmin() {
   const email = '${admin_email}';
   const password = '${admin_password}';
 
-  // Check if admin already exists
-  const existing = await prisma.user.findUnique({
-    where: { email }
-  });
+  try {
+    // Check if admin already exists
+    const existing = await prisma.user.findUnique({
+      where: { email }
+    });
 
-  if (existing) {
-    console.log('Admin user already exists');
-    process.exit(0);
-  }
-
-  // Hash password using bcrypt (same as better-auth)
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Create admin user
-  await prisma.user.create({
-    data: {
-      email,
-      emailVerified: true,
-      name: 'Administrator',
-      role: 'admin',
-      password: hashedPassword,
+    if (existing) {
+      console.log('Admin user already exists');
+      await prisma.\$disconnect();
+      process.exit(0);
     }
-  });
 
-  console.log('Admin user created successfully');
-  await prisma.\$disconnect();
+    // Use better-auth's API to create user with proper password hash
+    console.log('Creating admin user via better-auth API...');
+    const ctx = await auth.api.signUpEmail({
+      body: {
+        email: email,
+        password: password,
+        name: 'Administrator',
+      },
+    });
+
+    if (ctx.user) {
+      // Update user to be admin and verify email
+      await prisma.user.update({
+        where: { id: ctx.user.id },
+        data: {
+          role: 'admin',
+          emailVerified: true,
+        },
+      });
+      console.log('Admin user created successfully:', ctx.user.email);
+    } else {
+      console.error('Failed to create admin user - no user returned from signUpEmail');
+      process.exit(1);
+    }
+
+    await prisma.\$disconnect();
+    process.exit(0);
+  } catch (error) {
+    console.error('Error seeding admin:', error.message);
+    console.error('Stack:', error.stack);
+    await prisma.\$disconnect();
+    process.exit(1);
+  }
 }
 
-seedAdmin().catch((error) => {
-  console.error('Error seeding admin:', error);
-  process.exit(1);
-});
+seedAdmin();
 SEED_EOF
 
                 # Copy the seeding script into the API container and run it
                 echo -e "${MUTED}  Copying seed script to container...${NC}"
-                if ! docker cp "${INSTALL_DIR}/seed-admin.js" stellarstack-api:/tmp/seed-admin.js 2>/tmp/seed-copy-error.log; then
+                if ! docker cp "${INSTALL_DIR}/seed-admin.ts" stellarstack-api:/app/apps/api/seed-admin.ts 2>/tmp/seed-copy-error.log; then
                     echo ""
                     echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Failed to copy seed script to container${NC}    "
                     cat /tmp/seed-copy-error.log | sed 's/^/    /' || true
                     print_info "You can create an admin account manually after installation"
                 else
-                    # Run the seeding script inside the API container
+                    # Run the seeding script inside the API container with tsx
                     echo -e "${MUTED}  Running seed script in container...${NC}"
                     local seed_output
-                    seed_output=$(docker exec stellarstack-api node /tmp/seed-admin.js 2>&1) || true
+                    seed_output=$(docker exec stellarstack-api node --import tsx/esm seed-admin.ts 2>&1) || true
                     local seed_status=$?
 
                     echo -e "${MUTED}  Seed script exit code: ${seed_status}${NC}"
@@ -1908,18 +1924,52 @@ SEED_EOF
                         echo "$seed_output" | sed 's/^/    /' || echo "    (no output)"
                         echo ""
                         # Try direct database insertion as fallback
-                        echo -e "${MUTED}  Trying fallback method...${NC}"
+                        echo -e "${MUTED}  Trying fallback method (direct SQL)...${NC}"
 
                         # Generate bcrypt hash using the API container's bcrypt
                         local password_hash
                         password_hash=$(docker exec stellarstack-api node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('${admin_password}', 10).then(h => console.log(h));" 2>/dev/null) || true
 
                         if [ -n "$password_hash" ]; then
-                            # Insert directly into database
-                            docker exec stellarstack-postgres psql -U "${postgres_user}" -d "${postgres_db}" -c \
-                                "INSERT INTO \"user\" (id, email, \"emailVerified\", name, role, password, \"createdAt\", \"updatedAt\")
-                                 VALUES (gen_random_uuid(), '${admin_email}', true, 'Administrator', 'admin', '${password_hash}', NOW(), NOW())
-                                 ON CONFLICT (email) DO NOTHING;" > /dev/null 2>&1 || true
+                            # Insert user and account in a transaction
+                            docker exec stellarstack-postgres psql -U "${postgres_user}" -d "${postgres_db}" << SQLEOF > /dev/null 2>&1 || true
+DO \$\$
+DECLARE
+    new_user_id TEXT;
+BEGIN
+    -- Insert user if doesn't exist
+    INSERT INTO users (id, email, "emailVerified", name, role, "createdAt", "updatedAt")
+    VALUES (
+        'cl' || substr(md5(random()::text), 1, 24),
+        '${admin_email}',
+        true,
+        'Administrator',
+        'admin',
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id INTO new_user_id;
+
+    -- Get user ID if it already existed
+    IF new_user_id IS NULL THEN
+        SELECT id INTO new_user_id FROM users WHERE email = '${admin_email}';
+    END IF;
+
+    -- Insert credential account
+    INSERT INTO accounts (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
+    VALUES (
+        'cl' || substr(md5(random()::text), 1, 24),
+        '${admin_email}',
+        'credential',
+        new_user_id,
+        '${password_hash}',
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT DO NOTHING;
+END \$\$;
+SQLEOF
 
                             print_task_done "Creating admin account in database"
                             print_success "Admin account created: ${admin_email}"
@@ -1931,8 +1981,8 @@ SEED_EOF
                 fi
 
                 # Cleanup temp scripts (always run)
-                rm -f "${INSTALL_DIR}/seed-admin.js" || true
-                docker exec stellarstack-api rm -f /tmp/seed-admin.js > /dev/null 2>&1 || true
+                rm -f "${INSTALL_DIR}/seed-admin.ts" || true
+                docker exec stellarstack-api rm -f seed-admin.ts > /dev/null 2>&1 || true
 
                 # Re-enable exit-on-error
                 set -e
