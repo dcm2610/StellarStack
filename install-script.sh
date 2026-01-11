@@ -1830,6 +1830,9 @@ pull_and_start() {
                 echo ""
                 print_task "Creating admin account in database"
 
+                # Disable exit-on-error for this section
+                set +e
+
                 # Create a temporary seeding script with hardcoded credentials
                 cat > "${INSTALL_DIR}/seed-admin.js" << SEED_EOF
 const { PrismaClient } = require('@prisma/client');
@@ -1876,16 +1879,20 @@ seedAdmin().catch((error) => {
 SEED_EOF
 
                 # Copy the seeding script into the API container and run it
+                echo -e "${MUTED}  Copying seed script to container...${NC}"
                 if ! docker cp "${INSTALL_DIR}/seed-admin.js" stellarstack-api:/tmp/seed-admin.js 2>/tmp/seed-copy-error.log; then
                     echo ""
                     echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Failed to copy seed script to container${NC}    "
-                    cat /tmp/seed-copy-error.log | sed 's/^/    /'
+                    cat /tmp/seed-copy-error.log | sed 's/^/    /' || true
                     print_info "You can create an admin account manually after installation"
                 else
                     # Run the seeding script inside the API container
+                    echo -e "${MUTED}  Running seed script in container...${NC}"
                     local seed_output
-                    seed_output=$(docker exec stellarstack-api node /tmp/seed-admin.js 2>&1)
+                    seed_output=$(docker exec stellarstack-api node /tmp/seed-admin.js 2>&1) || true
                     local seed_status=$?
+
+                    echo -e "${MUTED}  Seed script exit code: ${seed_status}${NC}"
 
                     if [ $seed_status -eq 0 ]; then
                         print_task_done "Creating admin account in database"
@@ -1895,26 +1902,26 @@ SEED_EOF
                         print_info "Admin user already exists"
                     else
                         echo ""
-                        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Seed script failed${NC}    "
+                        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Seed script failed (exit code: ${seed_status})${NC}    "
                         echo ""
                         echo -e "${MUTED}  Error output:${NC}"
-                        echo "$seed_output" | sed 's/^/    /'
+                        echo "$seed_output" | sed 's/^/    /' || echo "    (no output)"
                         echo ""
                         # Try direct database insertion as fallback
-                        print_task "Creating admin account in database (fallback method)"
+                        echo -e "${MUTED}  Trying fallback method...${NC}"
 
                         # Generate bcrypt hash using the API container's bcrypt
                         local password_hash
-                        password_hash=$(docker exec stellarstack-api node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('${admin_password}', 10).then(h => console.log(h));" 2>/dev/null)
+                        password_hash=$(docker exec stellarstack-api node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('${admin_password}', 10).then(h => console.log(h));" 2>/dev/null) || true
 
                         if [ -n "$password_hash" ]; then
                             # Insert directly into database
                             docker exec stellarstack-postgres psql -U "${postgres_user}" -d "${postgres_db}" -c \
                                 "INSERT INTO \"user\" (id, email, \"emailVerified\", name, role, password, \"createdAt\", \"updatedAt\")
                                  VALUES (gen_random_uuid(), '${admin_email}', true, 'Administrator', 'admin', '${password_hash}', NOW(), NOW())
-                                 ON CONFLICT (email) DO NOTHING;" > /dev/null 2>&1
+                                 ON CONFLICT (email) DO NOTHING;" > /dev/null 2>&1 || true
 
-                            print_task_done "Creating admin account in database (fallback method)"
+                            print_task_done "Creating admin account in database"
                             print_success "Admin account created: ${admin_email}"
                         else
                             echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not create admin account automatically${NC}    "
@@ -1924,8 +1931,14 @@ SEED_EOF
                 fi
 
                 # Cleanup temp scripts (always run)
-                rm -f "${INSTALL_DIR}/seed-admin.js"
+                rm -f "${INSTALL_DIR}/seed-admin.js" || true
                 docker exec stellarstack-api rm -f /tmp/seed-admin.js > /dev/null 2>&1 || true
+
+                # Re-enable exit-on-error
+                set -e
+
+                echo -e "${MUTED}  Admin account seeding completed${NC}"
+                echo ""
             fi
         fi
     fi
