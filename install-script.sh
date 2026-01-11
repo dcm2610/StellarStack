@@ -376,6 +376,13 @@ check_dependencies() {
     if command -v docker &> /dev/null; then
         print_success "Docker is installed"
 
+        # Create a docker network called "Stellar" if it doesn't exist
+
+        if ! docker network ls | grep -q stellar_network; then
+          docker network create stellar_network
+        fi
+
+
         # Check if Docker is running
         if ! docker ps &> /dev/null; then
             print_warning "Docker is installed but not running"
