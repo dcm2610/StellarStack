@@ -1879,7 +1879,12 @@ EOF
         ln -sf "${NGINX_CONF_DIR}/stellarstack-daemon" "${NGINX_ENABLED_DIR}/stellarstack-daemon"
         print_task_done "Configuring nginx for Daemon (${daemon_ssl_domain})"
     fi
-}
+
+    # Configure Monitoring nginx if needed
+    if [ "$install_monitoring" = "y" ]; then
+        print_task "Configuring nginx for Monitoring (${monitoring_domain})"
+
+        cat > "${NGINX_CONF_DIR}/stellarstack-monitoring" << EOF
 server {
     listen 80;
     listen [::]:80;
