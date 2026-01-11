@@ -7,6 +7,7 @@ use axum::{
     Extension, Json,
 };
 use serde::{Deserialize, Serialize};
+use tracing::{debug, warn};
 
 use crate::filesystem::{FileInfo, Filesystem};
 use crate::server::Server;

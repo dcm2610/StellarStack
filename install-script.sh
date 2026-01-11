@@ -59,7 +59,7 @@ API_IMAGE="${DOCKER_ORG}/stellarstack-api"
 PANEL_IMAGE="${DOCKER_ORG}/stellarstack-web"
 
 # Installation type
-installation_type=""  # Options: panel_and_api, panel, api
+installation_type=""  # Options: panel_and_api, panel, api, daemon, all_in_one
 
 # Configuration
 panel_domain=""
@@ -67,6 +67,19 @@ api_domain=""
 monitoring_domain=""
 server_ip=""
 install_monitoring="n"
+
+# Daemon configuration
+daemon_panel_url=""
+daemon_token_id=""
+daemon_token=""
+daemon_port="8080"
+daemon_sftp_port="2022"
+daemon_enable_ssl="n"
+daemon_ssl_domain=""
+daemon_enable_redis="n"
+daemon_redis_url=""
+DAEMON_INSTALL_DIR="/opt/stellar-daemon"
+GITHUB_REPO="MarquesCoding/StellarStack"
 
 # PostgreSQL configuration
 postgres_user="stellarstack"
@@ -77,6 +90,8 @@ postgres_db="stellarstack"
 install_docker="n"
 install_nginx="n"
 install_certbot="n"
+install_git="n"
+install_rust="n"
 
 # Configuration reuse flags
 skip_nginx_config="n"
@@ -263,11 +278,17 @@ select_installation_type() {
     echo -e "${PRIMARY}  [3]${NC} ${SECONDARY}Install API${NC}"
     echo -e "${MUTED}      Backend API only${NC}"
     echo ""
+    echo -e "${PRIMARY}  [4]${NC} ${SECONDARY}Install Daemon${NC}"
+    echo -e "${MUTED}      Game server management daemon (node)${NC}"
+    echo ""
+    echo -e "${PRIMARY}  [5]${NC} ${SECONDARY}Install All-in-One ${MUTED}(Panel + API + Daemon)${NC}"
+    echo -e "${MUTED}      Complete installation with game server support${NC}"
+    echo ""
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
 
     while true; do
-        echo -ne "  ${SECONDARY}Enter your choice [1-3]:${NC} "
+        echo -ne "  ${SECONDARY}Enter your choice [1-5]:${NC} "
         read -r choice </dev/tty
 
         case $choice in
@@ -286,19 +307,37 @@ select_installation_type() {
                 print_success "Selected: API"
                 break
                 ;;
+            4)
+                installation_type="daemon"
+                print_success "Selected: Daemon"
+                break
+                ;;
+            5)
+                installation_type="all_in_one"
+                print_success "Selected: All-in-One (Panel + API + Daemon)"
+                break
+                ;;
             *)
-                print_error "Invalid choice. Please enter 1, 2, or 3."
+                print_error "Invalid choice. Please enter 1, 2, 3, 4, or 5."
                 echo ""
                 ;;
         esac
     done
 
     echo ""
-    if ask_yes_no "Install monitoring stack (Prometheus, Loki, Grafana)?" "y"; then
-        install_monitoring="y"
-        print_success "Monitoring stack will be installed"
-    else
-        print_info "Monitoring stack will not be installed"
+    # Only ask about monitoring for panel/api installations
+    if [[ "$installation_type" != "daemon" ]]; then
+        if ask_yes_no "Install monitoring stack (Prometheus, Loki, Grafana)?" "y"; then
+            install_monitoring="y"
+            print_success "Monitoring stack will be installed"
+        else
+            print_info "Monitoring stack will not be installed"
+        fi
+    fi
+
+    # For all-in-one, set daemon panel URL automatically
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        print_info "Daemon will be configured to connect to local API"
     fi
 
     wait_for_enter
@@ -470,6 +509,42 @@ check_dependencies() {
     fi
     echo ""
 
+    # Check Git (for daemon installation)
+    if [[ "$installation_type" == "daemon" || "$installation_type" == "all_in_one" ]]; then
+        if command -v git &> /dev/null; then
+            print_success "Git is installed"
+        else
+            print_warning "Git is NOT installed"
+            echo ""
+            echo -e "${SECONDARY}  Git is required to clone the repository for daemon.${NC}"
+            if ask_yes_no "Install Git?" "y"; then
+                install_git="y"
+                print_info "Git will be installed"
+            else
+                print_error "Git is required. Cannot continue."
+                exit 1
+            fi
+        fi
+        echo ""
+
+        # Check Rust/Cargo (for daemon installation)
+        if command -v cargo &> /dev/null; then
+            print_success "Rust/Cargo is installed"
+        else
+            print_warning "Rust/Cargo is NOT installed"
+            echo ""
+            echo -e "${SECONDARY}  Rust is required to build the daemon from source.${NC}"
+            if ask_yes_no "Install Rust?" "y"; then
+                install_rust="y"
+                print_info "Rust will be installed"
+            else
+                print_error "Rust is required. Cannot continue."
+                exit 1
+            fi
+        fi
+        echo ""
+    fi
+
     # Check Certbot
     if command -v certbot &> /dev/null; then
         print_success "Certbot is installed"
@@ -639,7 +714,7 @@ collect_domain_config() {
     fi
 
     # Collect Panel domain if installing Panel
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
         echo -e "${PRIMARY}  PANEL CONFIGURATION:${NC}"
         echo ""
         local panel_domain_verified=false
@@ -719,7 +794,7 @@ collect_domain_config() {
     fi
 
     # Collect API domain if installing API
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         echo -e "${PRIMARY}  API CONFIGURATION:${NC}"
         echo ""
         local api_domain_verified=false
@@ -853,6 +928,209 @@ collect_domain_config() {
                 fi
             fi
         done
+    fi
+
+    # Collect daemon domain if all-in-one installation
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  DAEMON CONFIGURATION:${NC}"
+        echo ""
+        local daemon_domain_verified=false
+        while [ "$daemon_domain_verified" = false ]; do
+            echo -e "${SECONDARY}  Daemon Domain ${MUTED}(e.g., node.example.com)${NC}"
+            echo -ne "  ${PRIMARY}>${NC} "
+            read -r daemon_ssl_domain </dev/tty
+
+            if [ -z "$daemon_ssl_domain" ]; then
+                print_error "Daemon domain is required"
+                echo ""
+                continue
+            fi
+
+            echo ""
+            echo -e "${SECONDARY}  Please create the following DNS record:${NC}"
+            echo ""
+            echo -e "    ${PRIMARY}Type:${NC}   A"
+            echo -e "    ${PRIMARY}Name:${NC}   ${daemon_ssl_domain}"
+            echo -e "    ${PRIMARY}Value:${NC}  ${server_ip}"
+            echo -e "    ${PRIMARY}TTL:${NC}    Auto / 3600"
+            echo ""
+
+            if ask_yes_no "Have you created the DNS record?" "n"; then
+                echo ""
+                print_task "Verifying DNS for ${daemon_ssl_domain}"
+                sleep 2
+
+                local dns_result
+                dns_result=$(verify_domain_dns "$daemon_ssl_domain" "$server_ip")
+                local dns_status=$?
+
+                if [ "$dns_result" = "unable_to_resolve" ] || [ $dns_status -ne 0 ]; then
+                    echo -e "\r  ${WARNING}[!]${NC} ${WARNING}DNS verification failed${NC}    "
+                    if ask_yes_no "Skip verification and continue anyway?" "n"; then
+                        print_warning "Skipping DNS verification for daemon domain"
+                        daemon_domain_verified=true
+                    fi
+                else
+                    print_task_done "Verifying DNS for ${daemon_ssl_domain}"
+                    print_success "Domain ${daemon_ssl_domain} correctly points to ${server_ip}"
+                    daemon_domain_verified=true
+                fi
+            else
+                echo ""
+                if ask_yes_no "Try a different domain?" "y"; then
+                    continue
+                else
+                    print_error "Daemon domain is required"
+                    exit 1
+                fi
+            fi
+        done
+
+        # Set daemon configuration for all-in-one
+        daemon_enable_ssl="y"
+        daemon_panel_url="https://${api_domain}"
+        echo ""
+        print_info "Daemon will connect to API at: ${daemon_panel_url}"
+        echo ""
+
+        # Daemon ports
+        echo -e "${SECONDARY}  Daemon API Port ${MUTED}[default: 8080]${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r input_port </dev/tty
+        if [ -n "$input_port" ]; then
+            daemon_port="$input_port"
+        fi
+        echo ""
+
+        echo -e "${SECONDARY}  SFTP Port ${MUTED}[default: 2022]${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r input_sftp </dev/tty
+        if [ -n "$input_sftp" ]; then
+            daemon_sftp_port="$input_sftp"
+        fi
+        echo ""
+    fi
+
+    wait_for_enter
+}
+
+# Collect daemon configuration
+collect_daemon_config() {
+    clear_screen
+    echo -e "${PRIMARY}  > DAEMON CONFIGURATION${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Configure the daemon connection to your StellarStack Panel.${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    # Panel API URL
+    while [ -z "$daemon_panel_url" ]; do
+        echo -e "${SECONDARY}  Panel API URL ${MUTED}(e.g., https://api.example.com)${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r daemon_panel_url </dev/tty
+        if [ -z "$daemon_panel_url" ]; then
+            print_error "Panel API URL is required"
+            echo ""
+        fi
+    done
+    echo ""
+
+    # Token ID
+    while [ -z "$daemon_token_id" ]; do
+        echo -e "${SECONDARY}  Token ID ${MUTED}(from Panel > Nodes > Configure)${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r daemon_token_id </dev/tty
+        if [ -z "$daemon_token_id" ]; then
+            print_error "Token ID is required"
+            echo ""
+        fi
+    done
+    echo ""
+
+    # Token
+    while [ -z "$daemon_token" ]; do
+        echo -e "${SECONDARY}  Token ${MUTED}(full token string from Panel)${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r daemon_token </dev/tty
+        if [ -z "$daemon_token" ]; then
+            print_error "Token is required"
+            echo ""
+        fi
+    done
+    echo ""
+
+    # Daemon Port
+    echo -e "${SECONDARY}  Daemon API Port ${MUTED}[default: 8080]${NC}"
+    echo -ne "  ${PRIMARY}>${NC} "
+    read -r input_port </dev/tty
+    if [ -n "$input_port" ]; then
+        daemon_port="$input_port"
+    fi
+    echo ""
+
+    # SFTP Port
+    echo -e "${SECONDARY}  SFTP Port ${MUTED}[default: 2022]${NC}"
+    echo -ne "  ${PRIMARY}>${NC} "
+    read -r input_sftp </dev/tty
+    if [ -n "$input_sftp" ]; then
+        daemon_sftp_port="$input_sftp"
+    fi
+    echo ""
+
+    # SSL Configuration
+    if ask_yes_no "Enable SSL with Certbot?" "n"; then
+        daemon_enable_ssl="y"
+        echo ""
+
+        local domain_verified=false
+        while [ "$domain_verified" = false ]; do
+            echo -e "${SECONDARY}  Domain for SSL certificate ${MUTED}(e.g., node1.example.com)${NC}"
+            echo -ne "  ${PRIMARY}>${NC} "
+            read -r daemon_ssl_domain </dev/tty
+
+            if [ -z "$daemon_ssl_domain" ]; then
+                print_error "Domain is required for SSL"
+                echo ""
+                continue
+            fi
+
+            # Verify DNS points to this server
+            echo ""
+            print_task "Verifying DNS for ${daemon_ssl_domain}"
+            local dns_result
+            dns_result=$(verify_domain_dns "$daemon_ssl_domain" "$server_ip")
+            local dns_status=$?
+
+            if [ "$dns_result" = "unable_to_resolve" ] || [ $dns_status -ne 0 ]; then
+                echo -e "\r  ${WARNING}[!]${NC} ${WARNING}DNS verification failed${NC}    "
+                if ask_yes_no "Skip verification and continue anyway?" "n"; then
+                    print_warning "Proceeding without DNS verification"
+                    domain_verified=true
+                fi
+            else
+                print_task_done "Verifying DNS for ${daemon_ssl_domain}"
+                print_success "Domain ${daemon_ssl_domain} correctly points to ${server_ip}"
+                domain_verified=true
+            fi
+        done
+    else
+        print_info "SSL will be disabled"
+    fi
+    echo ""
+
+    # Redis Configuration
+    if ask_yes_no "Do you have a Redis server?" "n"; then
+        daemon_enable_redis="y"
+        echo ""
+        echo -e "${SECONDARY}  Redis URL ${MUTED}[default: redis://127.0.0.1:6379]${NC}"
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r daemon_redis_url </dev/tty
+        if [ -z "$daemon_redis_url" ]; then
+            daemon_redis_url="redis://127.0.0.1:6379"
+        fi
+    else
+        print_info "Redis will be disabled"
     fi
 
     wait_for_enter
@@ -1001,6 +1279,39 @@ install_dependencies() {
         fi
         print_task_done "Installing Certbot"
     fi
+
+    # Install Git
+    if [ "$install_git" = "y" ]; then
+        print_task "Installing Git"
+        if command -v apt-get &> /dev/null; then
+            apt-get update -qq && apt-get install -y git > /dev/null 2>&1
+        elif command -v dnf &> /dev/null; then
+            dnf install -y git > /dev/null 2>&1
+        elif command -v yum &> /dev/null; then
+            yum install -y git > /dev/null 2>&1
+        fi
+        print_task_done "Installing Git"
+    fi
+
+    # Install Rust
+    if [ "$install_rust" = "y" ]; then
+        print_task "Installing build dependencies"
+        if command -v apt-get &> /dev/null; then
+            apt-get update -qq && apt-get install -y build-essential pkg-config libssl-dev > /dev/null 2>&1
+        elif command -v dnf &> /dev/null; then
+            dnf groupinstall -y "Development Tools" > /dev/null 2>&1
+            dnf install -y openssl-devel pkg-config > /dev/null 2>&1
+        elif command -v yum &> /dev/null; then
+            yum groupinstall -y "Development Tools" > /dev/null 2>&1
+            yum install -y openssl-devel pkg-config > /dev/null 2>&1
+        fi
+        print_task_done "Installing build dependencies"
+
+        print_task "Installing Rust"
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y > /dev/null 2>&1
+        export PATH="$HOME/.cargo/bin:$PATH"
+        print_task_done "Installing Rust"
+    fi
 }
 
 # Generate environment file
@@ -1125,7 +1436,7 @@ services:
 COMPOSE_EOF
 
     # Add API service if needed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         cat >> "${DOCKER_COMPOSE_FILE}" << 'COMPOSE_EOF'
   api:
     image: stellarstackoss/stellarstack-api:latest
@@ -1162,7 +1473,7 @@ COMPOSE_EOF
     fi
 
     # Add Panel service if needed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
         cat >> "${DOCKER_COMPOSE_FILE}" << 'COMPOSE_EOF'
   panel:
     image: stellarstackoss/stellarstack-web:latest
@@ -1393,7 +1704,7 @@ configure_nginx() {
     print_step "CONFIGURING NGINX"
 
     # Configure Panel nginx if needed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
         print_task "Configuring nginx for Panel (${panel_domain})"
 
         # Determine if we need API proxy (only for panel_and_api)
@@ -1464,7 +1775,7 @@ EOF
     fi
 
     # Configure API nginx if needed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         print_task "Configuring nginx for API (${api_domain})"
 
         cat > "${NGINX_CONF_DIR}/stellarstack-api" << EOF
@@ -1511,11 +1822,64 @@ EOF
         print_task_done "Configuring nginx for API (${api_domain})"
     fi
 
-    # Configure Monitoring nginx if needed
-    if [ "$install_monitoring" = "y" ]; then
-        print_task "Configuring nginx for Monitoring (${monitoring_domain})"
+    # Configure Daemon nginx if all-in-one
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        print_task "Configuring nginx for Daemon (${daemon_ssl_domain})"
 
-        cat > "${NGINX_CONF_DIR}/stellarstack-monitoring" << EOF
+        cat > "${NGINX_CONF_DIR}/stellarstack-daemon" << EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${daemon_ssl_domain};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://\$server_name\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${daemon_ssl_domain};
+
+    ssl_certificate /etc/letsencrypt/live/${daemon_ssl_domain}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${daemon_ssl_domain}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Increase timeouts for long-running game server operations
+    proxy_read_timeout 300;
+    proxy_connect_timeout 300;
+    proxy_send_timeout 300;
+
+    location / {
+        proxy_pass http://127.0.0.1:${daemon_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+
+        # Longer timeouts for game server operations
+        proxy_read_timeout 300;
+        proxy_connect_timeout 75;
+        proxy_send_timeout 300;
+    }
+}
+EOF
+
+        ln -sf "${NGINX_CONF_DIR}/stellarstack-daemon" "${NGINX_ENABLED_DIR}/stellarstack-daemon"
+        print_task_done "Configuring nginx for Daemon (${daemon_ssl_domain})"
+    fi
+}
 server {
     listen 80;
     listen [::]:80;
@@ -1576,7 +1940,7 @@ obtain_ssl_certificates() {
     systemctl stop nginx
 
     # Get Panel SSL if needed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
         print_task "Obtaining SSL certificate for ${panel_domain}"
         if certbot certonly --standalone -d "${panel_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
             print_task_done "Obtaining SSL certificate for ${panel_domain}"
@@ -1586,7 +1950,7 @@ obtain_ssl_certificates() {
     fi
 
     # Get API SSL if needed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         print_task "Obtaining SSL certificate for ${api_domain}"
         if certbot certonly --standalone -d "${api_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
             print_task_done "Obtaining SSL certificate for ${api_domain}"
@@ -1602,6 +1966,16 @@ obtain_ssl_certificates() {
             print_task_done "Obtaining SSL certificate for ${monitoring_domain}"
         else
             print_warning "Failed to obtain SSL certificate for ${monitoring_domain}"
+        fi
+    fi
+
+    # Get Daemon SSL if all-in-one
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        print_task "Obtaining SSL certificate for ${daemon_ssl_domain}"
+        if certbot certonly --standalone -d "${daemon_ssl_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
+            print_task_done "Obtaining SSL certificate for ${daemon_ssl_domain}"
+        else
+            print_warning "Failed to obtain SSL certificate for ${daemon_ssl_domain}"
         fi
     fi
 
@@ -1814,7 +2188,7 @@ pull_and_start() {
     fi
 
     # Monitor API if installed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         if ! monitor_container_startup "stellarstack-api" "API"; then
             print_warning "API had issues starting. Check logs with: docker logs stellarstack-api"
             echo ""
@@ -1994,7 +2368,7 @@ SQLEOF
     fi
 
     # Monitor Panel if installed
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
         if ! monitor_container_startup "stellarstack-panel" "Panel"; then
             print_warning "Panel had issues starting. Check logs with: docker logs stellarstack-panel"
             echo ""
@@ -2031,6 +2405,348 @@ SQLEOF
     echo ""
 }
 
+# Create daemon node and get token (for all-in-one installations)
+create_daemon_node_token() {
+    print_step "CONFIGURING DAEMON NODE"
+
+    print_task "Generating daemon authentication tokens"
+    daemon_token_id=$(openssl rand -hex 16)
+    daemon_token=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-40)
+    print_task_done "Generating daemon authentication tokens"
+
+    print_task "Creating location and node in database"
+
+    # Disable exit-on-error for this section
+    set +e
+
+    # Create a seeding script that creates location, node, and syncs with daemon
+    cat > "${INSTALL_DIR}/seed-all-in-one.ts" << 'SEED_EOF'
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function seedAllInOne() {
+  const daemonDomain = process.env.DAEMON_DOMAIN || 'node.example.com';
+  const daemonTokenId = process.env.DAEMON_TOKEN_ID || '';
+  const daemonToken = process.env.DAEMON_TOKEN || '';
+  const daemonPort = process.env.DAEMON_PORT || '443';
+  const daemonScheme = process.env.DAEMON_SCHEME || 'https';
+
+  try {
+    // Create default location
+    let location = await prisma.location.findFirst({
+      where: { shortCode: 'default' }
+    });
+
+    if (!location) {
+      console.log('Creating default location...');
+      location = await prisma.location.create({
+        data: {
+          shortCode: 'default',
+          longCode: 'Default Location',
+        }
+      });
+      console.log('Default location created:', location.shortCode);
+    } else {
+      console.log('Default location already exists:', location.shortCode);
+    }
+
+    // Create node
+    let node = await prisma.node.findFirst({
+      where: { fqdn: daemonDomain }
+    });
+
+    if (!node) {
+      console.log('Creating daemon node...');
+      node = await prisma.node.create({
+        data: {
+          name: 'Default Node',
+          fqdn: daemonDomain,
+          scheme: daemonScheme,
+          memory: 8192,
+          memoryOverallocate: 0,
+          disk: 102400,
+          diskOverallocate: 0,
+          daemonListen: parseInt(daemonPort),
+          daemonSftp: 2022,
+          daemonBase: '/opt/stellar-daemon/volumes',
+          locationId: location.id,
+          public: true,
+          behindProxy: true,
+          maintenanceMode: false,
+          uploadSize: 100,
+          daemonTokenId: daemonTokenId,
+          daemonToken: daemonToken,
+        }
+      });
+      console.log('Daemon node created:', node.fqdn);
+    } else {
+      console.log('Daemon node already exists:', node.fqdn);
+      // Update token if needed
+      await prisma.node.update({
+        where: { id: node.id },
+        data: {
+          daemonTokenId: daemonTokenId,
+          daemonToken: daemonToken,
+        }
+      });
+      console.log('Daemon node tokens updated');
+    }
+
+    await prisma.$disconnect();
+    console.log('All-in-one seeding completed successfully');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error seeding all-in-one:', error.message);
+    console.error('Stack:', error.stack);
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+}
+
+seedAllInOne();
+SEED_EOF
+
+    # Copy the seeding script into the API container and run it
+    echo -e "${MUTED}  Copying seed script to container...${NC}"
+    if ! docker cp "${INSTALL_DIR}/seed-all-in-one.ts" stellarstack-api:/app/apps/api/seed-all-in-one.ts 2>/tmp/seed-copy-error.log; then
+        echo ""
+        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Failed to copy seed script to container${NC}    "
+        cat /tmp/seed-copy-error.log | sed 's/^/    /' || true
+        print_error "Could not configure daemon node automatically"
+        set -e
+        return 1
+    fi
+
+    # Run the seeding script inside the API container
+    echo -e "${MUTED}  Running seed script in container...${NC}"
+    local seed_output
+    seed_output=$(docker exec -e DAEMON_DOMAIN="${daemon_ssl_domain}" \
+        -e DAEMON_TOKEN_ID="${daemon_token_id}" \
+        -e DAEMON_TOKEN="${daemon_token}" \
+        -e DAEMON_PORT="443" \
+        -e DAEMON_SCHEME="https" \
+        stellarstack-api node --import tsx/esm seed-all-in-one.ts 2>&1) || true
+    local seed_status=$?
+
+    if [ $seed_status -eq 0 ]; then
+        print_task_done "Creating location and node in database"
+        print_success "Daemon node configured automatically"
+        print_info "Node FQDN: ${daemon_ssl_domain}"
+        print_info "Location: Default Location"
+    else
+        echo ""
+        echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Automatic node creation failed${NC}    "
+        echo ""
+        echo -e "${MUTED}  Error output:${NC}"
+        echo "$seed_output" | sed 's/^/    /' || echo "    (no output)"
+        print_warning "You will need to create the node manually in the Panel"
+    fi
+
+    # Cleanup temp scripts
+    rm -f "${INSTALL_DIR}/seed-all-in-one.ts" || true
+    docker exec stellarstack-api rm -f seed-all-in-one.ts > /dev/null 2>&1 || true
+
+    # Re-enable exit-on-error
+    set -e
+
+    echo ""
+}
+
+# Install daemon from source
+install_daemon() {
+    print_step "INSTALLING STELLAR DAEMON"
+
+    BUILD_DIR="/tmp/stellar-daemon-build"
+    rm -rf "${BUILD_DIR}"
+
+    print_task "Cloning repository"
+    git clone --depth 1 "https://github.com/${GITHUB_REPO}.git" "${BUILD_DIR}" > /dev/null 2>&1
+    print_task_done "Cloning repository"
+
+    echo ""
+    echo -e "  ${SECONDARY}Building daemon (this may take 5-10 minutes)...${NC}"
+    echo ""
+
+    cd "${BUILD_DIR}/apps/daemon"
+    export PATH="$HOME/.cargo/bin:$PATH"
+
+    print_task "Compiling daemon"
+    if cargo build --release > /tmp/daemon-build.log 2>&1; then
+        print_task_done "Compiling daemon"
+    else
+        echo ""
+        print_error "Failed to build daemon"
+        echo -e "${WARNING}Last 20 lines of build log:${NC}"
+        tail -20 /tmp/daemon-build.log | sed 's/^/    /'
+        exit 1
+    fi
+
+    print_task "Creating installation directories"
+    mkdir -p "${DAEMON_INSTALL_DIR}"/{volumes,backups,archives,tmp,logs}
+    print_task_done "Creating installation directories"
+
+    print_task "Installing daemon binary"
+    cp "${BUILD_DIR}/apps/daemon/target/release/stellar-daemon" "${DAEMON_INSTALL_DIR}/stellar-daemon"
+    chmod +x "${DAEMON_INSTALL_DIR}/stellar-daemon"
+    print_task_done "Installing daemon binary"
+
+    # Setup SSL if enabled
+    local ssl_enabled="false"
+    local ssl_cert=""
+    local ssl_key=""
+
+    if [ "$daemon_enable_ssl" = "y" ] && [ -n "$daemon_ssl_domain" ]; then
+        # For all-in-one, nginx handles SSL, so we don't need to configure SSL in daemon
+        if [[ "$installation_type" == "all_in_one" ]]; then
+            print_info "SSL handled by nginx reverse proxy"
+            ssl_enabled="false"  # Daemon listens on HTTP, nginx terminates SSL
+        else
+            # Standalone daemon installation - daemon handles SSL itself
+            print_task "Obtaining SSL certificate"
+            # Stop services that might be using port 80
+            systemctl stop nginx > /dev/null 2>&1 || true
+
+            if certbot certonly --standalone -d "${daemon_ssl_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
+                ssl_enabled="true"
+                ssl_cert="/etc/letsencrypt/live/${daemon_ssl_domain}/fullchain.pem"
+                ssl_key="/etc/letsencrypt/live/${daemon_ssl_domain}/privkey.pem"
+                print_task_done "Obtaining SSL certificate"
+            else
+                print_warning "Failed to obtain SSL certificate, continuing without SSL"
+            fi
+
+            # Restart nginx if it was running
+            systemctl start nginx > /dev/null 2>&1 || true
+        fi
+    fi
+
+    # Redis settings
+    local redis_enabled="false"
+    local redis_url="redis://127.0.0.1:6379"
+    if [ "$daemon_enable_redis" = "y" ]; then
+        redis_enabled="true"
+        redis_url="$daemon_redis_url"
+    fi
+
+    print_task "Generating configuration"
+
+    # Determine API host - use localhost for all-in-one (nginx proxies), public IP for standalone
+    local api_host="${server_ip}"
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        api_host="127.0.0.1"
+    fi
+
+    cat > "${DAEMON_INSTALL_DIR}/config.toml" << EOF
+# StellarStack Daemon Configuration
+# Generated by install-script.sh on $(date)
+
+debug = false
+
+[api]
+host = "${api_host}"
+port = ${daemon_port}
+upload_limit = 100
+trusted_proxies = []
+
+[api.ssl]
+enabled = ${ssl_enabled}
+cert = "${ssl_cert}"
+key = "${ssl_key}"
+
+[system]
+root_directory = "${DAEMON_INSTALL_DIR}"
+data_directory = "${DAEMON_INSTALL_DIR}/volumes"
+backup_directory = "${DAEMON_INSTALL_DIR}/backups"
+archive_directory = "${DAEMON_INSTALL_DIR}/archives"
+tmp_directory = "${DAEMON_INSTALL_DIR}/tmp"
+log_directory = "${DAEMON_INSTALL_DIR}/logs"
+username = "stellar"
+timezone = "UTC"
+disk_check_interval = 60
+
+[system.user]
+uid = 1000
+gid = 1000
+
+[docker]
+tmpfs_size = 100
+container_pid_limit = 512
+dns = ["1.1.1.1", "1.0.0.1"]
+
+[docker.network]
+name = "stellar"
+interface = "172.18.0.1"
+driver = "bridge"
+is_internal = false
+
+[docker.installer_limits]
+memory = 1024
+cpu = 100
+
+[docker.overhead]
+default = 0
+
+[remote]
+url = "${daemon_panel_url}"
+token_id = "${daemon_token_id}"
+token = "${daemon_token}"
+timeout = 30
+boot_servers_per_page = 50
+
+[redis]
+enabled = ${redis_enabled}
+url = "${redis_url}"
+prefix = "stellar"
+
+[sftp]
+enabled = true
+bind_address = "0.0.0.0"
+bind_port = ${daemon_sftp_port}
+read_only = false
+EOF
+    chmod 600 "${DAEMON_INSTALL_DIR}/config.toml"
+    print_task_done "Generating configuration"
+
+    print_task "Creating systemd service"
+    cat > "/etc/systemd/system/stellar-daemon.service" << EOF
+[Unit]
+Description=StellarStack Daemon - Game Server Management
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${DAEMON_INSTALL_DIR}
+ExecStart=${DAEMON_INSTALL_DIR}/stellar-daemon --config ${DAEMON_INSTALL_DIR}/config.toml
+Restart=always
+RestartSec=5
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable stellar-daemon > /dev/null 2>&1
+    print_task_done "Creating systemd service"
+
+    print_task "Creating Docker network"
+    docker network create --driver bridge --subnet 172.18.0.0/16 --gateway 172.18.0.1 stellar > /dev/null 2>&1 || true
+    print_task_done "Creating Docker network"
+
+    print_task "Starting daemon"
+    systemctl start stellar-daemon
+    print_task_done "Starting daemon"
+
+    # Cleanup
+    cd /
+    rm -rf "${BUILD_DIR}"
+
+    echo ""
+    print_success "Daemon installation complete"
+}
+
 # Show completion screen
 show_complete() {
     clear_screen
@@ -2055,12 +2771,28 @@ show_complete() {
         echo -e "    ${PRIMARY}>${NC}  Monitoring: ${PRIMARY}https://${monitoring_domain}${NC}"
     fi
 
+    if [[ "$installation_type" == "daemon" ]]; then
+        local protocol="http"
+        if [ "$daemon_enable_ssl" = "y" ]; then
+            protocol="https"
+            echo -e "    ${PRIMARY}>${NC}  Daemon:    ${PRIMARY}${protocol}://${daemon_ssl_domain}:${daemon_port}${NC}"
+        else
+            echo -e "    ${PRIMARY}>${NC}  Daemon:    ${PRIMARY}${protocol}://${server_ip}:${daemon_port}${NC}"
+        fi
+        echo -e "    ${PRIMARY}>${NC}  SFTP:      ${PRIMARY}Port ${daemon_sftp_port}${NC}"
+    fi
+
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "    ${PRIMARY}>${NC}  Daemon:    ${PRIMARY}https://${daemon_ssl_domain}${NC}"
+        echo -e "    ${PRIMARY}>${NC}  SFTP:      ${PRIMARY}Port ${daemon_sftp_port}${NC}"
+    fi
+
     echo ""
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
 
     # Show admin credentials if they were set
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]] && [ -n "$admin_email" ]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]] && [ -n "$admin_email" ]; then
         echo -e "${PRIMARY}  ADMIN ACCOUNT:${NC}"
         echo ""
         echo -e "    ${SECONDARY}Email:${NC}    ${PRIMARY}${admin_email}${NC}"
@@ -2072,24 +2804,83 @@ show_complete() {
         echo ""
     fi
 
+    # Show daemon node info for all-in-one
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  DAEMON NODE (Auto-configured):${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}Node Name:${NC}     ${PRIMARY}Default Node${NC}"
+        echo -e "    ${SECONDARY}Location:${NC}      ${PRIMARY}Default Location${NC}"
+        echo -e "    ${SECONDARY}FQDN:${NC}          ${PRIMARY}${daemon_ssl_domain}${NC}"
+        echo -e "    ${SECONDARY}Status:${NC}        ${PRIMARY}✓ Ready to deploy servers${NC}"
+        echo ""
+        echo -e "    ${PRIMARY}[✓]${NC} ${PRIMARY}Node is fully configured and connected to Panel!${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    fi
+
     echo -e "${PRIMARY}  USEFUL COMMANDS:${NC}"
     echo ""
-    echo -e "    ${SECONDARY}cd ${INSTALL_DIR}${NC}"
-    echo -e "    ${SECONDARY}docker compose ps${NC}              ${MUTED}# Check container status${NC}"
-    echo -e "    ${SECONDARY}docker compose logs -f${NC}          ${MUTED}# View logs${NC}"
-    echo -e "    ${SECONDARY}docker compose restart${NC}          ${MUTED}# Restart all services${NC}"
-    echo -e "    ${SECONDARY}docker compose pull && docker compose up -d${NC} ${MUTED}# Update to latest${NC}"
+    if [[ "$installation_type" == "daemon" ]]; then
+        echo -e "    ${SECONDARY}systemctl status stellar-daemon${NC}  ${MUTED}# Check daemon status${NC}"
+        echo -e "    ${SECONDARY}systemctl restart stellar-daemon${NC} ${MUTED}# Restart daemon${NC}"
+        echo -e "    ${SECONDARY}systemctl stop stellar-daemon${NC}    ${MUTED}# Stop daemon${NC}"
+        echo -e "    ${SECONDARY}journalctl -u stellar-daemon -f${NC}  ${MUTED}# View daemon logs${NC}"
+    elif [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "    ${SECONDARY}cd ${INSTALL_DIR}${NC}"
+        echo -e "    ${SECONDARY}docker compose ps${NC}              ${MUTED}# Check Panel/API status${NC}"
+        echo -e "    ${SECONDARY}docker compose logs -f${NC}          ${MUTED}# View Panel/API logs${NC}"
+        echo -e "    ${SECONDARY}systemctl status stellar-daemon${NC}  ${MUTED}# Check daemon status${NC}"
+        echo -e "    ${SECONDARY}journalctl -u stellar-daemon -f${NC}  ${MUTED}# View daemon logs${NC}"
+    else
+        echo -e "    ${SECONDARY}cd ${INSTALL_DIR}${NC}"
+        echo -e "    ${SECONDARY}docker compose ps${NC}              ${MUTED}# Check container status${NC}"
+        echo -e "    ${SECONDARY}docker compose logs -f${NC}          ${MUTED}# View logs${NC}"
+        echo -e "    ${SECONDARY}docker compose restart${NC}          ${MUTED}# Restart all services${NC}"
+        echo -e "    ${SECONDARY}docker compose pull && docker compose up -d${NC} ${MUTED}# Update to latest${NC}"
+    fi
     echo ""
-    echo -e "${PRIMARY}  DATA MANAGEMENT:${NC}"
-    echo ""
-    echo -e "    ${SECONDARY}docker volume ls${NC}                ${MUTED}# List all data volumes${NC}"
-    echo -e "    ${SECONDARY}docker volume inspect stellarstack_postgres_data${NC} ${MUTED}# Check database volume${NC}"
-    echo ""
-    echo -e "    ${WARNING}[!]${NC} ${WARNING}Your database persists across container updates${NC}"
-    echo -e "    ${WARNING}[!]${NC} ${WARNING}To wipe all data: docker compose down -v (destructive!)${NC}"
-    echo ""
-    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
-    echo ""
+    if [[ "$installation_type" == "daemon" ]]; then
+        echo -e "${PRIMARY}  DAEMON CONFIGURATION:${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}Config file:${NC}  ${PRIMARY}${DAEMON_INSTALL_DIR}/config.toml${NC}"
+        echo -e "    ${SECONDARY}Volumes:${NC}      ${PRIMARY}${DAEMON_INSTALL_DIR}/volumes${NC}"
+        echo -e "    ${SECONDARY}Backups:${NC}      ${PRIMARY}${DAEMON_INSTALL_DIR}/backups${NC}"
+        echo -e "    ${SECONDARY}Logs:${NC}         ${PRIMARY}${DAEMON_INSTALL_DIR}/logs${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    elif [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  DATA MANAGEMENT:${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}docker volume ls${NC}                ${MUTED}# List all data volumes${NC}"
+        echo -e "    ${SECONDARY}docker volume inspect stellarstack_postgres_data${NC} ${MUTED}# Check database volume${NC}"
+        echo ""
+        echo -e "    ${WARNING}[!]${NC} ${WARNING}Your database persists across container updates${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+        echo -e "${PRIMARY}  DAEMON CONFIGURATION:${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}Config file:${NC}  ${PRIMARY}${DAEMON_INSTALL_DIR}/config.toml${NC}"
+        echo -e "    ${SECONDARY}Volumes:${NC}      ${PRIMARY}${DAEMON_INSTALL_DIR}/volumes${NC}"
+        echo -e "    ${SECONDARY}Backups:${NC}      ${PRIMARY}${DAEMON_INSTALL_DIR}/backups${NC}"
+        echo -e "    ${SECONDARY}Logs:${NC}         ${PRIMARY}${DAEMON_INSTALL_DIR}/logs${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    else
+        echo -e "${PRIMARY}  DATA MANAGEMENT:${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}docker volume ls${NC}                ${MUTED}# List all data volumes${NC}"
+        echo -e "    ${SECONDARY}docker volume inspect stellarstack_postgres_data${NC} ${MUTED}# Check database volume${NC}"
+        echo ""
+        echo -e "    ${WARNING}[!]${NC} ${WARNING}Your database persists across container updates${NC}"
+        echo -e "    ${WARNING}[!]${NC} ${WARNING}To wipe all data: docker compose down -v (destructive!)${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    fi
     echo -e "${PRIMARY}  DATABASE CREDENTIALS:${NC}"
     echo ""
     echo -e "    ${SECONDARY}Database:${NC}     ${PRIMARY}${postgres_db}${NC}"
@@ -2131,6 +2922,46 @@ show_complete() {
 
     echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
     echo ""
+
+    # Show getting started for all-in-one
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  GETTING STARTED:${NC}"
+        echo ""
+        echo -e "  ${PRIMARY}Your all-in-one installation is ready!${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}1. Log in to Panel:${NC} ${PRIMARY}https://${panel_domain}${NC}"
+        echo -e "    ${SECONDARY}2. Navigate to:${NC} ${MUTED}Servers > Create Server${NC}"
+        echo -e "    ${SECONDARY}3. Select location:${NC} ${PRIMARY}Default Location${NC}"
+        echo -e "    ${SECONDARY}4. Select node:${NC} ${PRIMARY}Default Node${NC}"
+        echo -e "    ${SECONDARY}5. Deploy your first game server!${NC}"
+        echo ""
+        echo -e "  ${PRIMARY}No additional configuration needed - everything is ready to use!${NC}"
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    fi
+
+    # Show firewall instructions for daemon installations
+    if [[ "$installation_type" == "daemon" || "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  FIREWALL CONFIGURATION:${NC}"
+        echo ""
+        echo -e "${WARNING}  [!]${NC} ${WARNING}Important: Open these ports in your firewall${NC}"
+        echo ""
+        echo -e "    ${SECONDARY}Port ${daemon_sftp_port}:${NC}  SFTP (required for file management)"
+        if [[ "$installation_type" == "daemon" ]]; then
+            echo -e "    ${SECONDARY}Port ${daemon_port}:${NC}  Daemon API"
+        fi
+        echo ""
+        echo -e "  ${MUTED}Example for ufw:${NC}"
+        echo -e "    ${SECONDARY}sudo ufw allow ${daemon_sftp_port}/tcp${NC}"
+        if [[ "$installation_type" == "daemon" ]]; then
+            echo -e "    ${SECONDARY}sudo ufw allow ${daemon_port}/tcp${NC}"
+        fi
+        echo ""
+        echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+        echo ""
+    fi
+
     echo -e "${SECONDARY}  Thank you for installing StellarStack!${NC}"
     echo -e "${MUTED}  Documentation: https://docs.stellarstack.app${NC}"
     echo ""
@@ -2189,6 +3020,16 @@ uninstall() {
     done
     print_task_done "Stopping and removing containers"
 
+    # Stop and remove daemon service if it exists
+    if systemctl list-unit-files | grep -q "stellar-daemon.service"; then
+        print_task "Stopping and removing daemon service"
+        systemctl stop stellar-daemon > /dev/null 2>&1 || true
+        systemctl disable stellar-daemon > /dev/null 2>&1 || true
+        rm -f /etc/systemd/system/stellar-daemon.service
+        systemctl daemon-reload
+        print_task_done "Stopping and removing daemon service"
+    fi
+
     # Remove Docker volumes
     print_task "Removing Docker volumes"
     docker volume rm stellarstack_postgres_data > /dev/null 2>&1 || true
@@ -2214,6 +3055,7 @@ uninstall() {
     # Remove installation directory
     print_task "Removing installation directory"
     rm -rf "${INSTALL_DIR}" 2>/dev/null || true
+    rm -rf "${DAEMON_INSTALL_DIR}" 2>/dev/null || true
     print_task_done "Removing installation directory"
 
     echo ""
@@ -2286,10 +3128,45 @@ main() {
     select_installation_type
     check_existing_installation
     check_dependencies
+
+    # Handle daemon installation separately
+    if [[ "$installation_type" == "daemon" ]]; then
+        # Get server IP for daemon
+        print_task "Detecting server IP address"
+        server_ip=$(get_server_ip)
+        if [ -n "$server_ip" ]; then
+            print_task_done "Detecting server IP address"
+        else
+            echo -e "\r  ${WARNING}[!]${NC} ${WARNING}Could not detect server IP automatically${NC}    "
+            echo ""
+            echo -e "${SECONDARY}  Please enter your server's public IP address:${NC}"
+            echo -ne "  ${PRIMARY}>${NC} "
+            read -r server_ip </dev/tty
+            if [ -z "$server_ip" ]; then
+                print_warning "No IP provided, using 0.0.0.0 (all interfaces)"
+                server_ip="0.0.0.0"
+            fi
+        fi
+
+        # Collect daemon configuration
+        collect_daemon_config
+
+        # Install system dependencies
+        install_dependencies
+
+        # Install daemon
+        install_daemon
+
+        # Show completion message
+        show_complete
+        return
+    fi
+
+    # Regular panel/API installation flow
     collect_domain_config
 
     # Collect admin credentials (only for fresh installations or if API is being installed)
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         if [ "$update_mode" != "y" ]; then
             collect_admin_credentials
         fi
@@ -2312,6 +3189,18 @@ main() {
 
     # Deploy containers
     pull_and_start
+
+    # For all-in-one, install daemon after panel/API are running
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        echo ""
+        print_step "INSTALLING DAEMON"
+
+        # Create/get daemon node tokens
+        create_daemon_node_token
+
+        # Install daemon (skip SSL generation, nginx handles it)
+        install_daemon
+    fi
 
     # Show completion message
     show_complete
