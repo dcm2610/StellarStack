@@ -133,12 +133,13 @@ remote.get("/servers", async (c) => {
         invocation: buildStartupCommand(blueprint.startup, environment),
         skip_egg_scripts: false,
         build: {
-          memory_limit: Number(server.memory),
-          swap: Number(server.swap),
+          // Convert BigInt to number safely - memory/disk are in MiB in database
+          memory_limit: typeof server.memory === "bigint" ? Number(server.memory) : server.memory,
+          swap: typeof server.swap === "bigint" ? Number(server.swap) : server.swap,
           io_weight: 500,
           cpu_limit: Math.round(server.cpu),
           threads: server.cpuPinning || null,
-          disk_space: Number(server.disk),
+          disk_space: typeof server.disk === "bigint" ? Number(server.disk) : server.disk,
           oom_disabled: server.oomKillDisable,
         },
         container: {

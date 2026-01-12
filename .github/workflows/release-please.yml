@@ -90,3 +90,55 @@ jobs:
           echo "**Release URL:** ${{ steps.release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Install Script:** Updated to version ${{ steps.release.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Discord Notification
+        if: steps.release.outputs.release_created
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "🚀 New Release: ${{ steps.release.outputs.tag_name }}",
+                "description": "A new version of StellarStack has been released!",
+                "url": "${{ steps.release.outputs.html_url }}",
+                "color": 5814783,
+                "fields": [
+                  {
+                    "name": "Version",
+                    "value": "${{ steps.release.outputs.tag_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Release",
+                    "value": "[View Release](${{ steps.release.outputs.html_url }})",
+                    "inline": true
+                  }
+                ],
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
+              }],
+              "components": [
+                {
+                  "type": 1,
+                  "components": [
+                    {
+                      "type": 2,
+                      "style": 5,
+                      "label": "View Release",
+                      "url": "${{ steps.release.outputs.html_url }}"
+                    },
+                    {
+                      "type": 2,
+                      "style": 5,
+                      "label": "View Repository",
+                      "url": "https://github.com/${{ github.repository }}"
+                    },
+                    {
+                      "type": 2,
+                      "style": 5,
+                      "label": "View Changelog",
+                      "url": "https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md"
+                    }
+                  ]
+                }
+              ]
+            }' \
+            "${{ secrets.DISCORD_WEBHOOK }}"

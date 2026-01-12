@@ -5,6 +5,12 @@
 
 set -e
 
+# Handle piped input (when running via curl | bash)
+# Redirect stdin from /dev/tty if available
+if [ ! -t 0 ] && [ -c /dev/tty ]; then
+    exec </dev/tty
+fi
+
 # Enable debugging if DEBUG=1
 if [ "${DEBUG:-0}" = "1" ]; then
     set -x
@@ -2624,6 +2630,15 @@ install_daemon() {
     print_task "Creating installation directories"
     mkdir -p "${DAEMON_INSTALL_DIR}"/{volumes,backups,archives,tmp,logs}
     print_task_done "Creating installation directories"
+
+    # Stop daemon service if it's running to allow binary replacement
+    if systemctl list-unit-files | grep -q "stellar-daemon.service"; then
+        if systemctl is-active --quiet stellar-daemon; then
+            print_task "Stopping running daemon service"
+            systemctl stop stellar-daemon > /dev/null 2>&1 || true
+            print_task_done "Stopping running daemon service"
+        fi
+    fi
 
     print_task "Installing daemon binary"
     cp "${BUILD_DIR}/apps/daemon/target/release/stellar-daemon" "${DAEMON_INSTALL_DIR}/stellar-daemon"
