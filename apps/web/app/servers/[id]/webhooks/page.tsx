@@ -20,6 +20,7 @@ import {
   BsX,
   BsArrowRepeat,
 } from "react-icons/bs";
+import { TbWand } from "react-icons/tb";
 import { useServer } from "@/components/server-provider";
 import { ServerInstallingPlaceholder } from "@/components/server-installing-placeholder";
 import { ServerSuspendedPlaceholder } from "@/components/server-suspended-placeholder";
@@ -51,9 +52,8 @@ const WebhooksPage = (): JSX.Element | null => {
 
   // Form states
   const [formUrl, setFormUrl] = useState("");
-  const [formEvent, setFormEvent] = useState<WebhookEvent | null>(null);
+  const [formEvents, setFormEvents] = useState<WebhookEvent[]>([]);
   const [formEnabled, setFormEnabled] = useState(true);
-  const [formProvider, setFormProvider] = useState<"generic" | "discord" | "slack">("generic");
 
   useEffect(() => {
     setMounted(true);
@@ -102,9 +102,8 @@ const WebhooksPage = (): JSX.Element | null => {
 
   const resetForm = () => {
     setFormUrl("");
-    setFormEvent(null);
+    setFormEvents([]);
     setFormEnabled(true);
-    setFormProvider("generic");
   };
 
   const openAddModal = () => {
@@ -115,9 +114,8 @@ const WebhooksPage = (): JSX.Element | null => {
   const openEditModal = (webhook: Webhook) => {
     setSelectedWebhook(webhook);
     setFormUrl(webhook.url);
-    setFormEvent(webhook.events[0] || null);
+    setFormEvents(webhook.events as WebhookEvent[]);
     setFormEnabled(webhook.enabled);
-    setFormProvider(webhook.provider || "generic");
     setEditModalOpen(true);
   };
 
@@ -127,31 +125,36 @@ const WebhooksPage = (): JSX.Element | null => {
   };
 
   const handleAdd = async () => {
-    if (!formEvent) return;
+    if (formEvents.length === 0) return;
     try {
       const newWebhook = await webhooks.create({
         serverId,
         url: formUrl,
-        events: [formEvent],
-        provider: formProvider,
+        events: formEvents,
       });
       setWebhookList((prev) => [...prev, newWebhook]);
       setAddModalOpen(false);
       resetForm();
       toast.success("Webhook created");
+      
+      try {
+        await webhooks.test(newWebhook.id);
+        toast.success("Test message sent to webhook");
+      } catch (error) {
+        toast.info("Webhook created, but test message failed to send");
+      }
     } catch (error) {
       toast.error("Failed to create webhook");
     }
   };
 
   const handleEdit = async () => {
-    if (!selectedWebhook || !formEvent) return;
+    if (!selectedWebhook || formEvents.length === 0) return;
     try {
       const updated = await webhooks.update(selectedWebhook.id, {
         url: formUrl,
-        events: [formEvent],
+        events: formEvents,
         enabled: formEnabled,
-        provider: formProvider,
       });
       setWebhookList((prev) => prev.map((w) => (w.id === selectedWebhook.id ? updated : w)));
       setEditModalOpen(false);
@@ -175,21 +178,32 @@ const WebhooksPage = (): JSX.Element | null => {
     }
   };
 
-  const handleRegenerateSecret = async (webhook: Webhook) => {
+  const handleTestWebhook = async (webhook: Webhook) => {
     try {
-      const result = await webhooks.regenerateSecret(webhook.id);
-      toast.success(`New secret: ${result.secret}`, { duration: 10000 });
-      fetchWebhooks();
+      await webhooks.test(webhook.id);
+      toast.success("Test message sent successfully");
     } catch (error) {
-      toast.error("Failed to regenerate secret");
+      toast.error("Failed to send test message");
     }
   };
 
-  const selectEvent = (event: WebhookEvent) => {
-    setFormEvent(event);
+  const handleRegenerateSecret = async (webhook: Webhook) => {
+    try {
+      await webhooks.delete(webhook.id);
+      setWebhookList((prev) => prev.filter((w) => w.id !== webhook.id));
+      toast.success("Webhook deleted");
+    } catch (error) {
+      toast.error("Failed to delete webhook");
+    }
   };
 
-  const isFormValid = formUrl.startsWith("http") && formEvent !== null;
+  const toggleEvent = (event: WebhookEvent) => {
+    setFormEvents((prev) =>
+      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]
+    );
+  };
+
+  const isFormValid = formUrl.startsWith("http") && formEvents.length > 0;
 
   return (
     <div className="relative min-h-svh transition-colors">
@@ -378,7 +392,7 @@ const WebhooksPage = (): JSX.Element | null => {
                           <span
                             className={cn(
                               "max-w-[400px] truncate font-mono text-xs",
-                              isDark ? "text-zinc-100" : "text-zinc-800"
+                              isDark ? "text-zinc-400" : "text-zinc-600"
                             )}
                           >
                             {webhook.url}
@@ -396,24 +410,6 @@ const WebhooksPage = (): JSX.Element | null => {
                             )}
                           >
                             {webhook.enabled ? "Active" : "Disabled"}
-                          </span>
-                          <span
-                            className={cn(
-                              "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                              webhook.provider === "discord"
-                                ? isDark
-                                  ? "border-indigo-700/50 text-indigo-400"
-                                  : "border-indigo-300 text-indigo-600"
-                                : webhook.provider === "slack"
-                                  ? isDark
-                                    ? "border-purple-700/50 text-purple-400"
-                                    : "border-purple-300 text-purple-600"
-                                  : isDark
-                                    ? "border-zinc-700 text-zinc-500"
-                                    : "border-zinc-300 text-zinc-400"
-                            )}
-                          >
-                            {webhook.provider === "generic" ? "Custom" : webhook.provider}
                           </span>
                         </div>
                       </div>
@@ -437,20 +433,6 @@ const WebhooksPage = (): JSX.Element | null => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRegenerateSecret(webhook)}
-                        className={cn(
-                          "p-2 transition-all",
-                          isDark
-                            ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                            : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                        )}
-                        title="Regenerate secret"
-                      >
-                        <BsArrowRepeat className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
                         onClick={() => openEditModal(webhook)}
                         className={cn(
                           "p-2 transition-all",
@@ -460,6 +442,20 @@ const WebhooksPage = (): JSX.Element | null => {
                         )}
                       >
                         <BsPencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTestWebhook(webhook)}
+                        className={cn(
+                          "p-2 transition-all",
+                          isDark
+                            ? "border-blue-900/60 text-blue-400/80 hover:border-blue-700 hover:text-blue-300"
+                            : "border-blue-300 text-blue-600 hover:border-blue-400 hover:text-blue-700"
+                        )}
+                        title="Send test message to webhook"
+                      >
+                        <TbWand className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -502,13 +498,13 @@ const WebhooksPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              Webhook URL
+              Discord Webhook URL
             </label>
             <Input
               type="url"
               value={formUrl}
               onChange={(e) => setFormUrl(e.target.value)}
-              placeholder="https://example.com/webhook"
+              placeholder="https://discordapp.com/api/webhooks/..."
               className={cn(
                 "font-mono text-sm transition-all",
                 isDark
@@ -516,43 +512,8 @@ const WebhooksPage = (): JSX.Element | null => {
                   : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
               )}
             />
-          </div>
-          <div>
-            <label
-              className={cn(
-                "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
-            >
-              Provider
-            </label>
-            <div className="flex gap-2">
-              {(["generic", "discord", "slack"] as const).map((provider) => (
-                <button
-                  key={provider}
-                  type="button"
-                  onClick={() => setFormProvider(provider)}
-                  className={cn(
-                    "flex-1 border p-3 text-center text-sm capitalize transition-all",
-                    formProvider === provider
-                      ? isDark
-                        ? "border-zinc-500 bg-zinc-800 text-zinc-100"
-                        : "border-zinc-400 bg-zinc-100 text-zinc-900"
-                      : isDark
-                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                        : "border-zinc-300 text-zinc-500 hover:border-zinc-400"
-                  )}
-                >
-                  {provider === "generic" ? "Custom" : provider}
-                </button>
-              ))}
-            </div>
             <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
-              {formProvider === "discord"
-                ? "Formats payloads as Discord embeds"
-                : formProvider === "slack"
-                  ? "Formats payloads as Slack blocks"
-                  : "Sends raw JSON payload with signature"}
+              Get this from your Discord server's webhook settings
             </p>
           </div>
           <div>
@@ -562,17 +523,17 @@ const WebhooksPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              Event
+              Events
             </label>
             <div className="space-y-2">
               {webhookEvents.map((event) => (
                 <button
                   key={event.value}
                   type="button"
-                  onClick={() => selectEvent(event.value)}
+                  onClick={() => toggleEvent(event.value)}
                   className={cn(
                     "flex w-full items-center gap-3 border p-3 text-left transition-all",
-                    formEvent === event.value
+                    formEvents.includes(event.value)
                       ? isDark
                         ? "border-zinc-500 bg-zinc-800"
                         : "border-zinc-400 bg-zinc-100"
@@ -583,8 +544,8 @@ const WebhooksPage = (): JSX.Element | null => {
                 >
                   <div
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full border",
-                      formEvent === event.value
+                      "flex h-5 w-5 items-center justify-center rounded border",
+                      formEvents.includes(event.value)
                         ? isDark
                           ? "border-green-500 bg-green-500/20"
                           : "border-green-400 bg-green-50"
@@ -593,11 +554,11 @@ const WebhooksPage = (): JSX.Element | null => {
                           : "border-zinc-300"
                     )}
                   >
-                    {formEvent === event.value && (
-                      <div
+                    {formEvents.includes(event.value) && (
+                      <BsCheck2
                         className={cn(
-                          "h-2 w-2 rounded-full",
-                          isDark ? "bg-green-400" : "bg-green-600"
+                          "h-3 w-3",
+                          isDark ? "text-green-400" : "text-green-600"
                         )}
                       />
                     )}
@@ -641,13 +602,13 @@ const WebhooksPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              Webhook URL
+              Discord Webhook URL
             </label>
             <Input
               type="url"
               value={formUrl}
               onChange={(e) => setFormUrl(e.target.value)}
-              placeholder="https://example.com/webhook"
+              placeholder="https://discordapp.com/api/webhooks/..."
               className={cn(
                 "font-mono text-sm transition-all",
                 isDark
@@ -655,6 +616,9 @@ const WebhooksPage = (): JSX.Element | null => {
                   : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
               )}
             />
+            <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+              Get this from your Discord server's webhook settings
+            </p>
           </div>
           <div>
             <label
@@ -710,55 +674,17 @@ const WebhooksPage = (): JSX.Element | null => {
                 isDark ? "text-zinc-400" : "text-zinc-600"
               )}
             >
-              Provider
-            </label>
-            <div className="flex gap-2">
-              {(["generic", "discord", "slack"] as const).map((provider) => (
-                <button
-                  key={provider}
-                  type="button"
-                  onClick={() => setFormProvider(provider)}
-                  className={cn(
-                    "flex-1 border p-3 text-center text-sm capitalize transition-all",
-                    formProvider === provider
-                      ? isDark
-                        ? "border-zinc-500 bg-zinc-800 text-zinc-100"
-                        : "border-zinc-400 bg-zinc-100 text-zinc-900"
-                      : isDark
-                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                        : "border-zinc-300 text-zinc-500 hover:border-zinc-400"
-                  )}
-                >
-                  {provider === "generic" ? "Custom" : provider}
-                </button>
-              ))}
-            </div>
-            <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
-              {formProvider === "discord"
-                ? "Formats payloads as Discord embeds"
-                : formProvider === "slack"
-                  ? "Formats payloads as Slack blocks"
-                  : "Sends raw JSON payload with signature"}
-            </p>
-          </div>
-          <div>
-            <label
-              className={cn(
-                "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
-            >
-              Event
+              Events
             </label>
             <div className="space-y-2">
               {webhookEvents.map((event) => (
                 <button
                   key={event.value}
                   type="button"
-                  onClick={() => selectEvent(event.value)}
+                  onClick={() => toggleEvent(event.value)}
                   className={cn(
                     "flex w-full items-center gap-3 border p-3 text-left transition-all",
-                    formEvent === event.value
+                    formEvents.includes(event.value)
                       ? isDark
                         ? "border-zinc-500 bg-zinc-800"
                         : "border-zinc-400 bg-zinc-100"
@@ -769,8 +695,8 @@ const WebhooksPage = (): JSX.Element | null => {
                 >
                   <div
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full border",
-                      formEvent === event.value
+                      "flex h-5 w-5 items-center justify-center rounded border",
+                      formEvents.includes(event.value)
                         ? isDark
                           ? "border-green-500 bg-green-500/20"
                           : "border-green-400 bg-green-50"
@@ -779,11 +705,11 @@ const WebhooksPage = (): JSX.Element | null => {
                           : "border-zinc-300"
                     )}
                   >
-                    {formEvent === event.value && (
-                      <div
+                    {formEvents.includes(event.value) && (
+                      <BsCheck2
                         className={cn(
-                          "h-2 w-2 rounded-full",
-                          isDark ? "bg-green-400" : "bg-green-600"
+                          "h-3 w-3",
+                          isDark ? "text-green-400" : "text-green-600"
                         )}
                       />
                     )}

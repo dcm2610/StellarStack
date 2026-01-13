@@ -1,5 +1,4 @@
 import { db } from "./db";
-import crypto from "crypto";
 import type { WebhookEvent, WebhookPayload, DispatchWebhookOptions } from "./webhooks.types";
 
 // Re-export types for backwards compatibility
@@ -42,13 +41,6 @@ export const WebhookEvents = {
   RESOURCE_WARNING: "resource.warning",
   RESOURCE_CRITICAL: "resource.critical",
 } as const;
-
-/**
- * Generate HMAC-SHA256 signature for webhook payload
- */
-const signPayload = (payload: string, secret: string): string => {
-  return crypto.createHmac("sha256", secret).update(payload).digest("hex");
-};
 
 /**
  * Format event name for display
@@ -174,39 +166,6 @@ const formatSlackPayload = (payload: WebhookPayload): object => {
 };
 
 /**
- * Format payload based on provider
- */
-const formatPayloadForProvider = (
-  payload: WebhookPayload,
-  provider: string
-): { body: string; contentType: string } => {
-  switch (provider) {
-    case "discord":
-      return {
-        body: JSON.stringify(formatDiscordPayload(payload)),
-        contentType: "application/json",
-      };
-    case "slack":
-      return {
-        body: JSON.stringify(formatSlackPayload(payload)),
-        contentType: "application/json",
-      };
-    default:
-      return {
-        body: JSON.stringify(payload),
-        contentType: "application/json",
-      };
-  }
-};
-
-/**
- * Generate a random webhook secret
- */
-export const generateWebhookSecret = (): string => {
-  return crypto.randomBytes(32).toString("hex");
-};
-
-/**
  * Dispatch a webhook event
  */
 export const dispatchWebhook = async (
@@ -263,15 +222,8 @@ export const dispatchWebhook = async (
 
   // Dispatch to all matching webhooks
   const deliveryPromises = webhooks.map(async (webhook) => {
-    // Format payload based on provider
-    const { body: formattedBody, contentType } = formatPayloadForProvider(
-      payload,
-      webhook.provider
-    );
-
-    // For generic webhooks, sign the payload; Discord/Slack don't use signatures
-    const signature =
-      webhook.provider === "generic" ? signPayload(formattedBody, webhook.secret) : "";
+    // Format payload as Discord embed
+    const formattedBody = JSON.stringify(formatDiscordPayload(payload));
 
     // Create delivery record (always store the original payload for debugging)
     const delivery = await db.webhookDelivery.create({
@@ -284,17 +236,10 @@ export const dispatchWebhook = async (
     });
 
     try {
-      // Build headers - only include signature for generic webhooks
       const headers: Record<string, string> = {
-        "Content-Type": contentType,
+        "Content-Type": "application/json",
         "User-Agent": "StellarStack-Webhook/1.0",
       };
-
-      if (webhook.provider === "generic") {
-        headers["X-Webhook-Signature"] = `sha256=${signature}`;
-        headers["X-Webhook-Event"] = event;
-        headers["X-Webhook-Delivery"] = delivery.id;
-      }
 
       const response = await fetch(webhook.url, {
         method: "POST",
@@ -365,8 +310,8 @@ const scheduleRetry = async (deliveryId: string, attemptNumber: number): Promise
       return;
     }
 
-    const payloadString = JSON.stringify(delivery.payload);
-    const signature = signPayload(payloadString, delivery.webhook.secret);
+    // Format payload as Discord embed (same as initial dispatch)
+    const formattedBody = JSON.stringify(formatDiscordPayload(delivery.payload as unknown as WebhookPayload));
 
     try {
       await db.webhookDelivery.update({
@@ -378,13 +323,9 @@ const scheduleRetry = async (deliveryId: string, attemptNumber: number): Promise
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Webhook-Signature": `sha256=${signature}`,
-          "X-Webhook-Event": delivery.event,
-          "X-Webhook-Delivery": deliveryId,
-          "X-Webhook-Retry": String(attemptNumber),
           "User-Agent": "StellarStack-Webhook/1.0",
         },
-        body: payloadString,
+        body: formattedBody,
         signal: AbortSignal.timeout(10000),
       });
 
@@ -425,13 +366,38 @@ export const getAvailableEvents = (): string[] => {
 };
 
 /**
- * Verify webhook signature
+ * Send a test webhook to verify the URL is working
  */
-export const verifyWebhookSignature = (
-  payload: string,
-  signature: string,
-  secret: string
-): boolean => {
-  const expectedSignature = `sha256=${signPayload(payload, secret)}`;
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+export const sendTestWebhook = async (webhookUrl: string): Promise<{ success: boolean; statusCode?: number; error?: string }> => {
+  const testEmbed = {
+    embeds: [{
+      title: "🔔 Test",
+      description: "Webhook connected",
+      color: 0x0099ff, // Blue
+      timestamp: new Date().toISOString(),
+      footer: { text: "StellarStack" },
+    }]
+  };
+
+  const formattedBody = JSON.stringify(testEmbed);
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "StellarStack-Webhook/1.0",
+      },
+      body: formattedBody,
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (response.ok) {
+      return { success: true, statusCode: response.status };
+    } else {
+      return { success: false, statusCode: response.status, error: `HTTP ${response.status}` };
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message || "Request failed" };
+  }
 };

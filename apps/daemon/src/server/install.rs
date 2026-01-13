@@ -261,14 +261,13 @@ impl InstallationProcess {
         // because Windows bind mounts can be unreliable with file permissions
         #[cfg(windows)]
         let (entrypoint, cmd) = {
-            // Normalize line endings for shell
             let normalized_script = self.script.script
                 .replace("\r\n", "\n")
                 .replace('\r', "\n");
             info!("Windows: passing script inline ({} chars)", normalized_script.len());
             debug!("Script to execute: {}", normalized_script);
             (
-                vec![self.script.entrypoint.clone(), "-c".to_string()],
+                vec!["/bin/sh".to_string(), "-c".to_string()],
                 vec![normalized_script],
             )
         };
@@ -277,7 +276,7 @@ impl InstallationProcess {
         let (entrypoint, cmd) = {
             info!("Unix: using mounted script at /mnt/install/install.sh");
             (
-                vec![self.script.entrypoint.clone()],
+                vec!["/bin/sh".to_string(), "-c".to_string()],
                 vec!["/mnt/install/install.sh".to_string()],
             )
         };

@@ -2,28 +2,22 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../lib/db";
 import { requireAuth } from "../middleware/auth";
-import { generateWebhookSecret, getAvailableEvents, WebhookEvents } from "../lib/webhooks";
+import { getAvailableEvents, WebhookEvents } from "../lib/webhooks";
 import type { Variables } from "../types";
 
 const webhooks = new Hono<{ Variables: Variables }>();
-
-// Supported webhook providers
-const WEBHOOK_PROVIDERS = ["generic", "discord", "slack"] as const;
-type WebhookProvider = (typeof WEBHOOK_PROVIDERS)[number];
 
 // Validation schemas
 const createWebhookSchema = z.object({
   url: z.string().url(),
   events: z.array(z.string()).min(1),
   serverId: z.string().optional(),
-  provider: z.enum(WEBHOOK_PROVIDERS).optional().default("generic"),
 });
 
 const updateWebhookSchema = z.object({
   url: z.string().url().optional(),
   events: z.array(z.string()).min(1).optional(),
   enabled: z.boolean().optional(),
-  provider: z.enum(WEBHOOK_PROVIDERS).optional(),
 });
 
 // Get available webhook events
@@ -67,14 +61,7 @@ webhooks.get("/", requireAuth, async (c) => {
     orderBy: { createdAt: "desc" },
   });
 
-  // Mask the secrets
-  const webhooksWithMaskedSecrets = userWebhooks.map((webhook) => ({
-    ...webhook,
-    secret:
-      webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
-  }));
-
-  return c.json(webhooksWithMaskedSecrets);
+  return c.json(userWebhooks);
 });
 
 // Get a single webhook
@@ -107,11 +94,7 @@ webhooks.get("/:id", requireAuth, async (c) => {
     return c.json({ error: "Webhook not found" }, 404);
   }
 
-  return c.json({
-    ...webhook,
-    secret:
-      webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
-  });
+  return c.json(webhook);
 });
 
 // Create a new webhook
@@ -124,7 +107,7 @@ webhooks.post("/", requireAuth, async (c) => {
     return c.json({ error: "Validation failed", details: parsed.error.errors }, 400);
   }
 
-  const { url, events, serverId, provider } = parsed.data;
+  const { url, events, serverId } = parsed.data;
 
   // Validate events
   const availableEvents = getAvailableEvents();
@@ -143,16 +126,14 @@ webhooks.post("/", requireAuth, async (c) => {
     }
   }
 
-  const secret = generateWebhookSecret();
-
   const webhook = await db.webhook.create({
     data: {
       userId: user.id,
       url,
-      secret,
+      secret: "", // Not used for Discord webhooks
       events,
       serverId,
-      provider,
+      provider: "discord", // Only Discord supported
     },
     include: {
       server: {
@@ -161,15 +142,7 @@ webhooks.post("/", requireAuth, async (c) => {
     },
   });
 
-  return c.json(
-    {
-      ...webhook,
-      // Show full secret only on creation
-      secretOnce: secret,
-      secret: secret.substring(0, 8) + "..." + secret.substring(secret.length - 4),
-    },
-    201
-  );
+  return c.json(webhook, 201);
 });
 
 // Update a webhook
@@ -211,38 +184,7 @@ webhooks.patch("/:id", requireAuth, async (c) => {
     },
   });
 
-  return c.json({
-    ...webhook,
-    secret:
-      webhook.secret.substring(0, 8) + "..." + webhook.secret.substring(webhook.secret.length - 4),
-  });
-});
-
-// Regenerate webhook secret
-webhooks.post("/:id/regenerate-secret", requireAuth, async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-
-  // Verify ownership
-  const existing = await db.webhook.findFirst({
-    where: { id, userId: user.id },
-  });
-
-  if (!existing) {
-    return c.json({ error: "Webhook not found" }, 404);
-  }
-
-  const newSecret = generateWebhookSecret();
-
-  await db.webhook.update({
-    where: { id },
-    data: { secret: newSecret },
-  });
-
-  return c.json({
-    secret: newSecret,
-    message: "Secret regenerated. Make sure to update your integration.",
-  });
+  return c.json(webhook);
 });
 
 // Delete a webhook
@@ -361,20 +303,12 @@ webhooks.post("/:id/deliveries/:deliveryId/retry", requireAuth, async (c) => {
 
   // Dispatch the retry (similar to dispatchWebhook but for a single delivery)
   const payloadString = JSON.stringify(delivery.payload);
-  const signature = require("crypto")
-    .createHmac("sha256", webhook.secret)
-    .update(payloadString)
-    .digest("hex");
 
   try {
     const response = await fetch(webhook.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Webhook-Signature": `sha256=${signature}`,
-        "X-Webhook-Event": delivery.event,
-        "X-Webhook-Delivery": newDelivery.id,
-        "X-Webhook-Retry": "manual",
         "User-Agent": "StellarStack-Webhook/1.0",
       },
       body: payloadString,
@@ -410,6 +344,40 @@ webhooks.post("/:id/deliveries/:deliveryId/retry", requireAuth, async (c) => {
         success: false,
         deliveryId: newDelivery.id,
         error: error.message || "Request failed",
+      },
+      500
+    );
+  }
+});
+
+// Test a webhook URL
+webhooks.post("/:id/test", requireAuth, async (c) => {
+  const user = c.get("user");
+  const webhookId = c.req.param("id");
+
+  // Get webhook
+  const webhook = await db.webhook.findFirst({
+    where: {
+      id: webhookId,
+      userId: user.id,
+    },
+  });
+
+  if (!webhook) {
+    return c.json({ error: "Webhook not found" }, 404);
+  }
+
+  // Import here to avoid circular dependency
+  const { sendTestWebhook } = await import("../lib/webhooks");
+
+  try {
+    const result = await sendTestWebhook(webhook.url);
+    return c.json(result);
+  } catch (error: any) {
+    return c.json(
+      {
+        success: false,
+        error: error.message || "Test failed",
       },
       500
     );
