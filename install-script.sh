@@ -86,6 +86,9 @@ postgres_user="stellarstack"
 postgres_password=""
 postgres_db="stellarstack"
 
+# Upload limit configuration
+upload_limit="100M"
+
 # Dependency installation
 install_docker="n"
 install_nginx="n"
@@ -489,9 +492,21 @@ check_dependencies() {
                     print_info "Existing nginx configurations will be preserved"
                     ;;
                 2)
+                    skip_nginx_config="n"
+                    # Clear domain variables so they won't be extracted from old nginx configs
+                    panel_domain=""
+                    api_domain=""
+                    monitoring_domain=""
+                    daemon_ssl_domain=""
                     print_info "nginx configurations will be overwritten"
                     ;;
                 3)
+                    skip_nginx_config="n"
+                    # Clear domain variables for fresh start
+                    panel_domain=""
+                    api_domain=""
+                    monitoring_domain=""
+                    daemon_ssl_domain=""
                     print_task "Removing existing StellarStack nginx configs"
                     rm -f /etc/nginx/sites-available/stellarstack-* 2>/dev/null || true
                     rm -f /etc/nginx/sites-enabled/stellarstack-* 2>/dev/null || true
@@ -622,66 +637,126 @@ collect_domain_config() {
     # Check for existing certificates and extract domains
     local found_existing_certs=false
 
-    # First, try to extract domains from existing .env file
+    # First, try to extract domains from existing .env file (only if keeping existing configs)
+    echo ""
+    print_info "Checking for existing .env file at: ${ENV_FILE}"
     if [ -f "${ENV_FILE}" ]; then
-        if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
-            # Extract panel domain from FRONTEND_URL
-            local extracted_panel=$(grep "^FRONTEND_URL=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | sed 's|https\?://||' | sed 's|/.*||')
-            if [ -n "$extracted_panel" ] && [ -d "/etc/letsencrypt/live/${extracted_panel}" ]; then
+        print_info "  ✓ .env file exists"
+        print_info "  skip_nginx_config value: '${skip_nginx_config}'"
+        
+        if [ "$skip_nginx_config" = "y" ]; then
+            print_info "  → Will extract domains from .env and nginx configs"
+        else
+            print_info "  → Skipping domain extraction (user chose to reconfigure)"
+        fi
+    else
+        print_info "  ✗ .env file does not exist (fresh installation)"
+    fi
+    echo ""
+
+    if [ -f "${ENV_FILE}" ] && [ "$skip_nginx_config" = "y" ]; then
+        echo -e "${SECONDARY}  Extracting existing domains from .env file...${NC}"
+        if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
+            # Extract panel domain from FRONTEND_URL, removing quotes and whitespace
+            local extracted_panel=$(grep "^FRONTEND_URL=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs | sed 's|https\?://||' | sed 's|/.*||')
+            print_info "  Panel: grep result: '$(grep "^FRONTEND_URL=" "${ENV_FILE}" 2>/dev/null)'"
+            print_info "  Panel: extracted: '${extracted_panel}'"
+            if [ -n "$extracted_panel" ]; then
                 panel_domain="$extracted_panel"
-                print_info "Detected existing panel domain: ${panel_domain}"
-                found_existing_certs=true
+                print_info "  Panel domain SET: ${panel_domain}"
+                if [ -d "/etc/letsencrypt/live/${extracted_panel}" ]; then
+                    found_existing_certs=true
+                fi
+            else
+                print_info "  Panel domain NOT found in .env"
             fi
         fi
 
-        if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
-            # Extract API domain from NEXT_PUBLIC_API_URL
-            local extracted_api=$(grep "^NEXT_PUBLIC_API_URL=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | sed 's|https\?://||' | sed 's|/.*||')
-            if [ -n "$extracted_api" ] && [ -d "/etc/letsencrypt/live/${extracted_api}" ]; then
+        if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
+            # Extract API domain from API_URL, removing quotes and whitespace
+            local extracted_api=$(grep "^API_URL=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs | sed 's|https\?://||' | sed 's|/.*||')
+            print_info "  API: grep result: '$(grep "^API_URL=" "${ENV_FILE}" 2>/dev/null)'"
+            print_info "  API: extracted: '${extracted_api}'"
+            if [ -n "$extracted_api" ]; then
                 api_domain="$extracted_api"
-                print_info "Detected existing API domain: ${api_domain}"
-                found_existing_certs=true
+                print_info "  API domain SET: ${api_domain}"
+                if [ -d "/etc/letsencrypt/live/${extracted_api}" ]; then
+                    found_existing_certs=true
+                fi
+            else
+                print_info "  API domain NOT found in .env"
             fi
         fi
 
         if [ "$install_monitoring" = "y" ]; then
-            # Extract monitoring domain from MONITORING_DOMAIN
-            local extracted_monitoring=$(grep "^MONITORING_DOMAIN=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
-            if [ -n "$extracted_monitoring" ] && [ -d "/etc/letsencrypt/live/${extracted_monitoring}" ]; then
+            # Extract monitoring domain from MONITORING_DOMAIN, removing quotes and whitespace
+            local extracted_monitoring=$(grep "^MONITORING_DOMAIN=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
+            print_info "  Monitoring: grep result: '$(grep "^MONITORING_DOMAIN=" "${ENV_FILE}" 2>/dev/null)'"
+            print_info "  Monitoring: extracted: '${extracted_monitoring}'"
+            if [ -n "$extracted_monitoring" ]; then
                 monitoring_domain="$extracted_monitoring"
-                print_info "Detected existing monitoring domain: ${monitoring_domain}"
-                found_existing_certs=true
+                print_info "  Monitoring domain SET: ${monitoring_domain}"
+                if [ -d "/etc/letsencrypt/live/${extracted_monitoring}" ]; then
+                    found_existing_certs=true
+                fi
+            else
+                print_info "  Monitoring domain NOT found in .env"
             fi
         fi
+        echo ""
+    elif [ -f "${ENV_FILE}" ]; then
+        print_info "Existing .env found but not extracting (user chose to overwrite configs)"
+        echo ""
     fi
 
-    # If domains not found in .env, try nginx config files
-    if [ -z "$panel_domain" ] && [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
-        if [ -f "${NGINX_CONF_DIR}/stellarstack-panel" ]; then
-            panel_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-panel" | head -1 | awk '{print $2}' | sed 's/;//')
-            if [ -n "$panel_domain" ] && [ -d "/etc/letsencrypt/live/${panel_domain}" ]; then
-                print_info "Detected existing panel domain from nginx: ${panel_domain}"
-                found_existing_certs=true
+    # If domains not found in .env, try nginx config files (only if keeping existing configs)
+    if [ "$skip_nginx_config" = "y" ]; then
+        if [ -z "$panel_domain" ] && [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
+            if [ -f "${NGINX_CONF_DIR}/stellarstack-panel" ]; then
+                panel_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-panel" | head -1 | awk '{print $2}' | sed 's/;//')
+                if [ -n "$panel_domain" ]; then
+                    print_info "Detected existing panel domain from nginx: ${panel_domain}"
+                    if [ -d "/etc/letsencrypt/live/${panel_domain}" ]; then
+                        found_existing_certs=true
+                    fi
+                fi
             fi
         fi
-    fi
 
-    if [ -z "$api_domain" ] && [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
-        if [ -f "${NGINX_CONF_DIR}/stellarstack-api" ]; then
-            api_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-api" | head -1 | awk '{print $2}' | sed 's/;//')
-            if [ -n "$api_domain" ] && [ -d "/etc/letsencrypt/live/${api_domain}" ]; then
-                print_info "Detected existing API domain from nginx: ${api_domain}"
-                found_existing_certs=true
+        if [ -z "$api_domain" ] && [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
+            if [ -f "${NGINX_CONF_DIR}/stellarstack-api" ]; then
+                api_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-api" | head -1 | awk '{print $2}' | sed 's/;//')
+                if [ -n "$api_domain" ]; then
+                    print_info "Detected existing API domain from nginx: ${api_domain}"
+                    if [ -d "/etc/letsencrypt/live/${api_domain}" ]; then
+                        found_existing_certs=true
+                    fi
+                fi
             fi
         fi
-    fi
 
-    if [ -z "$monitoring_domain" ] && [ "$install_monitoring" = "y" ]; then
-        if [ -f "${NGINX_CONF_DIR}/stellarstack-monitoring" ]; then
-            monitoring_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-monitoring" | head -1 | awk '{print $2}' | sed 's/;//')
-            if [ -n "$monitoring_domain" ] && [ -d "/etc/letsencrypt/live/${monitoring_domain}" ]; then
-                print_info "Detected existing monitoring domain from nginx: ${monitoring_domain}"
-                found_existing_certs=true
+        if [ -z "$monitoring_domain" ] && [ "$install_monitoring" = "y" ]; then
+            if [ -f "${NGINX_CONF_DIR}/stellarstack-monitoring" ]; then
+                monitoring_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-monitoring" | head -1 | awk '{print $2}' | sed 's/;//')
+                if [ -n "$monitoring_domain" ]; then
+                    print_info "Detected existing monitoring domain from nginx: ${monitoring_domain}"
+                    if [ -d "/etc/letsencrypt/live/${monitoring_domain}" ]; then
+                        found_existing_certs=true
+                    fi
+                fi
+            fi
+        fi
+
+        # Check for daemon domain if all-in-one
+        if [ -z "$daemon_ssl_domain" ] && [[ "$installation_type" == "all_in_one" || "$installation_type" == "daemon" ]]; then
+            if [ -f "${NGINX_CONF_DIR}/stellarstack-daemon" ]; then
+                daemon_ssl_domain=$(grep "server_name" "${NGINX_CONF_DIR}/stellarstack-daemon" | head -1 | awk '{print $2}' | sed 's/;//')
+                if [ -n "$daemon_ssl_domain" ]; then
+                    print_info "Detected existing daemon domain from nginx: ${daemon_ssl_domain}"
+                    if [ -d "/etc/letsencrypt/live/${daemon_ssl_domain}" ]; then
+                        found_existing_certs=true
+                    fi
+                fi
             fi
         fi
     fi
@@ -702,14 +777,78 @@ collect_domain_config() {
             all_domains_found=false
         fi
 
+        if [[ "$installation_type" == "all_in_one" ]] && [ -z "$daemon_ssl_domain" ]; then
+            all_domains_found=false
+        fi
+
         if [ "$all_domains_found" = true ]; then
             echo ""
             print_success "Using existing certificates and domains"
+            echo ""
+            echo -e "${SECONDARY}  Detected domains:${NC}"
+            if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
+                echo -e "    ${PRIMARY}Panel:${NC}          ${panel_domain}"
+            fi
+            if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
+                echo -e "    ${PRIMARY}API:${NC}            ${api_domain}"
+            fi
+            if [ "$install_monitoring" = "y" ]; then
+                echo -e "    ${PRIMARY}Monitoring:${NC}      ${monitoring_domain}"
+            fi
+            if [[ "$installation_type" == "all_in_one" ]]; then
+                echo -e "    ${PRIMARY}Daemon:${NC}          ${daemon_ssl_domain}"
+            fi
+            echo ""
             skip_ssl_generation="y"
+            
+            # For all-in-one, set daemon_panel_url so daemon knows how to connect to API
+            if [[ "$installation_type" == "all_in_one" ]]; then
+                daemon_panel_url="https://${api_domain}"
+                echo -e "${SECONDARY}  Daemon will connect to API at:${NC} ${daemon_panel_url}"
+                echo ""
+            fi
+            
             echo ""
             wait_for_enter
             return
         fi
+    fi
+
+    # Display summary of partially detected domains (if some but not all found)
+    local has_detected_domains=false
+    if [ -n "$panel_domain" ] || [ -n "$api_domain" ] || [ -n "$monitoring_domain" ] || [ -n "$daemon_ssl_domain" ]; then
+        has_detected_domains=true
+        echo ""
+        echo -e "${SECONDARY}  Detected domains:${NC}"
+        if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
+            if [ -n "$panel_domain" ]; then
+                echo -e "    ${PRIMARY}Panel:${NC}          ${panel_domain}"
+            else
+                echo -e "    ${MUTED}Panel:${NC}          (not detected, will be configured)"
+            fi
+        fi
+        if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
+            if [ -n "$api_domain" ]; then
+                echo -e "    ${PRIMARY}API:${NC}            ${api_domain}"
+            else
+                echo -e "    ${MUTED}API:${NC}            (not detected, will be configured)"
+            fi
+        fi
+        if [ "$install_monitoring" = "y" ]; then
+            if [ -n "$monitoring_domain" ]; then
+                echo -e "    ${PRIMARY}Monitoring:${NC}      ${monitoring_domain}"
+            else
+                echo -e "    ${MUTED}Monitoring:${NC}      (not detected, will be configured)"
+            fi
+        fi
+        if [[ "$installation_type" == "all_in_one" ]]; then
+            if [ -n "$daemon_ssl_domain" ]; then
+                echo -e "    ${PRIMARY}Daemon:${NC}          ${daemon_ssl_domain}"
+            else
+                echo -e "    ${MUTED}Daemon:${NC}          (not detected, will be configured)"
+            fi
+        fi
+        echo ""
     fi
 
     # Get server IP
@@ -1031,7 +1170,63 @@ collect_domain_config() {
         echo ""
     fi
 
+    # Confirm all domains
+    confirm_domains_config
+
     wait_for_enter
+}
+
+# Confirm all configured domains
+confirm_domains_config() {
+    clear_screen
+    echo -e "${PRIMARY}  > DOMAIN CONFIRMATION${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Please review your domain configuration:${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    # Show Panel domain
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  Panel:${NC}"
+        echo -e "    ${SECONDARY}Domain:${NC} ${panel_domain}"
+        echo ""
+    fi
+
+    # Show API domain
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  API:${NC}"
+        echo -e "    ${SECONDARY}Domain:${NC} ${api_domain}"
+        echo ""
+    fi
+
+    # Show Daemon/Node domain
+    if [[ "$installation_type" == "all_in_one" ]]; then
+        echo -e "${PRIMARY}  Node (Daemon):${NC}"
+        echo -e "    ${SECONDARY}Domain:${NC} ${daemon_ssl_domain}"
+        echo -e "    ${SECONDARY}API Port:${NC} ${daemon_port}"
+        echo -e "    ${SECONDARY}SFTP Port:${NC} ${daemon_sftp_port}"
+        echo ""
+    fi
+
+    # Show Monitoring domain
+    if [ "$install_monitoring" = "y" ]; then
+        echo -e "${PRIMARY}  Monitoring:${NC}"
+        echo -e "    ${SECONDARY}Domain:${NC} ${monitoring_domain}"
+        echo ""
+    fi
+
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    if ask_yes_no "Are these domain configurations correct?" "y"; then
+        print_success "Domain configuration confirmed"
+        echo ""
+    else
+        print_error "Please reconfigure your domains"
+        echo ""
+        exit 1
+    fi
 }
 
 # Collect daemon configuration
@@ -1153,6 +1348,69 @@ collect_daemon_config() {
         print_info "Redis will be disabled"
     fi
 
+    wait_for_enter
+}
+
+# Collect upload limit configuration
+collect_upload_limit_config() {
+    clear_screen
+    echo -e "${PRIMARY}  > UPLOAD SIZE LIMIT${NC}"
+    echo ""
+    echo -e "${SECONDARY}  Configure the maximum file upload size.${NC}"
+    echo ""
+    echo -e "${MUTED}  ────────────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    # Check for existing upload limit configuration
+    local existing_limit=""
+    if [ -f "${ENV_FILE}" ]; then
+        existing_limit=$(grep "^UPLOAD_LIMIT=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs)
+    fi
+
+    # If no limit in .env, try to extract from nginx config
+    if [ -z "$existing_limit" ] && [ -f "${NGINX_CONF_DIR}/stellarstack-panel" ]; then
+        existing_limit=$(grep "client_max_body_size" "${NGINX_CONF_DIR}/stellarstack-panel" | grep -oP '\d+[kKmMgG]?' | head -1)
+    fi
+
+    # If we found existing limit, use it
+    if [ -n "$existing_limit" ]; then
+        upload_limit="$existing_limit"
+        echo ""
+        print_success "Using existing upload limit: ${upload_limit}"
+        echo ""
+        wait_for_enter
+        return
+    fi
+
+    echo -e "${SECONDARY}  Upload size limit ${MUTED}[default: 100M]${NC}"
+    echo -e "${MUTED}  Valid formats: 50M, 100M, 500M, 1G, 2G, 1024k, 52428800${NC}"
+    echo ""
+
+    local limit_valid=false
+    while [ "$limit_valid" = false ]; do
+        echo -ne "  ${PRIMARY}>${NC} "
+        read -r input_upload_limit </dev/tty
+
+        if [ -z "$input_upload_limit" ]; then
+            print_success "Using default: ${upload_limit}"
+            limit_valid=true
+            continue
+        fi
+
+        # Validate format: number followed by optional k/K, m/M, g/G, or just a number
+        if [[ "$input_upload_limit" =~ ^[0-9]+[kKmMgG]?$ ]]; then
+            upload_limit="$input_upload_limit"
+            print_success "Upload limit set to: ${upload_limit}"
+            limit_valid=true
+        else
+            print_error "Invalid format: '$input_upload_limit'"
+            echo ""
+            echo -e "${SECONDARY}  Please enter a valid size (e.g., 50M, 1G, 500k, or 52428800)${NC}"
+            echo ""
+        fi
+    done
+
+    echo ""
     wait_for_enter
 }
 
@@ -1338,12 +1596,89 @@ install_dependencies() {
 generate_env_file() {
     print_step "GENERATING CONFIGURATION"
 
-    # Generate secure passwords and secrets
-    postgres_password=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
-    local jwt_secret=$(openssl rand -base64 32)
-    local better_auth_secret=$(openssl rand -base64 32)
-    local download_token_secret=$(openssl rand -base64 32)
-    local encryption_key=$(openssl rand -base64 32)
+    # Validate that all required domains are set
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
+        if [ -z "$panel_domain" ]; then
+            echo ""
+            print_error "Panel domain is not configured"
+            echo -e "  ${MUTED}Value: '${panel_domain}'${NC}"
+            echo -e "  ${MUTED}Installation type: ${installation_type}${NC}"
+            echo ""
+            print_error "Cannot generate .env file. Please reconfigure your domains."
+            exit 1
+        fi
+    fi
+
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
+        if [ -z "$api_domain" ]; then
+            echo ""
+            print_error "API domain is not configured"
+            echo -e "  ${MUTED}Value: '${api_domain}'${NC}"
+            echo -e "  ${MUTED}Installation type: ${installation_type}${NC}"
+            echo ""
+            print_error "Cannot generate .env file. Please reconfigure your domains."
+            exit 1
+        fi
+    fi
+
+    if [ "$install_monitoring" = "y" ] && [ -z "$monitoring_domain" ]; then
+        echo ""
+        print_error "Monitoring domain is not configured"
+        echo -e "  ${MUTED}Value: '${monitoring_domain}'${NC}"
+        echo ""
+        print_error "Cannot generate .env file. Please reconfigure your domains."
+        exit 1
+    fi
+
+    # Check if .env file already exists (update mode)
+    local env_exists=false
+    local existing_postgres_password=""
+    local existing_jwt_secret=""
+    local existing_better_auth_secret=""
+    local existing_download_token_secret=""
+    local existing_encryption_key=""
+    local existing_grafana_password=""
+
+    if [ -f "${ENV_FILE}" ]; then
+        env_exists=true
+        existing_postgres_password=$(grep "^POSTGRES_PASSWORD=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
+        existing_jwt_secret=$(grep "^JWT_SECRET=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
+        existing_better_auth_secret=$(grep "^BETTER_AUTH_SECRET=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
+        existing_download_token_secret=$(grep "^DOWNLOAD_TOKEN_SECRET=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
+        existing_encryption_key=$(grep "^ENCRYPTION_KEY=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
+        existing_grafana_password=$(grep "^GRAFANA_ADMIN_PASSWORD=" "${ENV_FILE}" 2>/dev/null | cut -d= -f2)
+    fi
+
+    # Generate new secrets only if they don't exist
+    if [ "$env_exists" = true ] && [ -n "$existing_postgres_password" ]; then
+        postgres_password="$existing_postgres_password"
+    else
+        postgres_password=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+    fi
+
+    if [ "$env_exists" = true ] && [ -n "$existing_jwt_secret" ]; then
+        local jwt_secret="$existing_jwt_secret"
+    else
+        local jwt_secret=$(openssl rand -base64 32)
+    fi
+
+    if [ "$env_exists" = true ] && [ -n "$existing_better_auth_secret" ]; then
+        local better_auth_secret="$existing_better_auth_secret"
+    else
+        local better_auth_secret=$(openssl rand -base64 32)
+    fi
+
+    if [ "$env_exists" = true ] && [ -n "$existing_download_token_secret" ]; then
+        local download_token_secret="$existing_download_token_secret"
+    else
+        local download_token_secret=$(openssl rand -base64 32)
+    fi
+
+    if [ "$env_exists" = true ] && [ -n "$existing_encryption_key" ]; then
+        local encryption_key="$existing_encryption_key"
+    else
+        local encryption_key=$(openssl rand -base64 32)
+    fi
 
     # Create install directory
     mkdir -p "${INSTALL_DIR}"
@@ -1374,13 +1709,22 @@ NODE_ENV=production
 NEXT_PUBLIC_API_URL=https://${api_domain}
 FRONTEND_URL=https://${panel_domain}
 
+# Upload Limit Configuration
+UPLOAD_LIMIT=${upload_limit}
+
 # Monitoring (if enabled)
 EOF
 
     if [ "$install_monitoring" = "y" ]; then
+        if [ "$env_exists" = true ] && [ -n "$existing_grafana_password" ]; then
+            local grafana_password="$existing_grafana_password"
+        else
+            local grafana_password=$(openssl rand -base64 16 | tr -d "=+/")
+        fi
+
         cat >> "${ENV_FILE}" << EOF
 MONITORING_DOMAIN=${monitoring_domain}
-GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/")
+GRAFANA_ADMIN_PASSWORD=${grafana_password}
 EOF
     fi
 
@@ -1774,6 +2118,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
+    client_max_body_size ${upload_limit};
 ${include_api_proxy}
     # Panel frontend
     location / {
@@ -1823,6 +2168,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
+    client_max_body_size ${upload_limit};
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -1871,6 +2217,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
+    client_max_body_size ${upload_limit};
 
     # Increase timeouts for long-running game server operations
     proxy_read_timeout 300;
@@ -1929,6 +2276,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
+    client_max_body_size ${upload_limit};
 
     location / {
         proxy_pass http://127.0.0.1:3002;
@@ -1966,41 +2314,57 @@ obtain_ssl_certificates() {
 
     # Get Panel SSL if needed
     if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
-        print_task "Obtaining SSL certificate for ${panel_domain}"
-        if certbot certonly --standalone -d "${panel_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
-            print_task_done "Obtaining SSL certificate for ${panel_domain}"
+        if [ -d "/etc/letsencrypt/live/${panel_domain}" ]; then
+            print_success "SSL certificate already exists for ${panel_domain}"
         else
-            print_warning "Failed to obtain SSL certificate for ${panel_domain}"
+            print_task "Obtaining SSL certificate for ${panel_domain}"
+            if certbot certonly --standalone -d "${panel_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
+                print_task_done "Obtaining SSL certificate for ${panel_domain}"
+            else
+                print_warning "Failed to obtain SSL certificate for ${panel_domain}"
+            fi
         fi
     fi
 
     # Get API SSL if needed
     if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
-        print_task "Obtaining SSL certificate for ${api_domain}"
-        if certbot certonly --standalone -d "${api_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
-            print_task_done "Obtaining SSL certificate for ${api_domain}"
+        if [ -d "/etc/letsencrypt/live/${api_domain}" ]; then
+            print_success "SSL certificate already exists for ${api_domain}"
         else
-            print_warning "Failed to obtain SSL certificate for ${api_domain}"
+            print_task "Obtaining SSL certificate for ${api_domain}"
+            if certbot certonly --standalone -d "${api_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
+                print_task_done "Obtaining SSL certificate for ${api_domain}"
+            else
+                print_warning "Failed to obtain SSL certificate for ${api_domain}"
+            fi
         fi
     fi
 
     # Get Monitoring SSL if needed
     if [ "$install_monitoring" = "y" ]; then
-        print_task "Obtaining SSL certificate for ${monitoring_domain}"
-        if certbot certonly --standalone -d "${monitoring_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
-            print_task_done "Obtaining SSL certificate for ${monitoring_domain}"
+        if [ -d "/etc/letsencrypt/live/${monitoring_domain}" ]; then
+            print_success "SSL certificate already exists for ${monitoring_domain}"
         else
-            print_warning "Failed to obtain SSL certificate for ${monitoring_domain}"
+            print_task "Obtaining SSL certificate for ${monitoring_domain}"
+            if certbot certonly --standalone -d "${monitoring_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
+                print_task_done "Obtaining SSL certificate for ${monitoring_domain}"
+            else
+                print_warning "Failed to obtain SSL certificate for ${monitoring_domain}"
+            fi
         fi
     fi
 
     # Get Daemon SSL if all-in-one
     if [[ "$installation_type" == "all_in_one" ]]; then
-        print_task "Obtaining SSL certificate for ${daemon_ssl_domain}"
-        if certbot certonly --standalone -d "${daemon_ssl_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
-            print_task_done "Obtaining SSL certificate for ${daemon_ssl_domain}"
+        if [ -d "/etc/letsencrypt/live/${daemon_ssl_domain}" ]; then
+            print_success "SSL certificate already exists for ${daemon_ssl_domain}"
         else
-            print_warning "Failed to obtain SSL certificate for ${daemon_ssl_domain}"
+            print_task "Obtaining SSL certificate for ${daemon_ssl_domain}"
+            if certbot certonly --standalone -d "${daemon_ssl_domain}" --non-interactive --agree-tos --register-unsafely-without-email > /dev/null 2>&1; then
+                print_task_done "Obtaining SSL certificate for ${daemon_ssl_domain}"
+            else
+                print_warning "Failed to obtain SSL certificate for ${daemon_ssl_domain}"
+            fi
         fi
     fi
 
@@ -3045,7 +3409,7 @@ uninstall() {
     fi
 
     echo ""
-    if ! ask_yes_no "Type 'yes' to confirm - This will DELETE ALL DATA" "n"; then
+    if ! ask_yes_no "Type 'Y' to confirm - This will DELETE ALL DATA" "n"; then
         echo ""
         print_info "Uninstall cancelled"
         exit 0
@@ -3212,6 +3576,9 @@ main() {
 
     # Regular panel/API installation flow
     collect_domain_config
+
+    # Collect upload limit configuration
+    collect_upload_limit_config
 
     # Collect admin credentials (only for fresh installations or if API is being installed)
     if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
