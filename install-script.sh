@@ -2495,10 +2495,11 @@ pull_and_start() {
 
     # Pull images
     local images=()
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" ]]; then
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "api" || "$installation_type" == "all_in_one" ]]; then
         images+=("${API_IMAGE}:latest")
     fi
-    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" ]]; then
+
+    if [[ "$installation_type" == "panel_and_api" || "$installation_type" == "panel" || "$installation_type" == "all_in_one" ]]; then
         images+=("${PANEL_IMAGE}:latest")
     fi
     images+=("postgres:16-alpine")
