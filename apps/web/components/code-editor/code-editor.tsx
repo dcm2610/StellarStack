@@ -67,7 +67,7 @@ export const CodeEditor = ({
     });
 
     // Get extensions (hardcoded to dark theme)
-    const extensions = getExtensionsForFile(filename, true, readOnly);
+    const extensions = getExtensionsForFile(filename, readOnly);
     extensions.push(updateListener);
 
     // Create state
