@@ -60,43 +60,9 @@ export const getLanguageExtension = (language: SupportedLanguage): Extension | n
 };
 
 /**
- * Dark theme for CodeMirror
+ * Dark theme for CodeMirror (always dark mode, no light mode support)
  */
 export const darkTheme = oneDark;
-
-/**
- * Light theme for CodeMirror
- */
-export const lightTheme = EditorView.theme({
-  "&": {
-    backgroundColor: "#ffffff",
-    color: "#24292e",
-  },
-  ".cm-content": {
-    caretColor: "#24292e",
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "#24292e",
-  },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-    backgroundColor: "#b3d4fc",
-  },
-  ".cm-activeLine": {
-    backgroundColor: "#f6f8fa",
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "#f6f8fa",
-  },
-  ".cm-gutters": {
-    backgroundColor: "#f6f8fa",
-    color: "#6e7781",
-    border: "none",
-    borderRight: "1px solid #d0d7de",
-  },
-  ".cm-lineNumbers .cm-gutterElement": {
-    padding: "0 8px 0 16px",
-  },
-});
 
 /**
  * Theme extension for proper scrolling
@@ -113,7 +79,7 @@ const scrollableTheme = EditorView.theme({
 /**
  * Base extensions for all editor instances
  */
-export const getBaseExtensions = (isDark: boolean, readOnly: boolean = false): Extension[] => {
+export const getBaseExtensions = (readOnly: boolean = false): Extension[] => {
   const extensions: Extension[] = [
     lineNumbers(),
     highlightActiveLine(),
@@ -124,7 +90,7 @@ export const getBaseExtensions = (isDark: boolean, readOnly: boolean = false): E
     indentOnInput(),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     keymap.of([...defaultKeymap, ...historyKeymap]),
-    isDark ? darkTheme : lightTheme,
+    darkTheme,
     scrollableTheme,
     EditorView.lineWrapping,
   ];
@@ -141,11 +107,10 @@ export const getBaseExtensions = (isDark: boolean, readOnly: boolean = false): E
  */
 export const getExtensionsForFile = (
   filename: string,
-  isDark: boolean,
   readOnly: boolean = false
 ): Extension[] => {
   const language = detectLanguage(filename);
-  const extensions = getBaseExtensions(isDark, readOnly);
+  const extensions = getBaseExtensions(readOnly);
 
   const langExt = getLanguageExtension(language);
   if (langExt) {

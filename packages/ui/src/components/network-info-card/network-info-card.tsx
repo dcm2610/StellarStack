@@ -7,12 +7,11 @@ import { useDragDropGrid } from "../drag-drop-grid";
 import type { CardProps, NetworkInfoData, NetworkInfoCardLabels } from "../dashboard-cards-types";
 
 interface NetworkInfoCardProps extends CardProps {
-  isDark: boolean;
   networkInfo: NetworkInfoData;
   labels: NetworkInfoCardLabels;
 }
 
-export const NetworkInfoCard = ({ itemId, isDark, networkInfo, labels }: NetworkInfoCardProps): JSX.Element => {
+export const NetworkInfoCard = ({ itemId, networkInfo, labels }: NetworkInfoCardProps): JSX.Element => {
   const { getItemSize } = useDragDropGrid();
   const size = getItemSize(itemId);
 
@@ -21,25 +20,25 @@ export const NetworkInfoCard = ({ itemId, isDark, networkInfo, labels }: Network
   const isCompact = size === "xs" || size === "sm";
   const isLarge = size === "lg" || size === "xl";
 
-  const labelColor = isDark ? "text-zinc-500" : "text-zinc-500";
-  const valueColor = isDark ? "text-zinc-200" : "text-zinc-800";
-  const badgeBg = isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700";
+  const labelColor = "text-zinc-500";
+  const valueColor = "text-zinc-200";
+  const badgeBg = "bg-zinc-800 text-zinc-300";
 
   const visiblePorts = isLarge ? networkInfo.openPorts : networkInfo.openPorts.slice(0, 3);
   const portsString = networkInfo.openPorts.slice(0, 3).map(p => p.port).join(", ");
 
   if (isXxs) {
     return (
-      <UsageCard isDark={isDark} className="h-full flex items-center justify-between px-6">
-        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.titleShort}</span>
-        <span className={cn("text-sm font-mono truncate ml-4", isDark ? "text-zinc-100" : "text-zinc-800")}>{networkInfo.publicIp}</span>
+      <UsageCard className="h-full flex items-center justify-between px-6">
+        <span className={cn("text-xs font-medium uppercase", "text-zinc-400")}>{labels.titleShort}</span>
+        <span className={cn("text-sm font-mono truncate ml-4", "text-zinc-100")}>{networkInfo.publicIp}</span>
       </UsageCard>
     );
   }
 
   return (
-    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4")}>
-      <UsageCardTitle isDark={isDark} className={cn(
+    <UsageCard className={cn("h-full", isXs && "p-4")}>
+      <UsageCardTitle className={cn(
         "opacity-80",
         isXs ? "text-xs mb-2" : isCompact ? "text-xs mb-4" : "text-md"
       )}>

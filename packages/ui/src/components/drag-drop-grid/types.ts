@@ -34,7 +34,6 @@ export interface DragDropGridContextValue {
   canResize: (itemId: string) => boolean;
   removeItem: (itemId: string) => void;
   isEditing: boolean;
-  isDark: boolean;
   removeConfirmLabels?: RemoveConfirmLabels;
 }
 
@@ -49,7 +48,6 @@ export interface DragDropGridProps extends Omit<ComponentPropsWithoutRef<"div">,
   gap?: number;
   isEditing?: boolean;
   savedLayouts?: Layouts;
-  isDark?: boolean;
   isDroppable?: boolean;
   allItems?: GridItemConfig[];
   removeConfirmLabels?: RemoveConfirmLabels;

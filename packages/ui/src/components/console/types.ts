@@ -12,7 +12,6 @@ export interface ConsoleProps {
   onCommand?: (command: string) => void;
   maxLines?: number;
   className?: string;
-  isDark?: boolean;
   isOffline?: boolean;
   showSendButton?: boolean;
 }
@@ -25,5 +24,4 @@ export interface TooltipPosition {
 export interface TimestampColumnTooltipProps {
   timestamp: number;
   position: TooltipPosition;
-  isDark?: boolean;
 }

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback } from "react";
 
 interface AsciiWaveBackgroundProps {
-  isDark?: boolean;
   fontSize?: number;
   speed?: number;
 }
@@ -11,7 +10,6 @@ interface AsciiWaveBackgroundProps {
 const ASCII_CHARS = " .:-=+*#%@";
 
 export const AsciiWaveBackground = ({
-  isDark = true,
   fontSize = 8,
   speed = 1,
 }: AsciiWaveBackgroundProps) => {
@@ -38,11 +36,11 @@ export const AsciiWaveBackground = ({
     const time = timeRef.current;
 
     // Clear canvas
-    ctx.fillStyle = isDark ? "transparent" : "transparent";
+    ctx.fillStyle = "transparent";
     ctx.clearRect(0, 0, width, height);
 
     // Set text style
-    ctx.fillStyle = isDark ? "#e5e7eb" : "#27272a";
+    ctx.fillStyle = "#e5e7eb";
     ctx.font = `${fontSize}px monospace`;
     ctx.textBaseline = "top";
 
@@ -72,9 +70,7 @@ export const AsciiWaveBackground = ({
         if (char && char !== " ") {
           // Add some opacity variation based on brightness
           const alpha = 0.15 + brightness * 0.35;
-          ctx.fillStyle = isDark
-            ? `rgba(229, 231, 235, ${alpha})`
-            : `rgba(39, 39, 42, ${alpha})`;
+          ctx.fillStyle = `rgba(229, 231, 235, ${alpha})`;
 
           ctx.fillText(char, x * fontSize, y * fontSize + wave);
         }
@@ -82,7 +78,7 @@ export const AsciiWaveBackground = ({
     }
 
     animationRef.current = requestAnimationFrame(draw);
-  }, [isDark, fontSize, speed]);
+  }, [fontSize, speed]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

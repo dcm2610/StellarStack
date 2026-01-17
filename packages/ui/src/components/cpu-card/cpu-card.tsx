@@ -12,7 +12,6 @@ import { getUsageColor } from "../dashboard-cards-utils";
 import type { CpuCardProps, CpuCardLabels } from "../dashboard-cards-types";
 
 interface CpuCardComponentProps extends CpuCardProps {
-  isDark: boolean;
   isOffline: boolean;
   labels: CpuCardLabels;
   /** Custom primary display value (e.g., "6% / 400%") - if provided, replaces percentage display */
@@ -26,7 +25,6 @@ export const CpuCard = ({
   tooltipContent,
   history,
   coreUsage,
-  isDark,
   isOffline,
   labels,
   primaryValue,
@@ -41,21 +39,18 @@ export const CpuCard = ({
   const showCoreGrid = isLarge && coreUsage && coreUsage.length > 0;
 
   const sparklineColor = isOffline
-    ? isDark
-      ? "#71717a"
-      : "#a1a1aa"
-    : getUsageColor(percentage, isDark);
+    ? "#71717a"
+    : getUsageColor(percentage);
 
   if (isXxs) {
     return (
       <UsageCard
-        isDark={isDark}
         className={cn("flex h-full items-center justify-between px-6", isOffline && "opacity-60")}
       >
         <span
           className={cn(
             "text-xs font-medium uppercase",
-            isDark ? "text-zinc-400" : "text-zinc-600"
+            "text-zinc-400"
           )}
         >
           {labels.title}
@@ -65,12 +60,8 @@ export const CpuCard = ({
             primaryValue ? "text-base" : "text-xl",
             "font-mono",
             isOffline
-              ? isDark
-                ? "text-zinc-500"
-                : "text-zinc-400"
-              : isDark
-                ? "text-zinc-100"
-                : "text-zinc-800"
+              ? "text-zinc-500"
+              : "text-zinc-100"
           )}
         >
           {isOffline ? (
@@ -87,14 +78,12 @@ export const CpuCard = ({
 
   return (
     <UsageCard
-      isDark={isDark}
       className={cn("flex h-full flex-col", isXs && "p-4", isOffline && "opacity-60")}
     >
       {tooltipContent && (
-        <InfoTooltip content={tooltipContent} visible={!isEditing} isDark={isDark} />
+        <InfoTooltip content={tooltipContent} visible={!isEditing} />
       )}
       <UsageCardTitle
-        isDark={isDark}
         className={cn("opacity-80", isXs ? "mb-2 text-xs" : isCompact ? "mb-4 text-xs" : "text-md")}
       >
         {labels.title}
@@ -107,12 +96,8 @@ export const CpuCard = ({
             <span
               className={cn(
                 isOffline
-                  ? isDark
-                    ? "text-zinc-500"
-                    : "text-zinc-400"
-                  : isDark
-                    ? "text-zinc-100"
-                    : "text-zinc-800",
+                  ? "text-zinc-500"
+                  : "text-zinc-100",
                 primaryValue
                   ? isXs
                     ? "text-lg"
@@ -146,7 +131,7 @@ export const CpuCard = ({
               <div
                 className={cn(
                   "tracking-wide",
-                  isDark ? "text-zinc-400" : "text-zinc-600",
+                  "text-zinc-400",
                   isCompact ? "mt-2 text-xs" : "mt-1 text-sm"
                 )}
               >
@@ -159,7 +144,7 @@ export const CpuCard = ({
               <div
                 className={cn(
                   "mt-0.5 text-[10px] tracking-wide",
-                  isDark ? "text-zinc-500" : "text-zinc-600"
+                  "text-zinc-500"
                 )}
               >
                 {details[0]}
@@ -173,12 +158,12 @@ export const CpuCard = ({
             <div
               className={cn(
                 "mb-1 shrink-0 text-[9px] font-medium uppercase",
-                isDark ? "text-zinc-500" : "text-zinc-600"
+                "text-zinc-500"
               )}
             >
               {labels.coreUsage}
             </div>
-            <CpuCoreGrid cores={coreUsage} isDark={isDark} isOffline={isOffline} />
+            <CpuCoreGrid cores={coreUsage} isOffline={isOffline} />
           </div>
         )}
 
@@ -188,7 +173,6 @@ export const CpuCard = ({
               data={history}
               color={sparklineColor}
               height={isXs ? 40 : isCompact ? 50 : 60}
-              isDark={isDark}
             />
           </div>
         )}

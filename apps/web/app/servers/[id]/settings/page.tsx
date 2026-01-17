@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
@@ -18,8 +17,6 @@ import {
 import { Spinner } from "@workspace/ui/components/spinner";
 import { Slider } from "@workspace/ui/components/slider";
 import {
-  BsSun,
-  BsMoon,
   BsExclamationTriangle,
   BsCheckCircle,
   BsGlobe,
@@ -313,7 +310,6 @@ const SettingsPage = (): JSX.Element | null => {
   const params = useParams();
   const serverId = params.id as string;
   const { server, isInstalling } = useServer();
-  const { setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
   const [settings, setSettings] = useState<ServerSettings>(defaultSettings);
   const [originalSettings, setOriginalSettings] = useState<ServerSettings>(defaultSettings);
@@ -343,8 +339,6 @@ const SettingsPage = (): JSX.Element | null => {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
 
   // Simulate pinging locations one by one when modal opens
   const startPinging = useCallback(() => {
@@ -444,10 +438,10 @@ const SettingsPage = (): JSX.Element | null => {
   };
 
   const getPingColor = (ping: number | null) => {
-    if (ping === null) return isDark ? "text-red-400" : "text-red-600";
-    if (ping < 50) return isDark ? "text-green-400" : "text-green-600";
-    if (ping < 100) return isDark ? "text-amber-400" : "text-amber-600";
-    return isDark ? "text-red-400" : "text-red-600";
+    if (ping === null) return "text-red-400";
+    if (ping < 50) return "text-green-400";
+    if (ping < 100) return "text-amber-400";
+    return "text-red-400";
   };
 
   // Group locations by region
@@ -466,7 +460,7 @@ const SettingsPage = (): JSX.Element | null => {
     return (
       <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -474,7 +468,7 @@ const SettingsPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -531,19 +525,19 @@ const SettingsPage = (): JSX.Element | null => {
               <SidebarTrigger
                 className={cn(
                   "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                  "text-zinc-400 hover:text-zinc-100"
                 )}
               />
               <div>
                 <h1
                   className={cn(
                     "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
+                    "text-zinc-100"
                   )}
                 >
                   SERVER SETTINGS
                 </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                   Server {serverId} • Configuration
                 </p>
               </div>
@@ -556,9 +550,7 @@ const SettingsPage = (): JSX.Element | null => {
                   onClick={handleReset}
                   className={cn(
                     "gap-2 transition-all",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                   )}
                 >
                   <span className="text-xs tracking-wider uppercase">Reset</span>
@@ -572,12 +564,8 @@ const SettingsPage = (): JSX.Element | null => {
                 className={cn(
                   "gap-2 transition-all",
                   saved
-                    ? isDark
-                      ? "border-green-500/50 text-green-400"
-                      : "border-green-400 text-green-600"
-                    : isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-40"
+                    ? "border-green-500/50 text-green-400"
+                    : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
                 )}
               >
                 {saved ? (
@@ -589,19 +577,7 @@ const SettingsPage = (): JSX.Element | null => {
                   <span className="text-xs tracking-wider uppercase">Save Changes</span>
                 )}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                className={cn(
-                  "p-2 transition-all hover:scale-110 active:scale-95",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                )}
-              >
-                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-              </Button>
+
             </div>
           </div>
 
@@ -609,40 +585,38 @@ const SettingsPage = (): JSX.Element | null => {
           <div
             className={cn(
               "relative mb-6 border p-6",
-              isDark
-                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+              "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
             )}
           >
             <div
               className={cn(
                 "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
 
             <h2
               className={cn(
                 "mb-6 text-sm font-medium tracking-wider uppercase",
-                isDark ? "text-zinc-300" : "text-zinc-700"
+                "text-zinc-300"
               )}
             >
               General
@@ -653,7 +627,7 @@ const SettingsPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-[10px] font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "text-zinc-500"
                   )}
                 >
                   Server Name
@@ -664,9 +638,7 @@ const SettingsPage = (): JSX.Element | null => {
                   onChange={(e) => handleSettingChange("name", e.target.value)}
                   className={cn(
                     "mt-2 w-full border px-3 py-2 text-sm transition-colors outline-none",
-                    isDark
-                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
-                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
+                    "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
                   )}
                 />
               </div>
@@ -674,7 +646,7 @@ const SettingsPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-[10px] font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "text-zinc-500"
                   )}
                 >
                   Description
@@ -685,9 +657,7 @@ const SettingsPage = (): JSX.Element | null => {
                   rows={3}
                   className={cn(
                     "mt-2 w-full resize-none border px-3 py-2 text-sm transition-colors outline-none",
-                    isDark
-                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
-                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
+                    "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
                   )}
                 />
               </div>
@@ -695,7 +665,7 @@ const SettingsPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-[10px] font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "text-zinc-500"
                   )}
                 >
                   Server Type
@@ -705,23 +675,21 @@ const SettingsPage = (): JSX.Element | null => {
                   onChange={(e) => handleSettingChange("serverType", e.target.value)}
                   className={cn(
                     "mt-2 w-full cursor-pointer border px-3 py-2 text-sm transition-colors outline-none",
-                    isDark
-                      ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
-                      : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400"
+                    "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 focus:border-zinc-500"
                   )}
                 >
                   {Object.entries(serverTypesByCategory).map(([category, types]) => (
                     <optgroup
                       key={category}
                       label={category}
-                      className={isDark ? "bg-zinc-900 text-zinc-400" : "bg-white text-zinc-500"}
+                      className={"bg-zinc-900 text-zinc-400"}
                     >
                       {types.map((type) => (
                         <option
                           key={type.id}
                           value={type.id}
                           className={
-                            isDark ? "bg-zinc-900 text-zinc-200" : "bg-white text-zinc-800"
+                            "bg-zinc-900 text-zinc-200"
                           }
                         >
                           {type.name}
@@ -742,44 +710,42 @@ const SettingsPage = (): JSX.Element | null => {
           <div
             className={cn(
               "relative border p-6",
-              isDark
-                ? "border-red-900/30 bg-gradient-to-b from-red-950/20 via-[#0f0f0f] to-[#0a0a0a]"
-                : "border-red-200 bg-gradient-to-b from-red-50 via-zinc-50 to-zinc-100"
+              "border-red-900/30 bg-gradient-to-b from-red-950/20 via-[#0f0f0f] to-[#0a0a0a]"
             )}
           >
             <div
               className={cn(
                 "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                isDark ? "border-red-800" : "border-red-300"
+                "border-red-800"
               )}
             />
             <div
               className={cn(
                 "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                isDark ? "border-red-800" : "border-red-300"
+                "border-red-800"
               )}
             />
             <div
               className={cn(
                 "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                isDark ? "border-red-800" : "border-red-300"
+                "border-red-800"
               )}
             />
             <div
               className={cn(
                 "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                isDark ? "border-red-800" : "border-red-300"
+                "border-red-800"
               )}
             />
 
             <div className="mb-6 flex items-center gap-2">
               <BsExclamationTriangle
-                className={cn("h-4 w-4", isDark ? "text-red-400" : "text-red-600")}
+                className={cn("h-4 w-4", "text-red-400")}
               />
               <h2
                 className={cn(
                   "text-sm font-medium tracking-wider uppercase",
-                  isDark ? "text-red-400" : "text-red-700"
+                  "text-red-400"
                 )}
               >
                 Danger Zone
@@ -789,11 +755,11 @@ const SettingsPage = (): JSX.Element | null => {
             <div className="flex items-center justify-between">
               <div>
                 <h3
-                  className={cn("text-sm font-medium", isDark ? "text-zinc-200" : "text-zinc-700")}
+                  className={cn("text-sm font-medium", "text-zinc-200")}
                 >
                   Reinstall Server
                 </h3>
-                <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-xs", "text-zinc-500")}>
                   This will reinstall the server with its current configuration
                 </p>
               </div>
@@ -803,9 +769,7 @@ const SettingsPage = (): JSX.Element | null => {
                 onClick={() => setReinstallModalOpen(true)}
                 className={cn(
                   "transition-all",
-                  isDark
-                    ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
-                    : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
+                  "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
                 )}
               >
                 <span className="text-xs tracking-wider uppercase">Reinstall</span>
@@ -823,7 +787,6 @@ const SettingsPage = (): JSX.Element | null => {
         description="Are you sure you want to save these settings? Some changes may require a server restart to take effect."
         onConfirm={handleSave}
         confirmLabel="Save"
-        isDark={isDark}
       />
 
       {/* Reinstall Confirmation Modal */}
@@ -835,7 +798,6 @@ const SettingsPage = (): JSX.Element | null => {
         onConfirm={handleReinstall}
         confirmLabel="Reinstall"
         variant="danger"
-        isDark={isDark}
         isLoading={isReinstalling}
       />
 
@@ -847,21 +809,21 @@ const SettingsPage = (): JSX.Element | null => {
         <DialogContent
           className={cn(
             "flex max-h-[85vh] flex-col overflow-hidden sm:max-w-5xl",
-            isDark ? "border-zinc-800 bg-[#0f0f0f]" : "border-zinc-200 bg-white"
+            "border-zinc-800 bg-[#0f0f0f]"
           )}
         >
           <DialogHeader>
             <DialogTitle
               className={cn(
                 "flex items-center gap-2 text-lg font-light tracking-wider",
-                isDark ? "text-zinc-100" : "text-zinc-800"
+                "text-zinc-100"
               )}
             >
               <BsGlobe className="h-5 w-5" />
               TRANSFER SERVER
             </DialogTitle>
             <DialogDescription
-              className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+              className={cn("text-sm", "text-zinc-500")}
             >
               Select a new location for your server. Latency is measured from your current position.
             </DialogDescription>
@@ -869,11 +831,11 @@ const SettingsPage = (): JSX.Element | null => {
 
           {isTransferring ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 py-12">
-              <Spinner className={cn("h-8 w-8", isDark ? "text-zinc-400" : "text-zinc-600")} />
-              <p className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+              <Spinner className={cn("h-8 w-8", "text-zinc-400")} />
+              <p className={cn("text-sm", "text-zinc-400")}>
                 Transferring server to {locations.find((l) => l.id === selectedLocation)?.city}...
               </p>
-              <p className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
+              <p className={cn("text-xs", "text-zinc-600")}>
                 This may take several minutes. Do not close this window.
               </p>
             </div>
@@ -883,16 +845,16 @@ const SettingsPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "mb-4 border px-4 py-3",
-                  isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
+                  "border-zinc-800 bg-zinc-900/50"
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <BsGeoAlt className={cn("h-4 w-4", isDark ? "text-zinc-400" : "text-zinc-500")} />
+                  <BsGeoAlt className={cn("h-4 w-4", "text-zinc-400")} />
                   <div>
                     <span
                       className={cn(
                         "text-[10px] tracking-wider uppercase",
-                        isDark ? "text-zinc-500" : "text-zinc-400"
+                        "text-zinc-500"
                       )}
                     >
                       Current Location
@@ -900,7 +862,7 @@ const SettingsPage = (): JSX.Element | null => {
                     <p
                       className={cn(
                         "text-sm font-medium",
-                        isDark ? "text-zinc-200" : "text-zinc-700"
+                        "text-zinc-200"
                       )}
                     >
                       {locations.find((l) => l.id === currentLocation)?.flag}{" "}
@@ -918,7 +880,7 @@ const SettingsPage = (): JSX.Element | null => {
                     <h3
                       className={cn(
                         "sticky top-0 mb-2 py-1 text-[10px] font-medium tracking-wider uppercase",
-                        isDark ? "bg-[#0f0f0f] text-zinc-500" : "bg-white text-zinc-400"
+                        "bg-[#0f0f0f] text-zinc-500"
                       )}
                     >
                       {region}
@@ -939,16 +901,10 @@ const SettingsPage = (): JSX.Element | null => {
                             className={cn(
                               "relative flex items-center justify-between border px-3 py-2.5 text-left transition-all",
                               isDisabled
-                                ? isDark
-                                  ? "cursor-not-allowed border-zinc-800 bg-zinc-900/30 opacity-50"
-                                  : "cursor-not-allowed border-zinc-200 bg-zinc-100/50 opacity-50"
+                                ? "cursor-not-allowed border-zinc-800 bg-zinc-900/30 opacity-50"
                                 : isSelected
-                                  ? isDark
-                                    ? "border-amber-600 bg-amber-950/30"
-                                    : "border-amber-400 bg-amber-50"
-                                  : isDark
-                                    ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-600 hover:bg-zinc-800/50"
-                                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
+                                  ? "border-amber-600 bg-amber-950/30"
+                                  : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-600 hover:bg-zinc-800/50"
                             )}
                             whileHover={!isDisabled ? { scale: 1.01 } : undefined}
                             whileTap={!isDisabled ? { scale: 0.99 } : undefined}
@@ -959,7 +915,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <p
                                   className={cn(
                                     "text-sm font-medium",
-                                    isDark ? "text-zinc-200" : "text-zinc-700"
+                                    "text-zinc-200"
                                   )}
                                 >
                                   {location.city}
@@ -967,7 +923,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <p
                                   className={cn(
                                     "text-[10px]",
-                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                    "text-zinc-500"
                                   )}
                                 >
                                   {location.country}
@@ -979,7 +935,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <span
                                   className={cn(
                                     "text-xs",
-                                    isDark ? "text-zinc-600" : "text-zinc-400"
+                                    "text-zinc-600"
                                   )}
                                 >
                                   --
@@ -989,7 +945,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <Spinner
                                   className={cn(
                                     "h-3 w-3",
-                                    isDark ? "text-zinc-500" : "text-zinc-400"
+                                    "text-zinc-500"
                                   )}
                                 />
                               )}
@@ -1004,7 +960,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <span
                                   className={cn(
                                     "text-xs",
-                                    isDark ? "text-red-400" : "text-red-600"
+                                    "text-red-400"
                                   )}
                                 >
                                   Error
@@ -1014,7 +970,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <BsCheck
                                   className={cn(
                                     "h-4 w-4",
-                                    isDark ? "text-amber-400" : "text-amber-600"
+                                    "text-amber-400"
                                   )}
                                 />
                               )}
@@ -1022,7 +978,7 @@ const SettingsPage = (): JSX.Element | null => {
                                 <span
                                   className={cn(
                                     "text-[10px] tracking-wider uppercase",
-                                    isDark ? "text-zinc-600" : "text-zinc-400"
+                                    "text-zinc-600"
                                   )}
                                 >
                                   Current
@@ -1041,7 +997,7 @@ const SettingsPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "mt-4 flex items-center justify-between border-t pt-4",
-                  isDark ? "border-zinc-800" : "border-zinc-200"
+                  "border-zinc-800"
                 )}
               >
                 <Button
@@ -1051,9 +1007,7 @@ const SettingsPage = (): JSX.Element | null => {
                   disabled={isPinging || pingCooldown > 0}
                   className={cn(
                     "gap-2",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+                    "border-zinc-700 text-zinc-400 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                   )}
                 >
                   <span className="text-xs tracking-wider uppercase">
@@ -1070,9 +1024,7 @@ const SettingsPage = (): JSX.Element | null => {
                     size="sm"
                     onClick={() => setTransferModalOpen(false)}
                     className={cn(
-                      isDark
-                        ? "border-zinc-700 text-zinc-400 hover:text-zinc-100"
-                        : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
+                      "border-zinc-700 text-zinc-400 hover:text-zinc-100"
                     )}
                   >
                     <span className="text-xs tracking-wider uppercase">Cancel</span>
@@ -1084,9 +1036,7 @@ const SettingsPage = (): JSX.Element | null => {
                     disabled={!selectedLocation}
                     className={cn(
                       "gap-2",
-                      isDark
-                        ? "border-amber-700 text-amber-400 hover:border-amber-600 hover:text-amber-300 disabled:opacity-40"
-                        : "border-amber-400 text-amber-600 hover:text-amber-700 disabled:opacity-40"
+                      "border-amber-700 text-amber-400 hover:border-amber-600 hover:text-amber-300 disabled:opacity-40"
                     )}
                   >
                     <BsGlobe className="h-3 w-3" />
@@ -1108,7 +1058,6 @@ const SettingsPage = (): JSX.Element | null => {
         onConfirm={confirmTransfer}
         confirmLabel="Transfer"
         variant="danger"
-        isDark={isDark}
       />
 
       {/* Server Split Modal */}
@@ -1116,21 +1065,21 @@ const SettingsPage = (): JSX.Element | null => {
         <DialogContent
           className={cn(
             "sm:max-w-lg",
-            isDark ? "border-zinc-800 bg-[#0f0f0f]" : "border-zinc-200 bg-white"
+            "border-zinc-800 bg-[#0f0f0f]"
           )}
         >
           <DialogHeader>
             <DialogTitle
               className={cn(
                 "flex items-center gap-2 text-lg font-light tracking-wider",
-                isDark ? "text-zinc-100" : "text-zinc-800"
+                "text-zinc-100"
               )}
             >
               <BsLayers className="h-5 w-5" />
               SPLIT SERVER
             </DialogTitle>
             <DialogDescription
-              className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+              className={cn("text-sm", "text-zinc-500")}
             >
               Divide this server&apos;s resources into two separate instances.
             </DialogDescription>
@@ -1140,9 +1089,7 @@ const SettingsPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "border p-3 text-xs",
-                isDark
-                  ? "border-amber-900/50 bg-amber-950/20 text-amber-400/80"
-                  : "border-amber-200 bg-amber-50 text-amber-700"
+                "border-amber-900/50 bg-amber-950/20 text-amber-400/80"
               )}
             >
               Splitting will create a new server with the allocated resources. The original server
@@ -1155,13 +1102,13 @@ const SettingsPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-[10px] font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "text-zinc-500"
                   )}
                 >
                   CPU Allocation
                 </label>
                 <span
-                  className={cn("font-mono text-xs", isDark ? "text-zinc-400" : "text-zinc-600")}
+                  className={cn("font-mono text-xs", "text-zinc-400")}
                 >
                   {splitResources.cpu}% / {100 - splitResources.cpu}%
                 </span>
@@ -1174,13 +1121,12 @@ const SettingsPage = (): JSX.Element | null => {
                 onValueChange={(value) =>
                   setSplitResources((prev) => ({ ...prev, cpu: value[0] ?? prev.cpu }))
                 }
-                isDark={isDark}
               />
               <div className="mt-2 flex justify-between">
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                <span className={cn("text-[10px]", "text-zinc-600")}>
                   New Server
                 </span>
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                <span className={cn("text-[10px]", "text-zinc-600")}>
                   This Server
                 </span>
               </div>
@@ -1192,13 +1138,13 @@ const SettingsPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-[10px] font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "text-zinc-500"
                   )}
                 >
                   Memory Allocation
                 </label>
                 <span
-                  className={cn("font-mono text-xs", isDark ? "text-zinc-400" : "text-zinc-600")}
+                  className={cn("font-mono text-xs", "text-zinc-400")}
                 >
                   {Math.round((settings.memoryLimit * splitResources.memory) / 100)} MB /{" "}
                   {Math.round((settings.memoryLimit * (100 - splitResources.memory)) / 100)} MB
@@ -1212,13 +1158,12 @@ const SettingsPage = (): JSX.Element | null => {
                 onValueChange={(value) =>
                   setSplitResources((prev) => ({ ...prev, memory: value[0] ?? prev.memory }))
                 }
-                isDark={isDark}
               />
               <div className="mt-2 flex justify-between">
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                <span className={cn("text-[10px]", "text-zinc-600")}>
                   New Server
                 </span>
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                <span className={cn("text-[10px]", "text-zinc-600")}>
                   This Server
                 </span>
               </div>
@@ -1230,13 +1175,13 @@ const SettingsPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-[10px] font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-400"
+                    "text-zinc-500"
                   )}
                 >
                   Disk Allocation
                 </label>
                 <span
-                  className={cn("font-mono text-xs", isDark ? "text-zinc-400" : "text-zinc-600")}
+                  className={cn("font-mono text-xs", "text-zinc-400")}
                 >
                   {Math.round((settings.diskLimit * splitResources.disk) / 100)} MB /{" "}
                   {Math.round((settings.diskLimit * (100 - splitResources.disk)) / 100)} MB
@@ -1250,13 +1195,12 @@ const SettingsPage = (): JSX.Element | null => {
                 onValueChange={(value) =>
                   setSplitResources((prev) => ({ ...prev, disk: value[0] ?? prev.disk }))
                 }
-                isDark={isDark}
               />
               <div className="mt-2 flex justify-between">
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                <span className={cn("text-[10px]", "text-zinc-600")}>
                   New Server
                 </span>
-                <span className={cn("text-[10px]", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                <span className={cn("text-[10px]", "text-zinc-600")}>
                   This Server
                 </span>
               </div>
@@ -1269,9 +1213,7 @@ const SettingsPage = (): JSX.Element | null => {
               size="sm"
               onClick={() => setSplitModalOpen(false)}
               className={cn(
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
+                "border-zinc-700 text-zinc-400 hover:text-zinc-100"
               )}
             >
               <span className="text-xs tracking-wider uppercase">Cancel</span>
@@ -1282,9 +1224,7 @@ const SettingsPage = (): JSX.Element | null => {
               onClick={handleSplitServer}
               className={cn(
                 "gap-2",
-                isDark
-                  ? "border-zinc-600 text-zinc-300 hover:text-zinc-100"
-                  : "border-zinc-400 text-zinc-700 hover:text-zinc-900"
+                "border-zinc-600 text-zinc-300 hover:text-zinc-100"
               )}
             >
               <BsLayers className="h-3 w-3" />

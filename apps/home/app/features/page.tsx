@@ -2,7 +2,6 @@
 
 import { useRef, type JSX } from "react";
 import Link from "next/link";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
@@ -189,21 +188,10 @@ const AnimatedSection = ({ children, className, delay = 0 }: { children: React.R
   );
 };
 
-const FeaturesPage = (): JSX.Element | null => {
-  const { resolvedTheme } = useNextTheme();
-  const mounted = useIsMounted();
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
-  return (
-    <div className={cn(
-      "min-h-svh transition-colors relative",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
-      <AnimatedBackground isDark={isDark} />
-      <FloatingDots isDark={isDark} count={20} />
+const FeaturesPage = (): JSX.Element => {
+    <div className="min-h-svh transition-colors relative bg-[#0b0b0a]">
+      <AnimatedBackground />
+      <FloatingDots count={20} />
       <Navigation />
 
       {/* Hero Section */}
@@ -214,10 +202,7 @@ const FeaturesPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className={cn(
-                "text-4xl md:text-6xl font-extralight tracking-tight mb-6",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
+              className="text-4xl md:text-6xl font-extralight tracking-tight mb-6 text-zinc-100"
             >
               Everything You Need
             </motion.h1>
@@ -225,10 +210,7 @@ const FeaturesPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className={cn(
-                "text-lg md:text-xl max-w-2xl mx-auto leading-relaxed",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
+              className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed text-zinc-400"
             >
               A complete, self-hosted solution for game server management with powerful features out of the box.
             </motion.p>
@@ -242,65 +224,25 @@ const FeaturesPage = (): JSX.Element | null => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
               <AnimatedSection key={i} delay={i * 0.05} className="h-full">
-                <div className={cn(
-                  "relative p-8 border transition-all hover:scale-[1.02] group h-full flex flex-col",
-                  isDark
-                    ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
-                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-lg"
-                )}>
+                <div className="relative p-8 border transition-all hover:scale-[1.02] group h-full flex flex-col border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50">
                   {/* Corner decorations */}
-                  <div className={cn(
-                    "absolute top-0 left-0 w-3 h-3 border-t border-l transition-colors",
-                    isDark
-                      ? "border-zinc-700 group-hover:border-zinc-500"
-                      : "border-zinc-300 group-hover:border-zinc-400"
-                  )} />
-                  <div className={cn(
-                    "absolute top-0 right-0 w-3 h-3 border-t border-r transition-colors",
-                    isDark
-                      ? "border-zinc-700 group-hover:border-zinc-500"
-                      : "border-zinc-300 group-hover:border-zinc-400"
-                  )} />
-                  <div className={cn(
-                    "absolute bottom-0 left-0 w-3 h-3 border-b border-l transition-colors",
-                    isDark
-                      ? "border-zinc-700 group-hover:border-zinc-500"
-                      : "border-zinc-300 group-hover:border-zinc-400"
-                  )} />
-                  <div className={cn(
-                    "absolute bottom-0 right-0 w-3 h-3 border-b border-r transition-colors",
-                    isDark
-                      ? "border-zinc-700 group-hover:border-zinc-500"
-                      : "border-zinc-300 group-hover:border-zinc-400"
-                  )} />
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="absolute top-0 right-0 w-3 h-3 border-t border-r transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r transition-colors border-zinc-700 group-hover:border-zinc-500" />
 
-                  <feature.icon className={cn(
-                    "w-8 h-8 mb-4 flex-shrink-0",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
-                  )} />
-                  <h3 className={cn(
-                    "text-lg font-medium mb-2 flex-shrink-0",
-                    isDark ? "text-zinc-100" : "text-zinc-900"
-                  )}>
+                  <feature.icon className="w-8 h-8 mb-4 flex-shrink-0 text-zinc-400" />
+                  <h3 className="text-lg font-medium mb-2 flex-shrink-0 text-zinc-100">
                     {feature.title}
                   </h3>
-                  <p className={cn(
-                    "text-sm leading-relaxed mb-4",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
-                  )}>
+                  <p className="text-sm leading-relaxed mb-4 text-zinc-400">
                     {feature.description}
                   </p>
                   <ul className="mt-auto space-y-2">
                     {feature.details.map((detail, j) => (
                       <li key={j} className="flex items-center gap-2">
-                        <BsCheckCircle className={cn(
-                          "w-3.5 h-3.5 flex-shrink-0",
-                          isDark ? "text-green-500" : "text-green-600"
-                        )} />
-                        <span className={cn(
-                          "text-xs",
-                          isDark ? "text-zinc-500" : "text-zinc-500"
-                        )}>
+                        <BsCheckCircle className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
+                        <span className="text-xs text-zinc-500">
                           {detail}
                         </span>
                       </li>
@@ -316,27 +258,16 @@ const FeaturesPage = (): JSX.Element | null => {
       {/* CTA Section */}
       <section className="relative py-24 px-6">
         <AnimatedSection className="max-w-4xl mx-auto text-center">
-          <h2 className={cn(
-            "text-3xl md:text-4xl font-extralight tracking-tight mb-6",
-            isDark ? "text-zinc-100" : "text-zinc-900"
-          )}>
+          <h2 className="text-3xl md:text-4xl font-extralight tracking-tight mb-6 text-zinc-100">
             Ready to Get Started?
           </h2>
-          <p className={cn(
-            "text-lg mb-10 max-w-xl mx-auto",
-            isDark ? "text-zinc-400" : "text-zinc-600"
-          )}>
+          <p className="text-lg mb-10 max-w-xl mx-auto text-zinc-400">
             Deploy StellarStack on your own infrastructure in minutes.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href="https://docs.stellarstack.app" target="_blank" rel="noopener noreferrer">
               <Button
-                className={cn(
-                  "text-sm uppercase tracking-wider px-8 py-6 gap-2 transition-all hover:scale-[1.02]",
-                  isDark
-                    ? "bg-zinc-100 text-zinc-900 hover:bg-white"
-                    : "bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-                )}
+                className="text-sm uppercase tracking-wider px-8 py-6 gap-2 transition-all hover:scale-[1.02] bg-zinc-100 text-zinc-900 hover:bg-white"
               >
                 Read the Docs
                 <BsArrowRight className="w-4 h-4" />
@@ -349,12 +280,7 @@ const FeaturesPage = (): JSX.Element | null => {
             >
               <Button
                 variant="outline"
-                className={cn(
-                  "text-sm uppercase tracking-wider px-8 py-6 gap-2",
-                  isDark
-                    ? "border-zinc-700 text-zinc-300 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-700 hover:border-zinc-400"
-                )}
+                className="text-sm uppercase tracking-wider px-8 py-6 gap-2 border-zinc-700 text-zinc-300 hover:border-zinc-500"
               >
                 <BsGithub className="w-4 h-4" />
                 View on GitHub
@@ -364,7 +290,7 @@ const FeaturesPage = (): JSX.Element | null => {
         </AnimatedSection>
       </section>
 
-      <Footer isDark={isDark} />
+      <Footer />
     </div>
   );
 };

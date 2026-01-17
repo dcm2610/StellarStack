@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
-import { BsSun, BsMoon, BsGithub, BsList, BsX } from "react-icons/bs";
+import { BsGithub, BsList, BsX } from "react-icons/bs";
 
 interface NavLink {
   href: string;
@@ -28,14 +27,8 @@ const defaultLinks: NavLink[] = [
 ];
 
 export const Navigation = ({ links = defaultLinks, showGitHub = true }: NavigationProps) => {
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -54,8 +47,6 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
     };
   }, [isOpen]);
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
   const isActive = (href: string) => {
     if (href.startsWith("#")) return false;
     return pathname === href;
@@ -69,17 +60,9 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
 
   return (
     <>
-      <nav className={cn(
-        "fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md",
-        isDark
-          ? "bg-[#0b0b0a]/80 border-zinc-800"
-          : "bg-[#f5f5f4]/80 border-zinc-200"
-      )}>
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md bg-[#0b0b0a]/80 border-zinc-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className={cn(
-            "text-lg font-light tracking-[0.2em]",
-            isDark ? "text-zinc-100" : "text-zinc-800"
-          )}>
+          <Link href="/" className="text-lg font-light tracking-[0.2em] text-zinc-100">
             STELLARSTACK
           </Link>
 
@@ -93,10 +76,7 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={cn(
-                      "text-xs uppercase tracking-wider transition-colors",
-                      isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                    )}
+                    className="text-xs uppercase tracking-wider transition-colors text-zinc-400 hover:text-zinc-100"
                   >
                     {link.label}
                   </a>
@@ -104,10 +84,7 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                   <a
                     key={link.href}
                     href={link.href}
-                    className={cn(
-                      "text-xs uppercase tracking-wider transition-colors",
-                      isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                    )}
+                    className="text-xs uppercase tracking-wider transition-colors text-zinc-400 hover:text-zinc-100"
                   >
                     {link.label}
                   </a>
@@ -118,8 +95,8 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                     className={cn(
                       "text-xs uppercase tracking-wider transition-colors",
                       isActive(link.href)
-                        ? isDark ? "text-zinc-100" : "text-zinc-900"
-                        : isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                        ? "text-zinc-100"
+                        : "text-zinc-400 hover:text-zinc-100"
                     )}
                   >
                     {link.label}
@@ -131,10 +108,7 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                   href="https://github.com/stellarstack/stellarstack"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(
-                    "text-xs uppercase tracking-wider transition-colors flex items-center gap-2",
-                    isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                  )}
+                  className="text-xs uppercase tracking-wider transition-colors flex items-center gap-2 text-zinc-400 hover:text-zinc-100"
                 >
                   <BsGithub className="w-4 h-4" />
                   GitHub
@@ -142,32 +116,12 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
               )}
             </div>
 
-            {/* Theme Toggle */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className={cn(
-                "transition-all hover:scale-110 active:scale-95 p-2",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
-              )}
-            >
-              {isDark ? <BsSun className="w-4 h-4" /> : <BsMoon className="w-4 h-4" />}
-            </Button>
-
             {/* Mobile Menu Button */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsOpen(true)}
-              className={cn(
-                "md:hidden transition-all p-2",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                  : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
-              )}
+              className="md:hidden transition-all p-2 border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
             >
               <BsList className="w-5 h-5" />
             </Button>
@@ -195,34 +149,18 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={cn(
-                "fixed top-0 right-0 bottom-0 z-[70] w-72 border-l md:hidden",
-                isDark
-                  ? "bg-[#0b0b0a] border-zinc-800"
-                  : "bg-[#f5f5f4] border-zinc-200"
-              )}
+              className="fixed top-0 right-0 bottom-0 z-[70] w-72 border-l md:hidden bg-[#0b0b0a] border-zinc-800"
             >
               {/* Sidebar Header */}
-              <div className={cn(
-                "flex items-center justify-between h-16 px-6 border-b",
-                isDark ? "border-zinc-800" : "border-zinc-200"
-              )}>
-                <span className={cn(
-                  "text-sm font-light tracking-[0.15em]",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
-                )}>
+              <div className="flex items-center justify-between h-16 px-6 border-b border-zinc-800">
+                <span className="text-sm font-light tracking-[0.15em] text-zinc-400">
                   MENU
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "p-2",
-                    isDark
-                      ? "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
-                      : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200"
-                  )}
+                  className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
                 >
                   <BsX className="w-5 h-5" />
                 </Button>
@@ -243,10 +181,7 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsOpen(false)}
-                        className={cn(
-                          "block py-3 text-sm uppercase tracking-wider transition-colors",
-                          isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                        )}
+                        className="block py-3 text-sm uppercase tracking-wider transition-colors text-zinc-400 hover:text-zinc-100"
                       >
                         {link.label}
                       </a>
@@ -254,10 +189,7 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                       <a
                         href={link.href}
                         onClick={() => handleLinkClick(link.href, true)}
-                        className={cn(
-                          "block py-3 text-sm uppercase tracking-wider transition-colors",
-                          isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                        )}
+                        className="block py-3 text-sm uppercase tracking-wider transition-colors text-zinc-400 hover:text-zinc-100"
                       >
                         {link.label}
                       </a>
@@ -268,8 +200,8 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                         className={cn(
                           "block py-3 text-sm uppercase tracking-wider transition-colors",
                           isActive(link.href)
-                            ? isDark ? "text-zinc-100" : "text-zinc-900"
-                            : isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                            ? "text-zinc-100"
+                            : "text-zinc-400 hover:text-zinc-100"
                         )}
                       >
                         {link.label}
@@ -289,10 +221,7 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 py-3 text-sm uppercase tracking-wider transition-colors",
-                        isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                      )}
+                      className="flex items-center gap-3 py-3 text-sm uppercase tracking-wider transition-colors text-zinc-400 hover:text-zinc-100"
                     >
                       <BsGithub className="w-4 h-4" />
                       GitHub
@@ -302,14 +231,8 @@ export const Navigation = ({ links = defaultLinks, showGitHub = true }: Navigati
               </div>
 
               {/* Sidebar Footer */}
-              <div className={cn(
-                "absolute bottom-0 left-0 right-0 px-6 py-6 border-t",
-                isDark ? "border-zinc-800" : "border-zinc-200"
-              )}>
-                <p className={cn(
-                  "text-xs",
-                  isDark ? "text-zinc-600" : "text-zinc-400"
-                )}>
+              <div className="absolute bottom-0 left-0 right-0 px-6 py-6 border-t border-zinc-800">
+                <p className="text-xs text-zinc-600">
                   Open Source Game Server Management
                 </p>
               </div>

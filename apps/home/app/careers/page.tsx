@@ -2,7 +2,6 @@
 
 import { useRef, type JSX } from "react";
 import Link from "next/link";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
@@ -62,21 +61,11 @@ const AnimatedSection = ({ children, className, delay = 0 }: { children: React.R
   );
 };
 
-const CareersPage = (): JSX.Element | null => {
-  const { resolvedTheme } = useNextTheme();
-  const mounted = useIsMounted();
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
+const CareersPage = (): JSX.Element => {
   return (
-    <div className={cn(
-      "min-h-svh transition-colors relative",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
-      <AnimatedBackground isDark={isDark} />
-      <FloatingDots isDark={isDark} count={20} />
+    <div className="min-h-svh transition-colors relative bg-[#0b0b0a]">
+      <AnimatedBackground />
+      <FloatingDots count={20} />
       <Navigation />
 
       {/* Hero Section */}
@@ -87,10 +76,7 @@ const CareersPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className={cn(
-                "text-4xl md:text-6xl font-extralight tracking-tight mb-6",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
+              className="text-4xl md:text-6xl font-extralight tracking-tight mb-6 text-zinc-100"
             >
               Join Our Team
             </motion.h1>
@@ -98,10 +84,7 @@ const CareersPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className={cn(
-                "text-lg md:text-xl max-w-2xl mx-auto leading-relaxed",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
+              className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed text-zinc-400"
             >
               Help us build the future of open-source game server management. We&apos;re always looking for passionate contributors.
             </motion.p>
@@ -115,26 +98,12 @@ const CareersPage = (): JSX.Element | null => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {perks.map((perk, i) => (
               <AnimatedSection key={i} delay={i * 0.1} className="h-full">
-                <div className={cn(
-                  "relative p-8 border transition-all h-full text-center",
-                  isDark
-                    ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
-                    : "border-zinc-200 bg-white hover:border-zinc-300"
-                )}>
-                  <perk.icon className={cn(
-                    "w-8 h-8 mx-auto mb-4",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
-                  )} />
-                  <h3 className={cn(
-                    "text-lg font-medium mb-2",
-                    isDark ? "text-zinc-100" : "text-zinc-900"
-                  )}>
+                <div className="relative p-8 border transition-all h-full text-center border-zinc-800 bg-zinc-900/30 hover:border-zinc-700">
+                  <perk.icon className="w-8 h-8 mx-auto mb-4 text-zinc-400" />
+                  <h3 className="text-lg font-medium mb-2 text-zinc-100">
                     {perk.title}
                   </h3>
-                  <p className={cn(
-                    "text-sm leading-relaxed",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
-                  )}>
+                  <p className="text-sm leading-relaxed text-zinc-400">
                     {perk.description}
                   </p>
                 </div>
@@ -145,59 +114,35 @@ const CareersPage = (): JSX.Element | null => {
       </section>
 
       {/* Open Positions Section */}
-      <section className={cn(
-        "relative py-24 px-6 border-y",
-        isDark ? "border-zinc-800 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
-      )}>
+      <section className="relative py-24 px-6 border-y border-zinc-800 bg-zinc-900/30">
         <div className="max-w-4xl mx-auto">
           <AnimatedSection className="text-center mb-16">
-            <h2 className={cn(
-              "text-3xl md:text-4xl font-extralight tracking-tight mb-4",
-              isDark ? "text-zinc-100" : "text-zinc-900"
-            )}>
+            <h2 className="text-3xl md:text-4xl font-extralight tracking-tight mb-4 text-zinc-100">
               Open Positions
             </h2>
-            <p className={cn(
-              "text-lg max-w-2xl mx-auto",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}>
+            <p className="text-lg max-w-2xl mx-auto text-zinc-400">
               We&apos;re an open-source project and welcome contributors of all kinds.
             </p>
           </AnimatedSection>
 
           <AnimatedSection delay={0.1}>
-            <div className={cn(
-              "relative p-8 md:p-12 border text-center",
-              isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-white"
-            )}>
+            <div className="relative p-8 md:p-12 border text-center border-zinc-800 bg-zinc-900/50">
               {/* Corner decorations */}
-              <div className={cn("absolute top-0 left-0 w-4 h-4 border-t border-l", isDark ? "border-zinc-600" : "border-zinc-400")} />
-              <div className={cn("absolute top-0 right-0 w-4 h-4 border-t border-r", isDark ? "border-zinc-600" : "border-zinc-400")} />
-              <div className={cn("absolute bottom-0 left-0 w-4 h-4 border-b border-l", isDark ? "border-zinc-600" : "border-zinc-400")} />
-              <div className={cn("absolute bottom-0 right-0 w-4 h-4 border-b border-r", isDark ? "border-zinc-600" : "border-zinc-400")} />
+              <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-zinc-600" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-zinc-600" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-zinc-600" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-zinc-600" />
 
-              <div className={cn(
-                "text-6xl mb-6",
-                isDark ? "text-zinc-700" : "text-zinc-300"
-              )}>
+              <div className="text-6xl mb-6 text-zinc-700">
                 🚀
               </div>
-              <h3 className={cn(
-                "text-xl font-medium mb-4",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}>
+              <h3 className="text-xl font-medium mb-4 text-zinc-100">
                 No Open Positions Right Now
               </h3>
-              <p className={cn(
-                "text-base mb-6 max-w-lg mx-auto",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}>
+              <p className="text-base mb-6 max-w-lg mx-auto text-zinc-400">
                 We don&apos;t have any paid positions available at the moment, but we&apos;re always excited to welcome new contributors to our open-source project!
               </p>
-              <p className={cn(
-                "text-sm",
-                isDark ? "text-zinc-500" : "text-zinc-500"
-              )}>
+              <p className="text-sm text-zinc-500">
                 Check out our GitHub to see how you can contribute.
               </p>
             </div>
@@ -208,16 +153,10 @@ const CareersPage = (): JSX.Element | null => {
       {/* CTA Section */}
       <section className="relative py-24 px-6">
         <AnimatedSection className="max-w-4xl mx-auto text-center">
-          <h2 className={cn(
-            "text-3xl md:text-4xl font-extralight tracking-tight mb-6",
-            isDark ? "text-zinc-100" : "text-zinc-900"
-          )}>
+          <h2 className="text-3xl md:text-4xl font-extralight tracking-tight mb-6 text-zinc-100">
             Become a Contributor
           </h2>
-          <p className={cn(
-            "text-lg mb-10 max-w-xl mx-auto",
-            isDark ? "text-zinc-400" : "text-zinc-600"
-          )}>
+          <p className="text-lg mb-10 max-w-xl mx-auto text-zinc-400">
             The best way to join our team is to start contributing. Every PR counts!
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -227,12 +166,7 @@ const CareersPage = (): JSX.Element | null => {
               rel="noopener noreferrer"
             >
               <Button
-                className={cn(
-                  "text-sm uppercase tracking-wider px-8 py-6 gap-2 transition-all hover:scale-[1.02]",
-                  isDark
-                    ? "bg-zinc-100 text-zinc-900 hover:bg-white"
-                    : "bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-                )}
+                className="text-sm uppercase tracking-wider px-8 py-6 gap-2 transition-all hover:scale-[1.02] bg-zinc-100 text-zinc-900 hover:bg-white"
               >
                 <BsGithub className="w-4 h-4" />
                 View Open Issues
@@ -241,12 +175,7 @@ const CareersPage = (): JSX.Element | null => {
             <a href="https://discord.gg/stellarstack" target="_blank" rel="noopener noreferrer">
               <Button
                 variant="outline"
-                className={cn(
-                  "text-sm uppercase tracking-wider px-8 py-6 gap-2",
-                  isDark
-                    ? "border-zinc-700 text-zinc-300 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-700 hover:border-zinc-400"
-                )}
+                className="text-sm uppercase tracking-wider px-8 py-6 gap-2 border-zinc-700 text-zinc-300 hover:border-zinc-500"
               >
                 Join Discord
                 <BsArrowRight className="w-4 h-4" />
@@ -256,7 +185,7 @@ const CareersPage = (): JSX.Element | null => {
         </AnimatedSection>
       </section>
 
-      <Footer isDark={isDark} />
+      <Footer />
     </div>
   );
 };

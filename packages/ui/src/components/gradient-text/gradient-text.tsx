@@ -47,7 +47,6 @@ export const GradientText = ({
 export const ShimmerText = ({
   children,
   className,
-  isDark = true,
 }: ShimmerTextProps) => {
   return (
     <span className={cn("relative inline-block", className)}>

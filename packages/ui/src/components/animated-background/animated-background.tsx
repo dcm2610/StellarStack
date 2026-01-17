@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback } from "react";
 
 interface AnimatedBackgroundProps {
-  isDark?: boolean;
   dotSize?: number;
   dotSpacing?: number;
   glowRadius?: number;
@@ -30,7 +29,6 @@ interface IdlePulse {
 }
 
 export const AnimatedBackground = ({
-  isDark = true,
   dotSize = 1,
   dotSpacing = 24,
   glowRadius = 120,
@@ -126,8 +124,8 @@ export const AnimatedBackground = ({
 
     ctx.clearRect(0, 0, width, height);
 
-    const baseDotColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.12)";
-    const glowColor = isDark ? [255, 255, 255] : [0, 0, 0];
+    const baseDotColor = "rgba(255, 255, 255, 0.08)";
+    const glowColor = [255, 255, 255];
 
     for (let x = dotSpacing / 2; x < width; x += dotSpacing) {
       for (let y = dotSpacing / 2; y < height; y += dotSpacing) {
@@ -182,10 +180,10 @@ export const AnimatedBackground = ({
         }
 
         if (maxIntensity > 0.005) {
-          const alpha = isDark ? 0.08 + maxIntensity * 0.35 : 0.12 + maxIntensity * 0.5;
+          const alpha = 0.08 + maxIntensity * 0.35;
           ctx.fillStyle = `rgba(${glowColor[0]}, ${glowColor[1]}, ${glowColor[2]}, ${alpha})`;
 
-          const currentDotSize = dotSize + maxIntensity * (isDark ? 1.2 : 1.8);
+          const currentDotSize = dotSize + maxIntensity * 1.2;
           ctx.beginPath();
           ctx.arc(x, y, currentDotSize, 0, Math.PI * 2);
           ctx.fill();
@@ -200,7 +198,6 @@ export const AnimatedBackground = ({
 
     animationRef.current = requestAnimationFrame(draw);
   }, [
-    isDark,
     dotSize,
     dotSpacing,
     glowRadius,

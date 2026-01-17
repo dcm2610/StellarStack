@@ -2,7 +2,6 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -11,8 +10,6 @@ import { Switch } from "@workspace/ui/components/switch";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import {
-  BsSun,
-  BsMoon,
   BsPlus,
   BsTrash,
   BsGlobe,
@@ -38,8 +35,6 @@ interface Subdomain {
 const NetworkPage = (): JSX.Element | null => {
   const params = useParams();
   const serverId = params.id as string;
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [subdomains, setSubdomains] = useState<Subdomain[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,10 +62,6 @@ const NetworkPage = (): JSX.Element | null => {
   const [subdomainName, setSubdomainName] = useState("");
   const [subdomainTargetPort, setSubdomainTargetPort] = useState<string>("");
   const [subdomainSsl, setSubdomainSsl] = useState(true);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Fetch allocations and subdomain feature status
   useEffect(() => {
@@ -133,15 +124,11 @@ const NetworkPage = (): JSX.Element | null => {
     }
   };
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
   if (isInstalling) {
     return (
       <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -149,7 +136,7 @@ const NetworkPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -250,19 +237,19 @@ const NetworkPage = (): JSX.Element | null => {
               <SidebarTrigger
                 className={cn(
                   "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                  "text-zinc-400 hover:text-zinc-100"
                 )}
               />
               <div>
                 <h1
                   className={cn(
                     "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
+                    "text-zinc-100"
                   )}
                 >
                   NETWORK
                 </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                   Server {server?.shortId || serverId} • Port allocation & subdomains
                 </p>
               </div>
@@ -270,15 +257,11 @@ const NetworkPage = (): JSX.Element | null => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setTheme(isDark ? "light" : "dark")}
               className={cn(
                 "p-2 transition-all hover:scale-110 active:scale-95",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                "hidden"
               )}
             >
-              {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
             </Button>
           </div>
 
@@ -288,18 +271,18 @@ const NetworkPage = (): JSX.Element | null => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <BsHddNetwork
-                    className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")}
+                    className={cn("h-5 w-5", "text-zinc-400")}
                   />
                   <h2
                     className={cn(
                       "text-sm font-medium tracking-wider uppercase",
-                      isDark ? "text-zinc-300" : "text-zinc-700"
+                      "text-zinc-300"
                     )}
                   >
                     Port Allocations
                   </h2>
                 </div>
-                <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <span className={cn("text-xs", "text-zinc-500")}>
                   {allocations.length} / {allocationLimit} used
                 </span>
               </div>
@@ -312,9 +295,7 @@ const NetworkPage = (): JSX.Element | null => {
                 className={cn(
                   "gap-2 transition-all",
                   !canAddAllocation && "cursor-not-allowed opacity-50",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                  "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                 )}
               >
                 <BsPlus className="h-4 w-4" />
@@ -326,7 +307,7 @@ const NetworkPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border p-8 text-center",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  "border-zinc-800 text-zinc-500"
                 )}
               >
                 Loading allocations...
@@ -335,7 +316,7 @@ const NetworkPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border p-8 text-center",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  "border-zinc-800 text-zinc-500"
                 )}
               >
                 No allocations assigned to this server.
@@ -347,7 +328,7 @@ const NetworkPage = (): JSX.Element | null => {
                     key={allocation.id}
                     className={cn(
                       "relative border p-4 transition-all",
-                      isDark
+                      true
                         ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
                         : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
                     )}
@@ -356,25 +337,25 @@ const NetworkPage = (): JSX.Element | null => {
                     <div
                       className={cn(
                         "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
                     <div
                       className={cn(
                         "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
                     <div
                       className={cn(
                         "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
                     <div
                       className={cn(
                         "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
 
@@ -383,7 +364,7 @@ const NetworkPage = (): JSX.Element | null => {
                         <div
                           className={cn(
                             "font-mono text-lg font-medium",
-                            isDark ? "text-zinc-100" : "text-zinc-800"
+                            "text-zinc-100"
                           )}
                         >
                           {allocation.ip}:{allocation.port}
@@ -393,9 +374,7 @@ const NetworkPage = (): JSX.Element | null => {
                             <span
                               className={cn(
                                 "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                                isDark
-                                  ? "border-green-500/50 text-green-400"
-                                  : "border-green-400 text-green-600"
+                                "border-green-500/50 text-green-400"
                               )}
                             >
                               Primary
@@ -403,7 +382,7 @@ const NetworkPage = (): JSX.Element | null => {
                           )}
                           {allocation.alias && (
                             <span
-                              className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+                              className={cn("text-sm", "text-zinc-500")}
                             >
                               {allocation.alias}
                             </span>
@@ -419,9 +398,7 @@ const NetworkPage = (): JSX.Element | null => {
                             onClick={() => handleSetPrimary(allocation)}
                             className={cn(
                               "p-2 transition-all",
-                              isDark
-                                ? "border-zinc-700 text-zinc-400 hover:border-yellow-700 hover:text-yellow-400"
-                                : "border-zinc-300 text-zinc-600 hover:border-yellow-400 hover:text-yellow-600"
+                              "border-zinc-700 text-zinc-400 hover:border-yellow-700 hover:text-yellow-400"
                             )}
                             title="Set as primary"
                           >
@@ -434,7 +411,7 @@ const NetworkPage = (): JSX.Element | null => {
                         )}
                         {isPrimary(allocation) && (
                           <div
-                            className={cn("p-2", isDark ? "text-yellow-400" : "text-yellow-600")}
+                            className={cn("p-2", "text-yellow-400")}
                           >
                             <BsStarFill className="h-4 w-4" />
                           </div>
@@ -446,9 +423,7 @@ const NetworkPage = (): JSX.Element | null => {
                           onClick={() => openDeletePortModal(allocation)}
                           className={cn(
                             "p-2 transition-all",
-                            isDark
-                              ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300 disabled:opacity-30"
-                              : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700 disabled:opacity-30"
+                            "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300 disabled:opacity-30"
                           )}
                         >
                           <BsTrash className="h-4 w-4" />
@@ -466,11 +441,11 @@ const NetworkPage = (): JSX.Element | null => {
             <div className="mb-8">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <BsGlobe className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
+                  <BsGlobe className={cn("h-5 w-5", "text-zinc-400")} />
                   <h2
                     className={cn(
                       "text-sm font-medium tracking-wider uppercase",
-                      isDark ? "text-zinc-300" : "text-zinc-700"
+                      "text-zinc-300"
                     )}
                   >
                     Subdomains
@@ -482,9 +457,7 @@ const NetworkPage = (): JSX.Element | null => {
                   onClick={openAddSubdomainModal}
                   className={cn(
                     "gap-2 transition-all",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                   )}
                 >
                   <BsPlus className="h-4 w-4" />
@@ -496,7 +469,7 @@ const NetworkPage = (): JSX.Element | null => {
                 <div
                   className={cn(
                     "border p-8 text-center",
-                    isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                    "border-zinc-800 text-zinc-500"
                   )}
                 >
                   No subdomains configured. Add a subdomain to create a friendly URL for your
@@ -509,34 +482,32 @@ const NetworkPage = (): JSX.Element | null => {
                       key={sub.id}
                       className={cn(
                         "relative border p-4 transition-all",
-                        isDark
-                          ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                          : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                        "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
                       )}
                     >
                       {/* Corner decorations */}
                       <div
                         className={cn(
                           "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                          isDark ? "border-zinc-500" : "border-zinc-400"
+                          "border-zinc-500"
                         )}
                       />
                       <div
                         className={cn(
                           "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                          isDark ? "border-zinc-500" : "border-zinc-400"
+                          "border-zinc-500"
                         )}
                       />
                       <div
                         className={cn(
                           "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                          isDark ? "border-zinc-500" : "border-zinc-400"
+                          "border-zinc-500"
                         )}
                       />
                       <div
                         className={cn(
                           "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                          isDark ? "border-zinc-500" : "border-zinc-400"
+                          "border-zinc-500"
                         )}
                       />
 
@@ -545,7 +516,7 @@ const NetworkPage = (): JSX.Element | null => {
                           <div
                             className={cn(
                               "font-mono text-sm",
-                              isDark ? "text-zinc-100" : "text-zinc-800"
+                              "text-zinc-100"
                             )}
                           >
                             {sub.subdomain}.{sub.domain}
@@ -555,9 +526,7 @@ const NetworkPage = (): JSX.Element | null => {
                               <span
                                 className={cn(
                                   "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                                  isDark
-                                    ? "border-green-500/50 text-green-400"
-                                    : "border-green-400 text-green-600"
+                                  "border-green-500/50 text-green-400"
                                 )}
                               >
                                 SSL
@@ -565,7 +534,7 @@ const NetworkPage = (): JSX.Element | null => {
                             )}
                           </div>
                           <span
-                            className={cn("text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+                            className={cn("text-sm", "text-zinc-500")}
                           >
                             → Port {sub.targetPort}
                           </span>
@@ -576,9 +545,7 @@ const NetworkPage = (): JSX.Element | null => {
                           onClick={() => openDeleteSubdomainModal(sub)}
                           className={cn(
                             "p-2 transition-all",
-                            isDark
-                              ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
-                              : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
+                            "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
                           )}
                         >
                           <BsTrash className="h-4 w-4" />
@@ -595,11 +562,11 @@ const NetworkPage = (): JSX.Element | null => {
           <div className="mb-8">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BsKey className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
+                <BsKey className={cn("h-5 w-5", "text-zinc-400")} />
                 <h2
                   className={cn(
                     "text-sm font-medium tracking-wider uppercase",
-                    isDark ? "text-zinc-300" : "text-zinc-700"
+                    "text-zinc-300"
                   )}
                 >
                   SFTP Connection
@@ -610,34 +577,32 @@ const NetworkPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "relative border p-6 transition-all",
-                isDark
-                  ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                  : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
               )}
             >
               {/* Corner decorations */}
               <div
                 className={cn(
                   "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
 
@@ -646,16 +611,16 @@ const NetworkPage = (): JSX.Element | null => {
                   <label
                     className={cn(
                       "mb-1 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-500" : "text-zinc-500"
+                      "text-zinc-500"
                     )}
                   >
                     Host
                   </label>
                   <div
-                    className={cn("font-mono text-sm", isDark ? "text-zinc-100" : "text-zinc-800")}
+                    className={cn("font-mono text-sm", "text-zinc-100")}
                   >
                     {server?.node?.host || (
-                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>Loading...</span>
+                      <span className="text-zinc-600">Loading...</span>
                     )}
                   </div>
                 </div>
@@ -664,13 +629,13 @@ const NetworkPage = (): JSX.Element | null => {
                   <label
                     className={cn(
                       "mb-1 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-500" : "text-zinc-500"
+                      "text-zinc-500"
                     )}
                   >
                     Port
                   </label>
                   <div
-                    className={cn("font-mono text-sm", isDark ? "text-zinc-100" : "text-zinc-800")}
+                    className={cn("font-mono text-sm", "text-zinc-100")}
                   >
                     {server?.node?.sftpPort ?? 2022}
                   </div>
@@ -680,7 +645,7 @@ const NetworkPage = (): JSX.Element | null => {
                   <label
                     className={cn(
                       "mb-1 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-500" : "text-zinc-500"
+                      "text-zinc-500"
                     )}
                   >
                     Username
@@ -688,13 +653,13 @@ const NetworkPage = (): JSX.Element | null => {
                   <div
                     className={cn(
                       "font-mono text-sm break-all",
-                      isDark ? "text-zinc-100" : "text-zinc-800"
+                      "text-zinc-100"
                     )}
                   >
                     {server && session?.user ? (
                       `${server.id}.${session.user.email}`
                     ) : (
-                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>Loading...</span>
+                      <span className="text-zinc-600">Loading...</span>
                     )}
                   </div>
                 </div>
@@ -714,9 +679,7 @@ const NetworkPage = (): JSX.Element | null => {
                   disabled={!server || !session?.user}
                   className={cn(
                     "gap-2 transition-all",
-                    isDark
-                      ? "border-purple-900/50 text-purple-400 hover:border-purple-700 hover:bg-purple-900/20 hover:text-purple-300 disabled:opacity-30"
-                      : "border-purple-300 text-purple-600 hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-30"
+                    "border-purple-900/50 text-purple-400 hover:border-purple-700 hover:bg-purple-900/20 hover:text-purple-300 disabled:opacity-30"
                   )}
                 >
                   <BsKey className="h-4 w-4" />
@@ -735,16 +698,14 @@ const NetworkPage = (): JSX.Element | null => {
                   disabled={!server || !session?.user}
                   className={cn(
                     "gap-2 transition-all",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-30"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-30"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-30"
                   )}
                 >
                   <span className="text-xs tracking-wider uppercase">Copy Connection URL</span>
                 </Button>
               </div>
 
-              <p className={cn("mt-4 text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
+              <p className={cn("mt-4 text-xs", "text-zinc-600")}>
                 Use your account password to authenticate via SFTP.
               </p>
             </div>
@@ -761,7 +722,6 @@ const NetworkPage = (): JSX.Element | null => {
         onConfirm={handleDeletePort}
         confirmLabel="Remove"
         variant="danger"
-        isDark={isDark}
       />
 
       {/* Add Subdomain Modal */}
@@ -772,7 +732,6 @@ const NetworkPage = (): JSX.Element | null => {
         description="Create a subdomain pointing to your server."
         onSubmit={handleAddSubdomain}
         submitLabel="Add Subdomain"
-        isDark={isDark}
         isValid={isSubdomainValid}
       >
         <div className="space-y-4">
@@ -780,7 +739,7 @@ const NetworkPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Subdomain Name
@@ -792,12 +751,10 @@ const NetworkPage = (): JSX.Element | null => {
                 placeholder="e.g., play"
                 className={cn(
                   "transition-all",
-                  isDark
-                    ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
-                    : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
+                  "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
                 )}
               />
-              <span className={cn("shrink-0 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+              <span className={cn("shrink-0 text-sm", "text-zinc-500")}>
                 .stellarstack.app
               </span>
             </div>
@@ -806,7 +763,7 @@ const NetworkPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Target Port
@@ -822,12 +779,8 @@ const NetworkPage = (): JSX.Element | null => {
                       "border p-3 text-left transition-all",
                       subdomainTargetPort === allocation.port.toString() ||
                         (!subdomainTargetPort && isPrimary(allocation))
-                        ? isDark
-                          ? "border-zinc-500 bg-zinc-800 text-zinc-100"
-                          : "border-zinc-400 bg-zinc-100 text-zinc-900"
-                        : isDark
-                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                        ? "border-zinc-500 bg-zinc-800 text-zinc-100"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -839,9 +792,7 @@ const NetworkPage = (): JSX.Element | null => {
                           <span
                             className={cn(
                               "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                              isDark
-                                ? "border-green-500/50 text-green-400"
-                                : "border-green-400 text-green-600"
+                              "border-green-500/50 text-green-400"
                             )}
                           >
                             Primary
@@ -849,7 +800,7 @@ const NetworkPage = (): JSX.Element | null => {
                         )}
                       </div>
                       {allocation.alias && (
-                        <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                        <span className={cn("text-xs", "text-zinc-500")}>
                           {allocation.alias}
                         </span>
                       )}
@@ -861,10 +812,10 @@ const NetworkPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border p-4 text-center",
-                  isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
+                  "border-zinc-700 bg-zinc-800/50"
                 )}
               >
-                <p className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                <p className={cn("text-sm", "text-zinc-400")}>
                   No allocations available.
                 </p>
               </div>
@@ -874,12 +825,12 @@ const NetworkPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Enable SSL
             </label>
-            <Switch checked={subdomainSsl} onCheckedChange={setSubdomainSsl} isDark={isDark} />
+            <Switch checked={subdomainSsl} onCheckedChange={setSubdomainSsl} />
           </div>
         </div>
       </FormModal>
@@ -893,7 +844,6 @@ const NetworkPage = (): JSX.Element | null => {
         onConfirm={handleDeleteSubdomain}
         confirmLabel="Delete"
         variant="danger"
-        isDark={isDark}
       />
 
       {/* Add Allocation Modal */}
@@ -904,7 +854,6 @@ const NetworkPage = (): JSX.Element | null => {
         description={`Add a new port allocation to your server. ${allocationsRemaining} remaining.`}
         onSubmit={handleAddAllocation}
         submitLabel={addingAllocation ? "Adding..." : "Add Allocation"}
-        isDark={isDark}
         isValid={!!selectedNewAllocation && !addingAllocation}
         isLoading={addingAllocation}
       >
@@ -913,7 +862,7 @@ const NetworkPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Available Allocations
@@ -928,12 +877,8 @@ const NetworkPage = (): JSX.Element | null => {
                     className={cn(
                       "w-full border p-3 text-left transition-all",
                       selectedNewAllocation === allocation.id
-                        ? isDark
-                          ? "border-zinc-500 bg-zinc-800 text-zinc-100"
-                          : "border-zinc-400 bg-zinc-100 text-zinc-900"
-                        : isDark
-                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400"
+                        ? "border-zinc-500 bg-zinc-800 text-zinc-100"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -941,7 +886,7 @@ const NetworkPage = (): JSX.Element | null => {
                         {allocation.ip}:{allocation.port}
                       </span>
                       {allocation.alias && (
-                        <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                        <span className={cn("text-xs", "text-zinc-500")}>
                           {allocation.alias}
                         </span>
                       )}
@@ -953,10 +898,10 @@ const NetworkPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border p-4 text-center",
-                  isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
+                  "border-zinc-700 bg-zinc-800/50"
                 )}
               >
-                <p className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                <p className={cn("text-sm", "text-zinc-400")}>
                   No available allocations on this node.
                 </p>
               </div>

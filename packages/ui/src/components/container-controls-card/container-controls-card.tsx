@@ -10,7 +10,6 @@ import type {
 } from "../dashboard-cards-types";
 
 interface ContainerControlsCardProps extends CardProps {
-  isDark: boolean;
   isOffline: boolean;
   status: ContainerStatus;
   onStart: () => void;
@@ -28,7 +27,6 @@ interface ContainerControlsCardProps extends CardProps {
 }
 
 export const ContainerControlsCard = ({
-  isDark,
   isOffline,
   status,
   onStart,
@@ -49,10 +47,9 @@ export const ContainerControlsCard = ({
 
   const buttonBase =
     "px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors border bg-transparent flex items-center justify-center gap-2 min-w-[80px]";
-  const buttonColors = isDark
-    ? "border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
-    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800";
-  const disabledColors = isDark ? "border-zinc-800 text-zinc-600" : "border-zinc-200 text-zinc-400";
+  const buttonColors =
+    "border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100";
+  const disabledColors = "border-zinc-800 text-zinc-600";
 
   // Start: disabled when running, starting, stopping, or any action loading
   const startDisabled = isRunning || isStarting || isStopping || anyLoading;
@@ -64,7 +61,7 @@ export const ContainerControlsCard = ({
   const restartDisabled = isStopped || isStarting || isStopping || isOffline || anyLoading;
 
   return (
-    <UsageCard isDark={isDark} className="flex h-full items-center justify-center px-8">
+    <UsageCard className="flex h-full items-center justify-center px-8">
       <div className="flex w-full max-w-md justify-between gap-4">
         <button
           onClick={onStart}

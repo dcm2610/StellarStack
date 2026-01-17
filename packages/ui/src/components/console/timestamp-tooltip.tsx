@@ -42,7 +42,7 @@ const formatRelativeTime = (timestamp: number): string => {
   return "just now";
 };
 
-export const TimestampColumnTooltip = ({ timestamp, position, isDark = true }: TimestampColumnTooltipProps) => {
+export const TimestampColumnTooltip = ({ timestamp, position }: TimestampColumnTooltipProps) => {
   const formats = useMemo(() => {
     const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return {
@@ -56,13 +56,13 @@ export const TimestampColumnTooltip = ({ timestamp, position, isDark = true }: T
 
   if (typeof window === "undefined") return null;
 
-  const valueColor = isDark ? "text-zinc-200" : "text-zinc-800";
+  const valueColor = "text-zinc-200";
 
   return createPortal(
     <div
       className={cn(
         "fixed z-50 p-3 border min-w-[280px] pointer-events-none animate-in fade-in-0 zoom-in-95 duration-100 backdrop-blur-md",
-        isDark ? "bg-[#0f0f0f]/80 border-zinc-200/10" : "bg-white/80 border-zinc-300"
+        "bg-[#0f0f0f]/80 border-zinc-200/10"
       )}
       style={{
         top: position.top,
@@ -70,10 +70,10 @@ export const TimestampColumnTooltip = ({ timestamp, position, isDark = true }: T
       }}
     >
       {/* Corner accents */}
-      <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-      <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-      <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-      <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+      <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", "border-zinc-500")} />
+      <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", "border-zinc-500")} />
+      <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", "border-zinc-500")} />
+      <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", "border-zinc-500")} />
 
       <div className="space-y-2 text-xs">
         <div className="flex justify-between gap-4">

@@ -2,13 +2,12 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { BsSun, BsMoon, BsInfoCircle, BsCheckCircle, BsArrowRepeat } from "react-icons/bs";
+import { BsInfoCircle, BsCheckCircle, BsArrowRepeat } from "react-icons/bs";
 import { servers } from "@/lib/api";
 import type { StartupVariable, DockerImageOption } from "@/lib/api";
 import { useServer } from "@/components/server-provider";
@@ -20,8 +19,6 @@ const StartupPage = (): JSX.Element | null => {
   const params = useParams();
   const serverId = params.id as string;
   const { server, isInstalling } = useServer();
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -40,10 +37,6 @@ const StartupPage = (): JSX.Element | null => {
   const [reinstallModalOpen, setReinstallModalOpen] = useState(false);
   const [isReinstalling, setIsReinstalling] = useState(false);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (serverId) {
@@ -71,15 +64,11 @@ const StartupPage = (): JSX.Element | null => {
     }
   };
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
   if (isInstalling) {
     return (
       <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -87,7 +76,7 @@ const StartupPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -196,19 +185,19 @@ const StartupPage = (): JSX.Element | null => {
               <SidebarTrigger
                 className={cn(
                   "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                  "text-zinc-400 hover:text-zinc-100"
                 )}
               />
               <div>
                 <h1
                   className={cn(
                     "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
+                    "text-zinc-100"
                   )}
                 >
                   STARTUP PARAMETERS
                 </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                   Configure startup variables and Docker image
                 </p>
               </div>
@@ -221,9 +210,7 @@ const StartupPage = (): JSX.Element | null => {
                   onClick={handleReset}
                   className={cn(
                     "gap-2 transition-all",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                   )}
                 >
                   <span className="text-xs tracking-wider uppercase">Reset</span>
@@ -237,12 +224,8 @@ const StartupPage = (): JSX.Element | null => {
                 className={cn(
                   "gap-2 transition-all",
                   saved
-                    ? isDark
-                      ? "border-green-500/50 text-green-400"
-                      : "border-green-400 text-green-600"
-                    : isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-40"
+                    ? "border-green-500/50 text-green-400"
+                    : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
                 )}
               >
                 {saved ? (
@@ -261,9 +244,7 @@ const StartupPage = (): JSX.Element | null => {
                 disabled={hasChanges}
                 className={cn(
                   "gap-2 transition-all",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 disabled:opacity-40"
+                  "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
                 )}
                 title={
                   hasChanges
@@ -274,19 +255,6 @@ const StartupPage = (): JSX.Element | null => {
                 <BsArrowRepeat className="h-4 w-4" />
                 <span className="text-xs tracking-wider uppercase">Reinstall</span>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                className={cn(
-                  "p-2 transition-all hover:scale-110 active:scale-95",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                )}
-              >
-                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
 
@@ -295,40 +263,38 @@ const StartupPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "relative mb-6 border p-4",
-                isDark
-                  ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                  : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
               )}
             >
               <div
                 className={cn(
                   "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
 
               <label
                 className={cn(
                   "text-[10px] font-medium tracking-wider uppercase",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
+                  "text-zinc-500"
                 )}
               >
                 Docker Image
@@ -341,12 +307,8 @@ const StartupPage = (): JSX.Element | null => {
                     className={cn(
                       "border px-3 py-2 text-xs font-medium tracking-wider uppercase transition-all",
                       selectedDockerImage === img.image
-                        ? isDark
-                          ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                          : "border-purple-500 bg-purple-50 text-purple-700"
-                        : isDark
-                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800"
+                        ? "border-purple-500 bg-purple-500/20 text-purple-300"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                     )}
                   >
                     {img.label}
@@ -356,7 +318,7 @@ const StartupPage = (): JSX.Element | null => {
               <p
                 className={cn(
                   "mt-2 font-mono text-[10px]",
-                  isDark ? "text-zinc-600" : "text-zinc-400"
+                  "text-zinc-600"
                 )}
               >
                 {selectedDockerImage}
@@ -368,40 +330,38 @@ const StartupPage = (): JSX.Element | null => {
           <div
             className={cn(
               "relative mb-6 border p-4",
-              isDark
-                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+              "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
             )}
           >
             <div
               className={cn(
                 "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
 
             <label
               className={cn(
                 "text-[10px] font-medium tracking-wider uppercase",
-                isDark ? "text-zinc-500" : "text-zinc-400"
+                "text-zinc-500"
               )}
             >
               Startup Command
@@ -409,9 +369,7 @@ const StartupPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "mt-2 overflow-x-auto border p-3 font-mono text-xs",
-                isDark
-                  ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-300"
-                  : "border-zinc-200 bg-zinc-100 text-zinc-700"
+                "border-zinc-700/50 bg-zinc-900/50 text-zinc-300"
               )}
             >
               {getStartupCommandPreview() || "No startup command configured"}
@@ -422,39 +380,37 @@ const StartupPage = (): JSX.Element | null => {
           <div
             className={cn(
               "relative mb-6 border p-4",
-              isDark
-                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+              "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
             )}
           >
             <div
               className={cn(
                 "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <div
               className={cn(
                 "absolute bottom-0 right-0 h-2 w-2 border-b border-r",
-                isDark ? "border-zinc-500" : "border-zinc-400"
+                "border-zinc-500"
               )}
             />
             <label
               className={cn(
                 "text-[10px] font-medium tracking-wider uppercase",
-                isDark ? "text-zinc-500" : "text-zinc-400"
+                "text-zinc-500"
               )}
             >
               Custom Startup Commands
@@ -462,7 +418,7 @@ const StartupPage = (): JSX.Element | null => {
             <p
               className={cn(
                 "mt-1 mb-3 text-xs",
-                isDark ? "text-zinc-400" : "text-zinc-500"
+                "text-zinc-400"
               )}
             >
               Additional commands to append to the startup command. These will be executed after the main command.
@@ -474,9 +430,7 @@ const StartupPage = (): JSX.Element | null => {
               rows={3}
               className={cn(
                 "w-full resize-y border p-3 font-mono text-xs outline-none transition-colors",
-                isDark
-                  ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-300 placeholder:text-zinc-600 focus:border-zinc-500"
-                  : "border-zinc-200 bg-zinc-100 text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-400"
+                "border-zinc-700/50 bg-zinc-900/50 text-zinc-300 placeholder:text-zinc-600 focus:border-zinc-500"
               )}
             />
           </div>
@@ -486,7 +440,7 @@ const StartupPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "border py-12 text-center",
-                isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                "border-zinc-800 text-zinc-500"
               )}
             >
               No startup variables configured for this blueprint.
@@ -498,34 +452,32 @@ const StartupPage = (): JSX.Element | null => {
                   key={variable.envVariable}
                   className={cn(
                     "relative border p-6 transition-all",
-                    isDark
-                      ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                      : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                    "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
                   )}
                 >
                   {/* Corner decorations */}
                   <div
                     className={cn(
                       "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
 
@@ -535,7 +487,7 @@ const StartupPage = (): JSX.Element | null => {
                         <h3
                           className={cn(
                             "text-sm font-medium tracking-wider uppercase",
-                            isDark ? "text-zinc-100" : "text-zinc-800"
+                            "text-zinc-100"
                           )}
                         >
                           {variable.name}
@@ -543,9 +495,7 @@ const StartupPage = (): JSX.Element | null => {
                         <span
                           className={cn(
                             "border px-2 py-0.5 font-mono text-[10px]",
-                            isDark
-                              ? "border-zinc-700 text-zinc-500"
-                              : "border-zinc-300 text-zinc-500"
+                            "border-zinc-700 text-zinc-500"
                           )}
                         >
                           {variable.envVariable}
@@ -554,14 +504,14 @@ const StartupPage = (): JSX.Element | null => {
                           <span
                             className={cn(
                               "px-2 py-0.5 text-[10px] tracking-wider uppercase",
-                              isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-200 text-zinc-500"
+                              "bg-zinc-800 text-zinc-500"
                             )}
                           >
                             Read Only
                           </span>
                         )}
                       </div>
-                      <p className={cn("mb-4 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                      <p className={cn("mb-4 text-xs", "text-zinc-500")}>
                         {variable.description}
                       </p>
                       <input
@@ -572,16 +522,14 @@ const StartupPage = (): JSX.Element | null => {
                         className={cn(
                           "w-full border px-3 py-2 font-mono text-sm transition-colors outline-none",
                           !variable.userEditable && "cursor-not-allowed opacity-60",
-                          isDark
-                            ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:bg-zinc-800/50"
-                            : "border-zinc-300 bg-white text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 disabled:bg-zinc-100"
+                          "border-zinc-700/50 bg-zinc-900/50 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:bg-zinc-800/50"
                         )}
                         placeholder={variable.defaultValue}
                       />
                       <div
                         className={cn(
                           "mt-2 flex items-center gap-1 text-[10px]",
-                          isDark ? "text-zinc-600" : "text-zinc-400"
+                          "text-zinc-600"
                         )}
                       >
                         <BsInfoCircle className="h-3 w-3" />
@@ -610,7 +558,6 @@ const StartupPage = (): JSX.Element | null => {
         description="Are you sure you want to save these startup parameter changes? The server will need to be reinstalled for changes to take effect."
         onConfirm={handleSave}
         confirmLabel="Save"
-        isDark={isDark}
         isLoading={isSaving}
       />
 
@@ -623,7 +570,6 @@ const StartupPage = (): JSX.Element | null => {
         onConfirm={handleReinstall}
         confirmLabel="Reinstall"
         variant="danger"
-        isDark={isDark}
         isLoading={isReinstalling}
       />
     </div>

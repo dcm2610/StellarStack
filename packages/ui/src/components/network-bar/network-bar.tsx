@@ -5,16 +5,11 @@ interface NetworkBarProps {
   upload: number; // percentage 0-100
   segments?: number;
   compact?: boolean;
-  isDark?: boolean;
 }
 
-const NetworkBar = ({ download, upload, segments = 6, compact = false, isDark = true }: NetworkBarProps) => {
-  const downloadGradient = isDark
-    ? "linear-gradient(to right, #1e3a5f, #3b82f6)"
-    : "linear-gradient(to right, #dbeafe, #3b82f6)";
-  const uploadGradient = isDark
-    ? "linear-gradient(to right, #4c1d95, #a855f7)"
-    : "linear-gradient(to right, #f3e8ff, #a855f7)";
+const NetworkBar = ({ download, upload, segments = 6, compact = false }: NetworkBarProps) => {
+  const downloadGradient = "linear-gradient(to right, #1e3a5f, #3b82f6)";
+  const uploadGradient = "linear-gradient(to right, #4c1d95, #a855f7)";
 
   return (
     <div className={compact ? "space-y-1 mt-auto pt-2" : "space-y-2 mt-auto pt-4"}>
@@ -23,7 +18,7 @@ const NetworkBar = ({ download, upload, segments = 6, compact = false, isDark = 
         <span className="text-xs text-zinc-500 w-4">↓</span>
         <div className="relative h-2 flex-1">
           {/* Gray background */}
-          <div className={cn("absolute inset-0", isDark ? "bg-zinc-700" : "bg-zinc-300")} />
+          <div className={cn("absolute inset-0", "bg-zinc-700")} />
 
           {/* Blue gradient overlay for download */}
           <div
@@ -37,7 +32,7 @@ const NetworkBar = ({ download, upload, segments = 6, compact = false, isDark = 
           {/* Divider segments */}
           <div className="absolute inset-0 flex">
             {Array.from({ length: segments - 1 }).map((_, i) => (
-              <div key={i} className={cn("flex-1 border-r-4", isDark ? "border-zinc-900" : "border-white")} />
+              <div key={i} className={cn("flex-1 border-r-4", "border-zinc-900")} />
             ))}
             <div className="flex-1" />
           </div>
@@ -49,7 +44,7 @@ const NetworkBar = ({ download, upload, segments = 6, compact = false, isDark = 
         <span className="text-xs text-zinc-500 w-4">↑</span>
         <div className="relative h-2 flex-1">
           {/* Gray background */}
-          <div className={cn("absolute inset-0", isDark ? "bg-zinc-700" : "bg-zinc-300")} />
+          <div className={cn("absolute inset-0", "bg-zinc-700")} />
 
           {/* Purple gradient overlay for upload */}
           <div
@@ -63,7 +58,7 @@ const NetworkBar = ({ download, upload, segments = 6, compact = false, isDark = 
           {/* Divider segments */}
           <div className="absolute inset-0 flex">
             {Array.from({ length: segments - 1 }).map((_, i) => (
-              <div key={i} className={cn("flex-1 border-r-4", isDark ? "border-zinc-900" : "border-white")} />
+              <div key={i} className={cn("flex-1 border-r-4", "border-zinc-900")} />
             ))}
             <div className="flex-1" />
           </div>

@@ -13,7 +13,6 @@ export const DropZone = ({
   onDragEnter,
   onDragLeave,
   className,
-  isDark = true,
   acceptedTypes,
   disabled = false,
 }: DropZoneProps) => {
@@ -114,21 +113,19 @@ export const DropZone = ({
         <div
           className={cn(
             "absolute inset-0",
-            isDark ? "bg-zinc-900/90" : "bg-white/90"
+            "bg-zinc-900/90"
           )}
         />
         <div
           className={cn(
             "absolute inset-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-4",
-            isDark
-              ? "border-blue-500/50 bg-blue-500/5"
-              : "border-blue-500/50 bg-blue-500/5"
+            "border-blue-500/50 bg-blue-500/5"
           )}
         >
           <div
             className={cn(
               "p-4 rounded-full",
-              isDark ? "bg-blue-500/20" : "bg-blue-500/10"
+              "bg-blue-500/20"
             )}
           >
             <BsCloudUpload className="w-12 h-12 text-blue-500 animate-bounce" />
@@ -137,7 +134,7 @@ export const DropZone = ({
             <p
               className={cn(
                 "text-lg font-medium",
-                isDark ? "text-zinc-100" : "text-zinc-900"
+                "text-zinc-100"
               )}
             >
               Drop files to upload
@@ -145,7 +142,7 @@ export const DropZone = ({
             <p
               className={cn(
                 "text-sm mt-1",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Release to start uploading
@@ -163,7 +160,6 @@ export const UploadButton = ({
   accept,
   multiple = true,
   className,
-  isDark = true,
   children,
   progress = 0,
   isUploading = false,
@@ -179,9 +175,7 @@ export const UploadButton = ({
     <label
       className={cn(
         "relative inline-flex items-center gap-2 px-4 py-2 cursor-pointer transition-all overflow-hidden",
-        isDark
-          ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
-          : "bg-zinc-200 hover:bg-zinc-300 text-zinc-800",
+        "bg-zinc-800 hover:bg-zinc-700 text-zinc-200",
         isUploading && "cursor-wait",
         className
       )}

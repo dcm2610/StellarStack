@@ -2,14 +2,13 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { servers } from "@/lib/api";
 import { DragDropGrid, GridItem } from "@workspace/ui/components/drag-drop-grid";
 import { useGridStorage } from "@workspace/ui/hooks/useGridStorage";
 import { Console } from "@workspace/ui/components/console";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
-import { BsSun, BsMoon, BsGrid } from "react-icons/bs";
+import { BsGrid } from "react-icons/bs";
 import { FadeIn } from "@workspace/ui/components/fade-in";
 import { Badge } from "@workspace/ui/components/badge";
 import { BsExclamationTriangle } from "react-icons/bs";
@@ -34,7 +33,6 @@ import { PlayersOnlineCard } from "@workspace/ui/components/players-online-card"
 import { RecentLogsCard } from "@workspace/ui/components/recent-logs-card";
 import { CardPreview } from "@workspace/ui/components/card-preview";
 import type { ContainerStatus } from "@workspace/ui/components/dashboard-cards-types";
-import { ThemeContext } from "../../../../contexts/ThemeContext";
 import { useLabels } from "../../../../hooks";
 import { defaultGridItems, defaultHiddenCards } from "../../../../constants";
 import { useServer } from "@/components/server-provider";
@@ -174,8 +172,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isCardSheetOpen, setIsCardSheetOpen] = useState(false);
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [showConnectionBanner, setShowConnectionBanner] = useState(false);
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
   const labels = useLabels();
@@ -238,10 +234,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
     message: line.text,
   }));
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // Delay showing connection banner to prevent flash on page load
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -267,8 +259,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
       }
     };
   }, [wsEnabled, wsConnected, wsConnecting, hasAttemptedConnection]);
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
 
   const {
     items,
@@ -333,15 +323,15 @@ const ServerOverviewPage = (): JSX.Element | null => {
     }
   };
 
-  if (!mounted || !isLoaded) {
+  if (!isLoaded) {
     return null;
   }
 
   // Show installing placeholder if server is being installed
   if (isInstalling) {
     return (
-      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+      <div className="min-h-svh bg-[#0b0b0a]">
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -349,8 +339,8 @@ const ServerOverviewPage = (): JSX.Element | null => {
   // Show suspended placeholder if server is suspended
   if (server?.status === "SUSPENDED") {
     return (
-      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+      <div className="min-h-svh bg-[#0b0b0a]">
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -358,8 +348,8 @@ const ServerOverviewPage = (): JSX.Element | null => {
   // Show maintenance placeholder if server is under maintenance
   if (server?.status === "MAINTENANCE") {
     return (
-      <div className={cn("min-h-svh", isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]")}>
-        <ServerMaintenancePlaceholder isDark={isDark} serverName={server?.name} />
+      <div className="min-h-svh bg-[#0b0b0a]">
+        <ServerMaintenancePlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -367,15 +357,10 @@ const ServerOverviewPage = (): JSX.Element | null => {
   // Show loading spinner only if loading AND not connected to WebSocket
   if (isLoading && !wsConnected) {
     return (
-      <div
-        className={cn(
-          "flex min-h-svh items-center justify-center",
-          isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-        )}
-      >
+      <div className="flex min-h-svh items-center justify-center bg-[#0b0b0a]">
         <div className="flex items-center gap-3">
           <Spinner className="h-5 w-5" />
-          <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+          <span className="text-sm text-zinc-400">
             Loading server...
           </span>
         </div>
@@ -384,20 +369,12 @@ const ServerOverviewPage = (): JSX.Element | null => {
   }
 
   return (
-    <ThemeContext.Provider value={{ isDark }}>
-      <div className="relative min-h-svh transition-colors">
+    <div className="relative min-h-svh transition-colors">
         {/* Background is now rendered in the layout for persistence */}
 
         {/* Connection error banner */}
         {showConnectionBanner && wsEnabled && !wsConnected && !wsConnecting && (
-          <div
-            className={cn(
-              "relative z-10 flex items-center justify-center gap-2 px-4 py-3 text-sm",
-              isDark
-                ? "border-b border-amber-500/20 bg-amber-500/10 text-amber-400"
-                : "border-b border-amber-200 bg-amber-50 text-amber-700"
-            )}
-          >
+          <div className="relative z-10 flex items-center justify-center gap-2 px-4 py-3 text-sm border-b border-amber-500/20 bg-amber-500/10 text-amber-400">
             <BsExclamationTriangle className="h-4 w-4 flex-shrink-0" />
             <span>
               Unable to connect to daemon. Server controls may not work until connection is
@@ -410,24 +387,12 @@ const ServerOverviewPage = (): JSX.Element | null => {
           <FadeIn delay={0}>
             <div className="mx-auto mb-6 flex max-w-7xl items-center justify-between">
               <div className="flex items-center gap-4">
-                <SidebarTrigger
-                  className={cn(
-                    "transition-all hover:scale-110 active:scale-95",
-                    isDark
-                      ? "text-zinc-400 hover:text-zinc-100"
-                      : "text-zinc-600 hover:text-zinc-900"
-                  )}
-                />
+                <SidebarTrigger className="transition-all hover:scale-110 active:scale-95 text-zinc-400 hover:text-zinc-100" />
                 <div>
-                  <h1
-                    className={cn(
-                      "text-2xl font-light tracking-wider",
-                      isDark ? "text-zinc-100" : "text-zinc-800"
-                    )}
-                  >
+                  <h1 className="text-2xl font-light tracking-wider text-zinc-100">
                     OVERVIEW
                   </h1>
-                  <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                     {server?.name || `Server ${serverId}`}
                   </p>
                 </div>
@@ -439,12 +404,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsCardSheetOpen(true)}
-                      className={cn(
-                        "transition-all hover:scale-[1.02] active:scale-95",
-                        isDark
-                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                      )}
+                      className="transition-all hover:scale-[1.02] active:scale-95 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                     >
                       <BsGrid className="mr-2 h-4 w-4" />
                       {labels.dashboard.manageCards}
@@ -453,12 +413,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       variant="outline"
                       size="sm"
                       onClick={resetLayout}
-                      className={cn(
-                        "transition-all hover:scale-[1.02] active:scale-95",
-                        isDark
-                          ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                          : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                      )}
+                      className="transition-all hover:scale-[1.02] active:scale-95 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                     >
                       {labels.dashboard.resetLayout}
                     </Button>
@@ -470,14 +425,8 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   onClick={() => setIsEditing(!isEditing)}
                   className={cn(
                     "transition-all hover:scale-[1.02] active:scale-95",
-                    isEditing &&
-                      (isDark
-                        ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
-                        : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700"),
-                    !isEditing &&
-                      (isDark
-                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                        : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900")
+                    isEditing && "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
+                    !isEditing && "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                   )}
                 >
                   {isEditing ? labels.dashboard.doneEditing : labels.dashboard.editLayout}
@@ -497,19 +446,7 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 >
                   {getStatusLabel()}
                 </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTheme(isDark ? "light" : "dark")}
-                  className={cn(
-                    "p-2 transition-all hover:scale-110 active:scale-95",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                  )}
-                >
-                  {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-                </Button>
+
               </div>
             </div>
           </FadeIn>
@@ -517,16 +454,13 @@ const ServerOverviewPage = (): JSX.Element | null => {
           <Sheet open={isCardSheetOpen} onOpenChange={setIsCardSheetOpen}>
             <SheetContent
               side="right"
-              className={cn(
-                "w-[400px] overflow-y-auto sm:max-w-[450px]",
-                isDark ? "border-zinc-800 bg-[#0f0f0f]" : "border-zinc-200 bg-white"
-              )}
+              className="w-[400px] overflow-y-auto sm:max-w-[450px] border-zinc-800 bg-[#0f0f0f]"
             >
               <SheetHeader>
-                <SheetTitle className={isDark ? "text-zinc-100" : "text-zinc-900"}>
+                <SheetTitle className="text-zinc-100">
                   {labels.dashboard.availableCards}
                 </SheetTitle>
-                <SheetDescription className={isDark ? "text-zinc-400" : "text-zinc-600"}>
+                <SheetDescription className="text-zinc-400">
                   {labels.dashboard.availableCardsDescription}
                 </SheetDescription>
               </SheetHeader>
@@ -537,23 +471,15 @@ const ServerOverviewPage = (): JSX.Element | null => {
                     <div
                       key={cardId}
                       onClick={() => showCard(cardId)}
-                      className={cn(
-                        "cursor-pointer overflow-hidden transition-all hover:scale-[1.02] hover:shadow-lg",
-                        isDark ? "hover:shadow-black/50" : "hover:shadow-zinc-300/50"
-                      )}
+                      className="cursor-pointer overflow-hidden transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-black/50"
                     >
                       <div className="pointer-events-none h-[120px]">
-                        <CardPreview cardId={cardId} isDark={isDark} server={displayData} />
+                        <CardPreview cardId={cardId} server={displayData} />
                       </div>
                     </div>
                   ))}
                 {hiddenCards.filter((id) => id !== "console").length === 0 && (
-                  <div
-                    className={cn(
-                      "py-8 text-center text-sm",
-                      isDark ? "text-zinc-500" : "text-zinc-400"
-                    )}
-                  >
+                  <div className="py-8 text-center text-sm text-zinc-500">
                     {labels.dashboard.allCardsOnDashboard}
                     <br />
                     {labels.dashboard.removeCardsHint}
@@ -574,7 +500,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
             rowHeight={50}
             gap={16}
             isEditing={isEditing}
-            isDark={isDark}
             isDroppable={true}
             removeConfirmLabels={labels.removeCard}
           >
@@ -583,7 +508,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="instance-name">
                   <InstanceNameCard
                     itemId="instance-name"
-                    isDark={isDark}
                     instanceName={displayData.name}
                   />
                 </GridItem>
@@ -595,7 +519,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="container-controls">
                   <ContainerControlsCard
                     itemId="container-controls"
-                    isDark={isDark}
                     isOffline={isOffline}
                     status={containerControls.status}
                     onStart={containerControls.handleStart}
@@ -614,7 +537,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="system-info">
                   <SystemInformationCard
                     itemId="system-info"
-                    isDark={isDark}
                     nodeData={displayData.node}
                     labels={labels.systemInfo}
                   />
@@ -627,7 +549,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="network-info">
                   <NetworkInfoCard
                     itemId="network-info"
-                    isDark={isDark}
                     networkInfo={{
                       publicIp: displayData.networkConfig.publicIp || "",
                       openPorts: displayData.networkConfig.openPorts,
@@ -651,7 +572,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                     ]}
                     history={displayData.cpu.usage.history}
                     coreUsage={displayData.cpu.coreUsage}
-                    isDark={isDark}
                     isOffline={isOffline}
                     labels={labels.cpu}
                   />
@@ -671,7 +591,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       displayData.memory.type || "",
                     ]}
                     history={displayData.memory.usage.history}
-                    isDark={isDark}
                     isOffline={isOffline}
                     labels={labels.ram}
                   />
@@ -691,7 +610,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                       displayData.disk.type || "",
                     ]}
                     history={displayData.disk.usage.history}
-                    isDark={isDark}
                     isOffline={isOffline}
                     labels={labels.disk}
                   />
@@ -708,7 +626,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                     upload={displayData.network.upload}
                     downloadHistory={displayData.network.downloadHistory}
                     uploadHistory={displayData.network.uploadHistory}
-                    isDark={isDark}
                     isOffline={isOffline}
                     labels={labels.network}
                   />
@@ -722,7 +639,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                   <Console
                     lines={consoleLines}
                     onCommand={handleCommand}
-                    isDark={isDark}
                     isOffline={isOffline}
                     showSendButton={true}
                   />
@@ -735,7 +651,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="players-online">
                   <PlayersOnlineCard
                     itemId="players-online"
-                    isDark={isDark}
                     isOffline={isOffline}
                     players={displayData.gameServer?.players || []}
                     maxPlayers={displayData.gameServer?.maxPlayers || 20}
@@ -751,7 +666,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="container-uptime">
                   <ContainerUptimeCard
                     itemId="container-uptime"
-                    isDark={isDark}
                     isOffline={isOffline}
                     containerUptime={displayData.containerUptime || 0}
                     containerStatus={displayData.status}
@@ -766,7 +680,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
                 <GridItem itemId="recent-logs">
                   <RecentLogsCard
                     itemId="recent-logs"
-                    isDark={isDark}
                     isOffline={isOffline}
                     logs={displayData.recentLogs || []}
                     labels={labels.recentLogs}
@@ -780,7 +693,6 @@ const ServerOverviewPage = (): JSX.Element | null => {
         {/* Extensions */}
         <EulaExtension serverId={serverId} lines={rawConsoleLines} onRestart={restart} />
       </div>
-    </ThemeContext.Provider>
   );
 };
 

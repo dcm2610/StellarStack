@@ -12,10 +12,9 @@ interface InfoTooltipProps {
   content: React.ReactNode;
   className?: string;
   visible?: boolean;
-  isDark?: boolean;
 }
 
-export const InfoTooltip = ({ content, className, visible = true, isDark = true }: InfoTooltipProps) => {
+export const InfoTooltip = ({ content, className, visible = true }: InfoTooltipProps) => {
   if (!visible) return null;
 
   return (
@@ -26,10 +25,10 @@ export const InfoTooltip = ({ content, className, visible = true, isDark = true 
             type="button"
             className={cn(
               "p-1.5 rounded-full transition-colors",
-              isDark ? "bg-zinc-800/60 hover:bg-zinc-700/80" : "bg-zinc-200/60 hover:bg-zinc-300/80"
+              "bg-zinc-800/60 hover:bg-zinc-700/80"
             )}
           >
-            <FiInfo className={cn("w-3.5 h-3.5", isDark ? "text-zinc-400" : "text-zinc-600")} />
+            <FiInfo className={cn("w-3.5 h-3.5", "text-zinc-400")} />
           </button>
         </TooltipTrigger>
         <TooltipContent
@@ -38,16 +37,16 @@ export const InfoTooltip = ({ content, className, visible = true, isDark = true 
           sideOffset={8}
           className={cn(
             "relative p-4 border min-w-[220px] max-w-[300px] rounded-none backdrop-blur-md",
-            isDark ? "bg-[#0f0f0f]/80 border-zinc-200/10" : "bg-white/80 border-zinc-300"
+            "bg-[#0f0f0f]/80 border-zinc-200/10"
           )}
         >
           {/* Corner accents matching UsageCard */}
-          <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-          <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
-          <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", isDark ? "border-zinc-500" : "border-zinc-400")} />
-          <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", isDark ? "border-zinc-500" : "border-zinc-400")} />
+          <div className={cn("absolute top-0 left-0 w-2 h-2 border-t border-l", "border-zinc-500")} />
+          <div className={cn("absolute top-0 right-0 w-2 h-2 border-t border-r", "border-zinc-500")} />
+          <div className={cn("absolute bottom-0 left-0 w-2 h-2 border-b border-l", "border-zinc-500")} />
+          <div className={cn("absolute bottom-0 right-0 w-2 h-2 border-b border-r", "border-zinc-500")} />
 
-          <div className={cn("text-xs space-y-2", isDark ? "text-zinc-300" : "text-zinc-700")}>
+          <div className={cn("text-xs space-y-2", "text-zinc-300")}>
             {content}
           </div>
         </TooltipContent>
@@ -59,14 +58,13 @@ export const InfoTooltip = ({ content, className, visible = true, isDark = true 
 interface InfoRowProps {
   label: string;
   value: string;
-  isDark?: boolean;
 }
 
-export const InfoRow = ({ label, value, isDark = true }: InfoRowProps) => {
+export const InfoRow = ({ label, value }: InfoRowProps) => {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-zinc-500">{label}</span>
-      <span className={cn("font-mono text-right", isDark ? "text-zinc-200" : "text-zinc-800")}>{value}</span>
+      <span className={cn("font-mono text-right", "text-zinc-200")}>{value}</span>
     </div>
   );
 };

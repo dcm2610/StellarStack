@@ -23,7 +23,6 @@ export interface ConfirmationModalProps {
   onConfirm: () => void;
   onCancel?: () => void;
   variant?: "default" | "danger";
-  isDark?: boolean;
   isLoading?: boolean;
 }
 
@@ -38,7 +37,6 @@ export const ConfirmationModal = ({
   onConfirm,
   onCancel,
   variant = "default",
-  isDark = true,
   isLoading = false,
 }: ConfirmationModalProps) => {
   const handleCancel = () => {
@@ -53,11 +51,11 @@ export const ConfirmationModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent isDark={isDark}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle isDark={isDark}>{title}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           {description && (
-            <DialogDescription isDark={isDark}>{description}</DialogDescription>
+            <DialogDescription>{description}</DialogDescription>
           )}
         </DialogHeader>
         {children}
@@ -66,12 +64,7 @@ export const ConfirmationModal = ({
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
-            className={cn(
-              "transition-all text-xs uppercase tracking-wider",
-              isDark
-                ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
-            )}
+            className="transition-all text-xs uppercase tracking-wider border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
           >
             {cancelLabel}
           </Button>
@@ -82,12 +75,8 @@ export const ConfirmationModal = ({
             className={cn(
               "transition-all text-xs uppercase tracking-wider",
               variant === "danger"
-                ? isDark
-                  ? "border-red-900/60 text-red-400/80 hover:text-red-300 hover:border-red-700 hover:bg-red-950/30"
-                  : "border-red-300 text-red-600 hover:text-red-700 hover:border-red-400 hover:bg-red-50"
-                : isDark
-                  ? "border-zinc-600 text-zinc-200 hover:text-zinc-100 hover:border-zinc-400 hover:bg-zinc-800"
-                  : "border-zinc-400 text-zinc-800 hover:text-zinc-900 hover:border-zinc-500 hover:bg-zinc-100"
+                ? "border-red-900/60 text-red-400/80 hover:text-red-300 hover:border-red-700 hover:bg-red-950/30"
+                : "border-zinc-600 text-zinc-200 hover:text-zinc-100 hover:border-zinc-400 hover:bg-zinc-800"
             )}
           >
             {isLoading ? "Loading..." : confirmLabel}

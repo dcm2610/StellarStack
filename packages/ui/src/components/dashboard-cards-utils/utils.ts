@@ -1,5 +1,5 @@
-export const getUsageColor = (percentage: number, isDark: boolean = true): string => {
-  if (percentage === 0) return isDark ? "#71717a" : "#a1a1aa";
+export const getUsageColor = (percentage: number): string => {
+  if (percentage === 0) return "#71717a";
   if (percentage > 75) return "#ef4444";
   if (percentage > 50) return "#f59e0b";
   return "#22c55e";

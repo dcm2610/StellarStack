@@ -2,7 +2,6 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -10,8 +9,6 @@ import { SidebarTrigger } from "@workspace/ui/components/sidebar";
 import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import {
-  BsSun,
-  BsMoon,
   BsPlus,
   BsTrash,
   BsServer,
@@ -42,8 +39,6 @@ const SplitPage = (): JSX.Element | null => {
   const router = useRouter();
   const serverId = params.id as string;
   const { server, isInstalling, refetch } = useServer();
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [children, setChildren] = useState<ChildServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [splitting, setSplitting] = useState(false);
@@ -58,10 +53,6 @@ const SplitPage = (): JSX.Element | null => {
   const [formMemoryPercent, setFormMemoryPercent] = useState(25);
   const [formDiskPercent, setFormDiskPercent] = useState(25);
   const [formCpuPercent, setFormCpuPercent] = useState(25);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (serverId) {
@@ -81,15 +72,11 @@ const SplitPage = (): JSX.Element | null => {
     }
   };
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
   if (isInstalling) {
     return (
       <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -97,7 +84,7 @@ const SplitPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -197,19 +184,19 @@ const SplitPage = (): JSX.Element | null => {
               <SidebarTrigger
                 className={cn(
                   "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                  "text-zinc-400 hover:text-zinc-100"
                 )}
               />
               <div>
                 <h1
                   className={cn(
                     "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
+                    "text-zinc-100"
                   )}
                 >
                   SERVER SPLITTING
                 </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                   Server {serverId} • {children.length} child servers
                 </p>
               </div>
@@ -222,28 +209,14 @@ const SplitPage = (): JSX.Element | null => {
                   onClick={openSplitModal}
                   className={cn(
                     "gap-2 transition-all",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                   )}
                 >
                   <BsPlus className="h-4 w-4" />
                   <span className="text-xs tracking-wider uppercase">Split Server</span>
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                className={cn(
-                  "p-2 transition-all hover:scale-110 active:scale-95",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                )}
-              >
-                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-              </Button>
+
             </div>
           </div>
 
@@ -252,16 +225,14 @@ const SplitPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "mb-6 flex items-center gap-3 border p-4",
-                isDark
-                  ? "border-amber-700/30 bg-amber-950/20 text-amber-200/80"
-                  : "border-amber-200 bg-amber-50 text-amber-800"
+                "border-amber-700/30 bg-amber-950/20 text-amber-200/80"
               )}
             >
               <BsExclamationTriangle className="h-5 w-5 shrink-0" />
               <div>
                 <p className="text-sm font-medium">This is a Child Server</p>
                 <p
-                  className={cn("mt-0.5 text-xs", isDark ? "text-amber-200/60" : "text-amber-600")}
+                  className={cn("mt-0.5 text-xs", "text-amber-200/60")}
                 >
                   Child servers cannot be split further. Only parent servers can create child
                   servers.
@@ -275,41 +246,39 @@ const SplitPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "relative mb-6 border p-6",
-                isDark
-                  ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                  : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
               )}
             >
               {/* Corner decorations */}
               <div
                 className={cn(
                   "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
 
               <h3
                 className={cn(
                   "mb-4 text-xs font-medium tracking-wider uppercase",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
+                  "text-zinc-400"
                 )}
               >
                 Current Resources
@@ -320,18 +289,18 @@ const SplitPage = (): JSX.Element | null => {
                   <div
                     className={cn(
                       "flex h-10 w-10 items-center justify-center border",
-                      isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
+                      "border-zinc-700 bg-zinc-800/50"
                     )}
                   >
                     <BsMemory
-                      className={cn("h-5 w-5", isDark ? "text-blue-400" : "text-blue-600")}
+                      className={cn("h-5 w-5", "text-blue-400")}
                     />
                   </div>
                   <div>
                     <div
                       className={cn(
                         "text-xs tracking-wider uppercase",
-                        isDark ? "text-zinc-500" : "text-zinc-500"
+                        "text-zinc-500"
                       )}
                     >
                       Memory
@@ -339,7 +308,7 @@ const SplitPage = (): JSX.Element | null => {
                     <div
                       className={cn(
                         "text-lg font-light",
-                        isDark ? "text-zinc-100" : "text-zinc-800"
+                        "text-zinc-100"
                       )}
                     >
                       {formatMiB(parentMemory)}
@@ -351,18 +320,18 @@ const SplitPage = (): JSX.Element | null => {
                   <div
                     className={cn(
                       "flex h-10 w-10 items-center justify-center border",
-                      isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
+                      "border-zinc-700 bg-zinc-800/50"
                     )}
                   >
                     <BsHdd
-                      className={cn("h-5 w-5", isDark ? "text-green-400" : "text-green-600")}
+                      className={cn("h-5 w-5", "text-green-400")}
                     />
                   </div>
                   <div>
                     <div
                       className={cn(
                         "text-xs tracking-wider uppercase",
-                        isDark ? "text-zinc-500" : "text-zinc-500"
+                        "text-zinc-500"
                       )}
                     >
                       Disk
@@ -370,7 +339,7 @@ const SplitPage = (): JSX.Element | null => {
                     <div
                       className={cn(
                         "text-lg font-light",
-                        isDark ? "text-zinc-100" : "text-zinc-800"
+                        "text-zinc-100"
                       )}
                     >
                       {formatMiB(parentDisk)}
@@ -382,18 +351,18 @@ const SplitPage = (): JSX.Element | null => {
                   <div
                     className={cn(
                       "flex h-10 w-10 items-center justify-center border",
-                      isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
+                      "border-zinc-700 bg-zinc-800/50"
                     )}
                   >
                     <BsCpu
-                      className={cn("h-5 w-5", isDark ? "text-amber-400" : "text-amber-600")}
+                      className={cn("h-5 w-5", "text-amber-400")}
                     />
                   </div>
                   <div>
                     <div
                       className={cn(
                         "text-xs tracking-wider uppercase",
-                        isDark ? "text-zinc-500" : "text-zinc-500"
+                        "text-zinc-500"
                       )}
                     >
                       CPU
@@ -401,7 +370,7 @@ const SplitPage = (): JSX.Element | null => {
                     <div
                       className={cn(
                         "text-lg font-light",
-                        isDark ? "text-zinc-100" : "text-zinc-800"
+                        "text-zinc-100"
                       )}
                     >
                       {parentCpu}%
@@ -414,56 +383,54 @@ const SplitPage = (): JSX.Element | null => {
 
           {/* Loading State */}
           {loading ? (
-            <div className={cn("py-12 text-center", isDark ? "text-zinc-500" : "text-zinc-400")}>
+            <div className={cn("py-12 text-center", "text-zinc-500")}>
               Loading child servers...
             </div>
           ) : children.length === 0 ? (
             <div
               className={cn(
                 "relative border p-8 text-center",
-                isDark
-                  ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                  : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
               )}
             >
               {/* Corner decorations */}
               <div
                 className={cn(
                   "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
 
               <BsServer
-                className={cn("mx-auto mb-4 h-12 w-12", isDark ? "text-zinc-600" : "text-zinc-400")}
+                className={cn("mx-auto mb-4 h-12 w-12", "text-zinc-600")}
               />
               <h3
                 className={cn(
                   "mb-2 text-lg font-medium",
-                  isDark ? "text-zinc-300" : "text-zinc-700"
+                  "text-zinc-300"
                 )}
               >
                 No Child Servers
               </h3>
-              <p className={cn("mb-4 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+              <p className={cn("mb-4 text-sm", "text-zinc-500")}>
                 {isChildServer
                   ? "Child servers cannot have their own children."
                   : "Split this server to create child servers with dedicated resources."}
@@ -475,9 +442,7 @@ const SplitPage = (): JSX.Element | null => {
                   onClick={openSplitModal}
                   className={cn(
                     "gap-2",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:text-zinc-900"
+                    "border-zinc-700 text-zinc-400 hover:text-zinc-100"
                   )}
                 >
                   <BsPlus className="h-4 w-4" />
@@ -491,7 +456,7 @@ const SplitPage = (): JSX.Element | null => {
               <h3
                 className={cn(
                   "text-xs font-medium tracking-wider uppercase",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
+                  "text-zinc-400"
                 )}
               >
                 Child Servers
@@ -501,34 +466,32 @@ const SplitPage = (): JSX.Element | null => {
                   key={child.id}
                   className={cn(
                     "relative border p-6 transition-all",
-                    isDark
-                      ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                      : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
+                    "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
                   )}
                 >
                   {/* Corner decorations */}
                   <div
                     className={cn(
                       "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
 
@@ -537,11 +500,11 @@ const SplitPage = (): JSX.Element | null => {
                       <div
                         className={cn(
                           "flex h-10 w-10 items-center justify-center border",
-                          isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100"
+                          "border-zinc-700 bg-zinc-800/50"
                         )}
                       >
                         <BsServer
-                          className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-500")}
+                          className={cn("h-5 w-5", "text-zinc-400")}
                         />
                       </div>
                       <div>
@@ -549,7 +512,7 @@ const SplitPage = (): JSX.Element | null => {
                           <h3
                             className={cn(
                               "text-sm font-medium tracking-wider uppercase",
-                              isDark ? "text-zinc-100" : "text-zinc-800"
+                              "text-zinc-100"
                             )}
                           >
                             {child.name}
@@ -558,16 +521,10 @@ const SplitPage = (): JSX.Element | null => {
                             className={cn(
                               "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
                               child.status === "RUNNING"
-                                ? isDark
-                                  ? "border-green-700/50 text-green-400"
-                                  : "border-green-300 text-green-600"
+                                ? "border-green-700/50 text-green-400"
                                 : child.status === "STOPPED"
-                                  ? isDark
-                                    ? "border-zinc-700 text-zinc-500"
-                                    : "border-zinc-300 text-zinc-500"
-                                  : isDark
-                                    ? "border-amber-700/50 text-amber-400"
-                                    : "border-amber-300 text-amber-600"
+                                  ? "border-zinc-700 text-zinc-500"
+                                  : "border-amber-700/50 text-amber-400"
                             )}
                           >
                             {child.status}
@@ -576,7 +533,7 @@ const SplitPage = (): JSX.Element | null => {
                         <div
                           className={cn(
                             "mt-1 flex items-center gap-4 text-xs",
-                            isDark ? "text-zinc-500" : "text-zinc-500"
+                            "text-zinc-500"
                           )}
                         >
                           <span>{formatMiB(child.memory)} RAM</span>
@@ -594,9 +551,7 @@ const SplitPage = (): JSX.Element | null => {
                         onClick={() => router.push(`/servers/${child.id}/overview`)}
                         className={cn(
                           "gap-2 transition-all",
-                          isDark
-                            ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                            : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                          "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                         )}
                       >
                         <span className="text-xs tracking-wider uppercase">Manage</span>
@@ -608,9 +563,7 @@ const SplitPage = (): JSX.Element | null => {
                         onClick={() => openDeleteModal(child)}
                         className={cn(
                           "p-2 transition-all",
-                          isDark
-                            ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
-                            : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
+                          "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
                         )}
                       >
                         <BsTrash className="h-4 w-4" />
@@ -632,7 +585,6 @@ const SplitPage = (): JSX.Element | null => {
         description="Create a child server by allocating a portion of this server's resources."
         onSubmit={handleSplit}
         submitLabel={splitting ? "Splitting..." : "Create Child Server"}
-        isDark={isDark}
         isValid={isFormValid && !splitting}
       >
         <div className="space-y-6">
@@ -640,7 +592,7 @@ const SplitPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Child Server Name
@@ -651,9 +603,7 @@ const SplitPage = (): JSX.Element | null => {
               placeholder="Enter server name"
               className={cn(
                 "transition-all",
-                isDark
-                  ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
-                  : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
+                "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
               )}
             />
           </div>
@@ -666,12 +616,12 @@ const SplitPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-xs tracking-wider uppercase",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
+                    "text-zinc-400"
                   )}
                 >
                   Memory ({formMemoryPercent}%)
                 </label>
-                <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <span className={cn("text-xs", "text-zinc-500")}>
                   {formatMiB(childMemory)} / {formatMiB(parentMemory)}
                 </span>
               </div>
@@ -691,12 +641,12 @@ const SplitPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-xs tracking-wider uppercase",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
+                    "text-zinc-400"
                   )}
                 >
                   Disk ({formDiskPercent}%)
                 </label>
-                <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <span className={cn("text-xs", "text-zinc-500")}>
                   {formatMiB(childDisk)} / {formatMiB(parentDisk)}
                 </span>
               </div>
@@ -716,12 +666,12 @@ const SplitPage = (): JSX.Element | null => {
                 <label
                   className={cn(
                     "text-xs tracking-wider uppercase",
-                    isDark ? "text-zinc-400" : "text-zinc-600"
+                    "text-zinc-400"
                   )}
                 >
                   CPU ({formCpuPercent}%)
                 </label>
-                <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <span className={cn("text-xs", "text-zinc-500")}>
                   {childCpu}% / {parentCpu}%
                 </span>
               </div>
@@ -740,43 +690,43 @@ const SplitPage = (): JSX.Element | null => {
           <div
             className={cn(
               "border p-4",
-              isDark ? "border-zinc-700 bg-zinc-900/50" : "border-zinc-300 bg-zinc-50"
+              "border-zinc-700 bg-zinc-900/50"
             )}
           >
             <div
               className={cn(
                 "mb-3 text-xs font-medium tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               After Split
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className={cn("mb-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <div className={cn("mb-1 text-xs", "text-zinc-500")}>
                   Parent Server
                 </div>
-                <div className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div className={cn("text-sm", "text-zinc-300")}>
                   {formatMiB(remainingMemory)} RAM
                 </div>
-                <div className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div className={cn("text-sm", "text-zinc-300")}>
                   {formatMiB(remainingDisk)} Disk
                 </div>
-                <div className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div className={cn("text-sm", "text-zinc-300")}>
                   {remainingCpu}% CPU
                 </div>
               </div>
               <div>
-                <div className={cn("mb-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <div className={cn("mb-1 text-xs", "text-zinc-500")}>
                   Child Server
                 </div>
-                <div className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div className={cn("text-sm", "text-zinc-300")}>
                   {formatMiB(childMemory)} RAM
                 </div>
-                <div className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div className={cn("text-sm", "text-zinc-300")}>
                   {formatMiB(childDisk)} Disk
                 </div>
-                <div className={cn("text-sm", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                <div className={cn("text-sm", "text-zinc-300")}>
                   {childCpu}% CPU
                 </div>
               </div>
@@ -787,9 +737,7 @@ const SplitPage = (): JSX.Element | null => {
           <div
             className={cn(
               "flex items-start gap-2 border p-3 text-xs",
-              isDark
-                ? "border-amber-700/30 bg-amber-950/20 text-amber-200/80"
-                : "border-amber-200 bg-amber-50 text-amber-800"
+              "border-amber-700/30 bg-amber-950/20 text-amber-200/80"
             )}
           >
             <BsExclamationTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -810,7 +758,6 @@ const SplitPage = (): JSX.Element | null => {
         onConfirm={handleDeleteChild}
         confirmLabel="Delete Server"
         variant="danger"
-        isDark={isDark}
       />
     </div>
   );

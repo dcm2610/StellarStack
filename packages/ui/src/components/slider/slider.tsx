@@ -6,7 +6,6 @@ import * as SliderPrimitive from "@radix-ui/react-slider"
 import { cn } from "@workspace/ui/lib/utils"
 
 interface SliderProps extends React.ComponentProps<typeof SliderPrimitive.Root> {
-  isDark?: boolean
 }
 
 const Slider = ({
@@ -15,7 +14,6 @@ const Slider = ({
   value,
   min = 0,
   max = 100,
-  isDark = true,
   ...props
 }: SliderProps) => {
   const _values = React.useMemo(
@@ -45,14 +43,14 @@ const Slider = ({
         data-slot="slider-track"
         className={cn(
           "relative grow overflow-hidden data-[orientation=horizontal]:h-2 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2",
-          isDark ? "bg-zinc-800" : "bg-zinc-200"
+          "bg-zinc-800"
         )}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
             "absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
-            isDark ? "bg-zinc-500" : "bg-zinc-400"
+            "bg-zinc-500"
           )}
         />
       </SliderPrimitive.Track>
@@ -62,9 +60,7 @@ const Slider = ({
           key={index}
           className={cn(
             "block size-4 shrink-0 border-2 transition-all hover:scale-110 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
-            isDark
-              ? "bg-zinc-200 border-zinc-400 hover:border-zinc-300"
-              : "bg-white border-zinc-400 hover:border-zinc-500"
+            "bg-zinc-200 border-zinc-400 hover:border-zinc-300"
           )}
         />
       ))}

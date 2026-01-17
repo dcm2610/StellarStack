@@ -2,19 +2,17 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { AnimatedBackground } from "@workspace/ui/components/animated-background";
 import { FloatingDots } from "@workspace/ui/components/floating-particles";
-import { BsSun, BsMoon, BsCheck2, BsArrowRight } from "react-icons/bs";
+import { BsCheck2, BsArrowRight } from "react-icons/bs";
 import { setup, ApiError } from "@/lib/api";
 import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 
 const SetupPage = (): JSX.Element | null => {
   const router = useRouter();
-  const { setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [step, setStep] = useState(1);
@@ -47,8 +45,6 @@ const SetupPage = (): JSX.Element | null => {
     };
     checkStatus();
   }, [router]);
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,15 +119,15 @@ const SetupPage = (): JSX.Element | null => {
       <div
         className={cn(
           "relative flex min-h-svh items-center justify-center transition-colors",
-          isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+          "bg-[#0b0b0a]"
         )}
       >
-        <AnimatedBackground isDark={isDark} />
-        <FloatingDots isDark={isDark} count={15} />
+        <AnimatedBackground />
+        <FloatingDots count={15} />
         <div
           className={cn(
             "text-sm tracking-wider uppercase",
-            isDark ? "text-zinc-500" : "text-zinc-400"
+            "text-zinc-500"
           )}
         >
           Loading...
@@ -142,14 +138,12 @@ const SetupPage = (): JSX.Element | null => {
 
   const inputClasses = cn(
     "w-full px-4 py-3 border bg-transparent text-sm transition-colors focus:outline-none",
-    isDark
-      ? "border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:border-zinc-500"
-      : "border-zinc-300 text-zinc-900 placeholder-zinc-400 focus:border-zinc-400"
+    "border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:border-zinc-500"
   );
 
   const labelClasses = cn(
     "block text-xs font-medium uppercase tracking-wider mb-2",
-    isDark ? "text-zinc-400" : "text-zinc-600"
+    "text-zinc-400"
   );
 
   const StepIndicator = ({
@@ -165,16 +159,10 @@ const SetupPage = (): JSX.Element | null => {
       className={cn(
         "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all",
         complete
-          ? isDark
-            ? "border border-emerald-500/50 bg-emerald-500/20 text-emerald-400"
-            : "border border-emerald-500/50 bg-emerald-500/20 text-emerald-600"
+          ? "border border-emerald-500/50 bg-emerald-500/20 text-emerald-400"
           : active
-            ? isDark
-              ? "bg-zinc-100 text-zinc-900"
-              : "bg-zinc-800 text-zinc-100"
-            : isDark
-              ? "border border-zinc-700 bg-zinc-800 text-zinc-500"
-              : "border border-zinc-300 bg-zinc-200 text-zinc-500"
+            ? "bg-zinc-100 text-zinc-900"
+            : "border border-zinc-700 bg-zinc-800 text-zinc-500"
       )}
     >
       {complete ? <BsCheck2 className="h-4 w-4" /> : number}
@@ -185,61 +173,42 @@ const SetupPage = (): JSX.Element | null => {
     <div
       className={cn(
         "relative flex min-h-svh items-center justify-center transition-colors",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
+        "bg-[#0b0b0a]"
       )}
     >
-      <AnimatedBackground isDark={isDark} />
-      <FloatingDots isDark={isDark} count={15} />
-
-      {/* Theme toggle */}
-      <div className="absolute top-6 right-6 z-10">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setTheme(isDark ? "light" : "dark")}
-          className={cn(
-            "p-2 transition-all hover:scale-110 active:scale-95",
-            isDark
-              ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-              : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-          )}
-        >
-          {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-        </Button>
-      </div>
+      <AnimatedBackground />
+      <FloatingDots count={15} />
 
       {/* Setup Card */}
       <div
         className={cn(
           "relative mx-4 w-full max-w-md border p-8 transition-colors",
-          isDark
-            ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-lg shadow-black/20"
-            : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 shadow-lg shadow-zinc-400/20"
+          "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-lg shadow-black/20"
         )}
       >
         {/* Corner decorations */}
         <div
           className={cn(
             "absolute top-0 left-0 h-3 w-3 border-t border-l",
-            isDark ? "border-zinc-500" : "border-zinc-400"
+            "border-zinc-500"
           )}
         />
         <div
           className={cn(
             "absolute top-0 right-0 h-3 w-3 border-t border-r",
-            isDark ? "border-zinc-500" : "border-zinc-400"
+            "border-zinc-500"
           )}
         />
         <div
           className={cn(
             "absolute bottom-0 left-0 h-3 w-3 border-b border-l",
-            isDark ? "border-zinc-500" : "border-zinc-400"
+            "border-zinc-500"
           )}
         />
         <div
           className={cn(
             "absolute right-0 bottom-0 h-3 w-3 border-r border-b",
-            isDark ? "border-zinc-500" : "border-zinc-400"
+            "border-zinc-500"
           )}
         />
 
@@ -249,25 +218,25 @@ const SetupPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full",
-                isDark ? "bg-emerald-500/20" : "bg-emerald-500/20"
+                "bg-emerald-500/20"
               )}
             >
               <BsCheck2
-                className={cn("h-8 w-8", isDark ? "text-emerald-400" : "text-emerald-600")}
+                className={cn("h-8 w-8", "text-emerald-400")}
               />
             </div>
             <h2
               className={cn(
                 "mb-2 text-xl font-light tracking-wider",
-                isDark ? "text-zinc-100" : "text-zinc-800"
+                "text-zinc-100"
               )}
             >
               Setup Complete!
             </h2>
-            <p className={cn("mb-4 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+            <p className={cn("mb-4 text-sm", "text-zinc-500")}>
               Your admin account has been created.
             </p>
-            <p className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
+            <p className={cn("text-xs", "text-zinc-600")}>
               Redirecting to admin panel...
             </p>
           </div>
@@ -278,12 +247,12 @@ const SetupPage = (): JSX.Element | null => {
               <h1
                 className={cn(
                   "text-2xl font-light tracking-wider",
-                  isDark ? "text-zinc-100" : "text-zinc-800"
+                  "text-zinc-100"
                 )}
               >
                 STELLARSTACK
               </h1>
-              <p className={cn("mt-2 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+              <p className={cn("mt-2 text-sm", "text-zinc-500")}>
                 Initial Setup
               </p>
             </div>
@@ -291,9 +260,9 @@ const SetupPage = (): JSX.Element | null => {
             {/* Step indicators */}
             <div className="mb-8 flex items-center justify-center gap-2">
               <StepIndicator number={1} active={step === 1} complete={step > 1} />
-              <div className={cn("h-px w-8", isDark ? "bg-zinc-700" : "bg-zinc-300")} />
+              <div className={cn("h-px w-8", "bg-zinc-700")} />
               <StepIndicator number={2} active={step === 2} complete={step > 2} />
-              <div className={cn("h-px w-8", isDark ? "bg-zinc-700" : "bg-zinc-300")} />
+              <div className={cn("h-px w-8", "bg-zinc-700")} />
               <StepIndicator number={3} active={step === 3} complete={false} />
             </div>
 
@@ -305,12 +274,12 @@ const SetupPage = (): JSX.Element | null => {
                     <h2
                       className={cn(
                         "text-sm font-medium tracking-wider uppercase",
-                        isDark ? "text-zinc-300" : "text-zinc-700"
+                        "text-zinc-300"
                       )}
                     >
                       Welcome
                     </h2>
-                    <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                    <p className={cn("mt-1 text-xs", "text-zinc-500")}>
                       Let&apos;s create your administrator account
                     </p>
                   </div>
@@ -337,12 +306,12 @@ const SetupPage = (): JSX.Element | null => {
                     <h2
                       className={cn(
                         "text-sm font-medium tracking-wider uppercase",
-                        isDark ? "text-zinc-300" : "text-zinc-700"
+                        "text-zinc-300"
                       )}
                     >
                       Account Details
                     </h2>
-                    <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                    <p className={cn("mt-1 text-xs", "text-zinc-500")}>
                       Enter your email address
                     </p>
                   </div>
@@ -369,12 +338,12 @@ const SetupPage = (): JSX.Element | null => {
                     <h2
                       className={cn(
                         "text-sm font-medium tracking-wider uppercase",
-                        isDark ? "text-zinc-300" : "text-zinc-700"
+                        "text-zinc-300"
                       )}
                     >
                       Security
                     </h2>
-                    <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                    <p className={cn("mt-1 text-xs", "text-zinc-500")}>
                       Create a strong password
                     </p>
                   </div>
@@ -422,9 +391,7 @@ const SetupPage = (): JSX.Element | null => {
                     variant="outline"
                     className={cn(
                       "flex-1 py-3 text-xs font-medium tracking-wider uppercase",
-                      isDark
-                        ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                        : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                      "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                     )}
                   >
                     Back
@@ -435,9 +402,7 @@ const SetupPage = (): JSX.Element | null => {
                   disabled={isLoading}
                   className={cn(
                     "flex flex-1 items-center justify-center gap-2 py-3 text-xs font-medium tracking-wider uppercase transition-all",
-                    isDark
-                      ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:bg-zinc-700 disabled:text-zinc-500"
-                      : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 disabled:bg-zinc-300 disabled:text-zinc-500"
+                    "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:bg-zinc-700 disabled:text-zinc-500"
                   )}
                 >
                   {isLoading ? (

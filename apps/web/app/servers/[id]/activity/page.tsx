@@ -2,15 +2,11 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
-import { Button } from "@workspace/ui/components/button";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
 import { Spinner } from "@workspace/ui/components/spinner";
 import {
-  BsSun,
-  BsMoon,
   BsPlayFill,
   BsStopFill,
   BsArrowRepeat,
@@ -261,18 +257,10 @@ const ActivityPage = (): JSX.Element | null => {
   const params = useParams();
   const serverId = params.id as string;
   const { server, isInstalling } = useServer();
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Fetch activity logs
   const { data: activityData, isLoading } = useActivity(serverId, { limit: 50 });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
@@ -286,13 +274,11 @@ const ActivityPage = (): JSX.Element | null => {
     });
   };
 
-  if (!mounted) return null;
-
   if (isInstalling) {
     return (
       <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -300,7 +286,7 @@ const ActivityPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -314,89 +300,32 @@ const ActivityPage = (): JSX.Element | null => {
       <div className="relative p-8">
         <div className="mx-auto max-w-6xl">
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger
-                className={cn(
-                  "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
-                )}
-              />
-              <div>
-                <h1
-                  className={cn(
-                    "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
-                  )}
-                >
-                  ACTIVITY LOG
-                </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
-                  Server {server?.shortId || serverId.slice(0, 8)} • {logs.length} recent activities
-                </p>
-              </div>
+          <div className="mb-8 flex items-center gap-4">
+            <SidebarTrigger className="transition-all hover:scale-110 active:scale-95 text-zinc-400 hover:text-zinc-100" />
+            <div>
+              <h1 className="text-2xl font-light tracking-wider text-zinc-100">
+                ACTIVITY LOG
+              </h1>
+              <p className="mt-1 text-sm text-zinc-500">
+                Server {server?.shortId || serverId.slice(0, 8)} • {logs.length} recent activities
+              </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className={cn(
-                "p-2 transition-all hover:scale-110 active:scale-95",
-                isDark
-                  ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-              )}
-            >
-              {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-            </Button>
           </div>
 
           {/* Activity Timeline */}
-          <div
-            className={cn(
-              "relative border",
-              isDark
-                ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100"
-            )}
-          >
+          <div className="relative border border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]">
             {/* Corner decorations */}
-            <div
-              className={cn(
-                "absolute top-0 left-0 h-3 w-3 border-t border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
-              )}
-            />
-            <div
-              className={cn(
-                "absolute top-0 right-0 h-3 w-3 border-t border-r",
-                isDark ? "border-zinc-500" : "border-zinc-400"
-              )}
-            />
-            <div
-              className={cn(
-                "absolute bottom-0 left-0 h-3 w-3 border-b border-l",
-                isDark ? "border-zinc-500" : "border-zinc-400"
-              )}
-            />
-            <div
-              className={cn(
-                "absolute right-0 bottom-0 h-3 w-3 border-r border-b",
-                isDark ? "border-zinc-500" : "border-zinc-400"
-              )}
-            />
+            <div className="absolute top-0 left-0 h-3 w-3 border-t border-l border-zinc-500" />
+            <div className="absolute top-0 right-0 h-3 w-3 border-t border-r border-zinc-500" />
+            <div className="absolute bottom-0 left-0 h-3 w-3 border-b border-l border-zinc-500" />
+            <div className="absolute right-0 bottom-0 h-3 w-3 border-r border-b border-zinc-500" />
 
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Spinner className="h-8 w-8" />
               </div>
             ) : logs.length === 0 ? (
-              <div
-                className={cn(
-                  "flex flex-col items-center justify-center py-20",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
-                )}
-              >
+              <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                 <BsGear className="mb-4 h-12 w-12 opacity-50" />
                 <p className="text-sm">No activity recorded yet</p>
               </div>
@@ -410,22 +339,19 @@ const ActivityPage = (): JSX.Element | null => {
                   <div
                     key={activity.id}
                     className={cn(
-                      index !== logs.length - 1 &&
-                        (isDark ? "border-b border-zinc-800/50" : "border-b border-zinc-200")
+                      index !== logs.length - 1 && "border-b border-zinc-800/50"
                     )}
                   >
                     <div
                       onClick={() => hasMetadata && toggleExpanded(activity.id)}
                       className={cn(
-                        "flex items-start gap-4 px-6 py-4 transition-colors",
-                        isDark ? "hover:bg-zinc-800/20" : "hover:bg-zinc-50",
+                        "flex items-start gap-4 px-6 py-4 transition-colors hover:bg-zinc-800/20",
                         hasMetadata && "cursor-pointer"
                       )}
                     >
                       <div
                         className={cn(
-                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center border",
-                          isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-300 bg-zinc-100",
+                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center border border-zinc-700 bg-zinc-800/50",
                           config.color
                         )}
                       >
@@ -433,50 +359,28 @@ const ActivityPage = (): JSX.Element | null => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "text-sm font-medium",
-                              isDark ? "text-zinc-200" : "text-zinc-700"
-                            )}
-                          >
+                          <span className="text-sm font-medium text-zinc-200">
                             {config.label}
                           </span>
                           {activity.ip && (
-                            <span
-                              className={cn(
-                                "border px-2 py-0.5 text-xs",
-                                isDark
-                                  ? "border-zinc-700 text-zinc-500"
-                                  : "border-zinc-300 text-zinc-500"
-                              )}
-                            >
+                            <span className="border border-zinc-700 px-2 py-0.5 text-xs text-zinc-500">
                               {activity.ip}
                             </span>
                           )}
                         </div>
                         {!!activity.metadata?.command && (
-                          <p
-                            className={cn(
-                              "mt-1 font-mono text-xs",
-                              isDark ? "text-zinc-500" : "text-zinc-400"
-                            )}
-                          >
+                          <p className="mt-1 font-mono text-xs text-zinc-500">
                             {String(activity.metadata.command)}
                           </p>
                         )}
                         {!!activity.metadata?.path && !activity.metadata?.command && (
-                          <p
-                            className={cn(
-                              "mt-1 font-mono text-xs",
-                              isDark ? "text-zinc-500" : "text-zinc-400"
-                            )}
-                          >
+                          <p className="mt-1 font-mono text-xs text-zinc-500">
                             {String(activity.metadata.path)}
                           </p>
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <span className={cn("text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}>
+                        <span className="text-xs text-zinc-600">
                           {formatTimestamp(activity.timestamp)}
                         </span>
                         {hasMetadata && (
@@ -484,9 +388,7 @@ const ActivityPage = (): JSX.Element | null => {
                             animate={{ rotate: isExpanded ? 180 : 0 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <BsChevronDown
-                              className={cn("h-4 w-4", isDark ? "text-zinc-600" : "text-zinc-400")}
-                            />
+                            <BsChevronDown className="h-4 w-4 text-zinc-600" />
                           </motion.div>
                         )}
                       </div>
@@ -505,38 +407,15 @@ const ActivityPage = (): JSX.Element | null => {
                           <div className="relative px-6 pt-1 pb-4">
                             {/* Arrow connector - positioned below the icon */}
                             <div className="absolute top-0 left-[2.2rem] flex items-start gap-1">
-                              <BsArrowReturnRight
-                                className={cn(
-                                  "mt-1 h-4 w-4",
-                                  isDark ? "text-zinc-600" : "text-zinc-400"
-                                )}
-                              />
+                              <BsArrowReturnRight className="mt-1 h-4 w-4 text-zinc-600" />
                             </div>
-                            <div
-                              className={cn(
-                                "ml-8",
-                                "grid grid-cols-2 gap-4 border p-4 md:grid-cols-3 lg:grid-cols-4",
-                                isDark
-                                  ? "border-zinc-800 bg-zinc-900/50"
-                                  : "border-zinc-200 bg-white"
-                              )}
-                            >
+                            <div className="ml-8 grid grid-cols-2 gap-4 border border-zinc-800 bg-zinc-900/50 p-4 md:grid-cols-3 lg:grid-cols-4">
                               {Object.entries(activity.metadata).map(([key, value]) => (
                                 <div key={key}>
-                                  <span
-                                    className={cn(
-                                      "block text-[10px] font-medium tracking-wider uppercase",
-                                      isDark ? "text-zinc-500" : "text-zinc-400"
-                                    )}
-                                  >
+                                  <span className="block text-[10px] font-medium tracking-wider uppercase text-zinc-500">
                                     {key.replace(/_/g, " ")}
                                   </span>
-                                  <span
-                                    className={cn(
-                                      "mt-0.5 block font-mono text-xs break-all",
-                                      isDark ? "text-zinc-300" : "text-zinc-700"
-                                    )}
-                                  >
+                                  <span className="mt-0.5 block font-mono text-xs break-all text-zinc-300">
                                     {typeof value === "object"
                                       ? JSON.stringify(value)
                                       : String(value)}
@@ -556,9 +435,7 @@ const ActivityPage = (): JSX.Element | null => {
 
           {/* Pagination info */}
           {activityData && activityData.total > 0 && (
-            <div
-              className={cn("mt-4 text-center text-xs", isDark ? "text-zinc-600" : "text-zinc-400")}
-            >
+            <div className="mt-4 text-center text-xs text-zinc-600">
               Showing {logs.length} of {activityData.total} activities
             </div>
           )}

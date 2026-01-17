@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useTheme } from "next-themes";
 import {
   Dialog,
   DialogContent,
@@ -36,8 +35,6 @@ export const EulaExtension = ({ serverId, lines, onRestart }: EulaExtensionProps
   const [showDialog, setShowDialog] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [hasShownDialog, setHasShownDialog] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
 
   // Check console lines for EULA-related messages
   const checkForEulaRequired = useCallback(() => {
@@ -115,37 +112,28 @@ export const EulaExtension = ({ serverId, lines, onRestart }: EulaExtensionProps
 
   return (
     <Dialog open={showDialog} onOpenChange={setShowDialog}>
-      <DialogContent isDark={isDark} className="max-w-lg">
+      <DialogContent className="max-w-lg bg-zinc-900/95 border-zinc-800 text-zinc-100">
         <DialogHeader>
-          <DialogTitle isDark={isDark}>Minecraft EULA Required</DialogTitle>
-          <DialogDescription isDark={isDark} className="pt-2">
+          <DialogTitle>Minecraft EULA Required</DialogTitle>
+          <DialogDescription className="pt-2 text-zinc-400">
             To run a Minecraft server, you must accept the Minecraft End User License Agreement.
           </DialogDescription>
         </DialogHeader>
 
-        <div className={cn(
-          "p-4 text-sm space-y-3",
-          isDark ? "bg-zinc-900/50 border border-zinc-800" : "bg-zinc-100 border border-zinc-200"
-        )}>
-          <p className={isDark ? "text-zinc-300" : "text-zinc-700"}>
+        <div className="p-4 text-sm space-y-3 bg-zinc-900/50 border border-zinc-800">
+          <p className="text-zinc-300">
             By clicking &quot;Accept&quot;, you agree to the{" "}
             <a
               href="https://aka.ms/MinecraftEULA"
               target="_blank"
               rel="noopener noreferrer"
-              className={cn(
-                "underline hover:no-underline",
-                isDark ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"
-              )}
+              className="underline hover:no-underline text-blue-400 hover:text-blue-300"
             >
               Minecraft EULA
             </a>
             .
           </p>
-          <p className={cn(
-            "text-xs",
-            isDark ? "text-zinc-500" : "text-zinc-500"
-          )}>
+          <p className="text-xs text-zinc-500">
             This will update the eula.txt file and restart your server.
           </p>
         </div>
@@ -155,23 +143,14 @@ export const EulaExtension = ({ serverId, lines, onRestart }: EulaExtensionProps
             variant="outline"
             onClick={handleDecline}
             disabled={isAccepting}
-            className={cn(
-              isDark
-                ? "border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
-                : "border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-400"
-            )}
+            className="border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:border-zinc-500"
           >
             Decline
           </Button>
           <Button
             onClick={handleAcceptEula}
             disabled={isAccepting}
-            className={cn(
-              "transition-all",
-              isDark
-                ? "bg-green-600 hover:bg-green-700 text-white"
-                : "bg-green-600 hover:bg-green-700 text-white"
-            )}
+            className="transition-all bg-green-600 hover:bg-green-700 text-white"
           >
             {isAccepting ? "Accepting..." : "Accept EULA"}
           </Button>

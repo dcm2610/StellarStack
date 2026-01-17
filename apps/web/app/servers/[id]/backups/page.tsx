@@ -2,7 +2,6 @@
 
 import { useState, useEffect, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
@@ -12,8 +11,6 @@ import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import { Spinner } from "@workspace/ui/components/spinner";
 import {
-  BsSun,
-  BsMoon,
   BsCloudDownload,
   BsDownload,
   BsTrash,
@@ -33,8 +30,6 @@ const BackupsPage = (): JSX.Element | null => {
   const params = useParams();
   const serverId = params.id as string;
   const { server, isInstalling } = useServer();
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
 
   // React Query hooks
   const { data: backups = [], isLoading } = useBackups(serverId);
@@ -49,10 +44,6 @@ const BackupsPage = (): JSX.Element | null => {
   // Form states
   const [backupName, setBackupName] = useState("");
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return "0 B";
     const k = 1024;
@@ -60,8 +51,6 @@ const BackupsPage = (): JSX.Element | null => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
 
   // Check if a backup is currently in progress
   const isBackupInProgress = backups.some(
@@ -74,12 +63,10 @@ const BackupsPage = (): JSX.Element | null => {
   const completedBackups = backups.filter((b) => b.status === "COMPLETED").length;
   const canCreateBackup = !backupsDisabled && !isBackupInProgress && completedBackups < backupLimit;
 
-  if (!mounted) return null;
-
   if (isInstalling) {
     return (
       <div className="min-h-svh">
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -87,7 +74,7 @@ const BackupsPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -201,19 +188,19 @@ const BackupsPage = (): JSX.Element | null => {
               <SidebarTrigger
                 className={cn(
                   "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                  "text-zinc-400 hover:text-zinc-100"
                 )}
               />
               <div>
                 <h1
                   className={cn(
                     "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
+                    "text-zinc-100"
                   )}
                 >
                   BACKUPS
                 </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                   {server?.name || `Server ${serverId}`} • {completedBackups} / {backupLimit} backup
                   {backupLimit !== 1 ? "s" : ""} used
                 </p>
@@ -236,28 +223,13 @@ const BackupsPage = (): JSX.Element | null => {
                   className={cn(
                     "gap-2 transition-all",
                     !canCreateBackup && "cursor-not-allowed opacity-50",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                   )}
                 >
                   <BsPlus className="h-4 w-4" />
                   <span className="text-xs tracking-wider uppercase">Create Backup</span>
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                className={cn(
-                  "p-2 transition-all hover:scale-110 active:scale-95",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                )}
-              >
-                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
 
@@ -267,7 +239,7 @@ const BackupsPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "flex items-center justify-center gap-2 py-12 text-center text-sm",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
+                  "text-zinc-500"
                 )}
               >
                 <Spinner className="h-4 w-4" />
@@ -277,7 +249,7 @@ const BackupsPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border py-12 text-center",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  "border-zinc-800 text-zinc-500"
                 )}
               >
                 <p className="mb-2">Backups are not available for this server.</p>
@@ -287,7 +259,7 @@ const BackupsPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border py-12 text-center",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  "border-zinc-800 text-zinc-500"
                 )}
               >
                 No backups found. Create your first backup.
@@ -304,34 +276,32 @@ const BackupsPage = (): JSX.Element | null => {
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className={cn(
                       "relative border p-6",
-                      isDark
-                        ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] hover:border-zinc-700"
-                        : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 hover:border-zinc-400"
+                      "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] hover:border-zinc-700"
                     )}
                   >
                     {/* Corner decorations */}
                     <div
                       className={cn(
                         "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
                     <div
                       className={cn(
                         "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
                     <div
                       className={cn(
                         "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
                     <div
                       className={cn(
                         "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                        isDark ? "border-zinc-500" : "border-zinc-400"
+                        "border-zinc-500"
                       )}
                     />
 
@@ -343,7 +313,7 @@ const BackupsPage = (): JSX.Element | null => {
                             <h3
                               className={cn(
                                 "text-sm font-medium tracking-wider uppercase",
-                                isDark ? "text-zinc-100" : "text-zinc-800"
+                                "text-zinc-100"
                               )}
                             >
                               {backup.name}
@@ -352,9 +322,7 @@ const BackupsPage = (): JSX.Element | null => {
                               <span
                                 className={cn(
                                   "flex items-center gap-1 border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                                  isDark
-                                    ? "border-amber-500/50 text-amber-400"
-                                    : "border-amber-400 text-amber-600"
+                                  "border-amber-500/50 text-amber-400"
                                 )}
                               >
                                 <BsLock className="h-3 w-3" />
@@ -366,17 +334,11 @@ const BackupsPage = (): JSX.Element | null => {
                                 className={cn(
                                   "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
                                   backup.status === "IN_PROGRESS" &&
-                                    (isDark
-                                      ? "border-blue-500/50 text-blue-400"
-                                      : "border-blue-400 text-blue-600"),
+                                    "border-blue-500/50 text-blue-400",
                                   backup.status === "RESTORING" &&
-                                    (isDark
-                                      ? "border-amber-500/50 text-amber-400"
-                                      : "border-amber-400 text-amber-600"),
+                                    "border-amber-500/50 text-amber-400",
                                   backup.status === "FAILED" &&
-                                    (isDark
-                                      ? "border-red-500/50 text-red-400"
-                                      : "border-red-400 text-red-600")
+                                    "border-red-500/50 text-red-400"
                                 )}
                               >
                                 {backup.status.replace("_", " ")}
@@ -386,7 +348,7 @@ const BackupsPage = (): JSX.Element | null => {
                           <div
                             className={cn(
                               "mt-1 flex items-center gap-4 text-xs",
-                              isDark ? "text-zinc-500" : "text-zinc-500"
+                              "text-zinc-500"
                             )}
                           >
                             <span>{formatFileSize(backup.size)}</span>
@@ -403,9 +365,7 @@ const BackupsPage = (): JSX.Element | null => {
                           disabled={lock.isPending}
                           className={cn(
                             "p-2 transition-all",
-                            isDark
-                              ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                              : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                            "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                           )}
                           title={backup.isLocked ? "Unlock backup" : "Lock backup"}
                         >
@@ -422,9 +382,7 @@ const BackupsPage = (): JSX.Element | null => {
                           disabled={getDownloadToken.isPending}
                           className={cn(
                             "gap-2 transition-all",
-                            isDark
-                              ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                              : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                            "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                           )}
                           title="Download backup"
                         >
@@ -437,9 +395,7 @@ const BackupsPage = (): JSX.Element | null => {
                           onClick={() => openRestoreModal(backup)}
                           className={cn(
                             "gap-2 transition-all",
-                            isDark
-                              ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                              : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                            "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                           )}
                         >
                           <BsCloudDownload className="h-4 w-4" />
@@ -454,9 +410,7 @@ const BackupsPage = (): JSX.Element | null => {
                             "p-2 transition-all",
                             backup.isLocked
                               ? "cursor-not-allowed opacity-30"
-                              : isDark
-                                ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
-                                : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
+                              : "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
                           )}
                         >
                           <BsTrash className="h-4 w-4" />
@@ -479,7 +433,6 @@ const BackupsPage = (): JSX.Element | null => {
         description="Create a new manual backup of your server."
         onSubmit={handleCreate}
         submitLabel={create.isPending ? "Creating..." : "Create Backup"}
-        isDark={isDark}
         isValid={!create.isPending}
         isLoading={create.isPending}
       >
@@ -488,7 +441,7 @@ const BackupsPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "mb-2 block text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Backup Name (Optional)
@@ -500,12 +453,10 @@ const BackupsPage = (): JSX.Element | null => {
               disabled={create.isPending}
               className={cn(
                 "transition-all",
-                isDark
-                  ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
-                  : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
+                "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
               )}
             />
-            <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+            <p className={cn("mt-1 text-xs", "text-zinc-500")}>
               Leave empty for auto-generated name
             </p>
           </div>
@@ -521,7 +472,6 @@ const BackupsPage = (): JSX.Element | null => {
         onConfirm={handleRestore}
         confirmLabel="Restore"
         variant="danger"
-        isDark={isDark}
         isLoading={restore.isPending}
       />
 
@@ -534,7 +484,6 @@ const BackupsPage = (): JSX.Element | null => {
         onConfirm={handleDelete}
         confirmLabel="Delete"
         variant="danger"
-        isDark={isDark}
         isLoading={remove.isPending}
       />
     </div>

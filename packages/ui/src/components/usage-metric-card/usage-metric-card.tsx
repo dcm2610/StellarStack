@@ -11,7 +11,6 @@ import { getUsageColor } from "../dashboard-cards-utils";
 import type { UsageMetricCardProps, UsageMetricCardLabels } from "../dashboard-cards-types";
 
 interface UsageMetricCardComponentProps extends UsageMetricCardProps {
-  isDark: boolean;
   isOffline: boolean;
   labels: UsageMetricCardLabels;
   /** Custom primary display value (e.g., "0.01 GiB / 70 GiB") - if provided, replaces percentage display */
@@ -25,7 +24,6 @@ export const UsageMetricCard = ({
   tooltipContent,
   history,
   color,
-  isDark,
   isOffline,
   labels,
   primaryValue,
@@ -38,13 +36,13 @@ export const UsageMetricCard = ({
   const isCompact = size === "xs" || size === "sm" || size === "xxs" || size === "xxs-wide";
   const isLarge = size === "lg" || size === "xl";
 
-  const sparklineColor = isOffline ? (isDark ? "#71717a" : "#a1a1aa") : (color || getUsageColor(percentage, isDark));
+  const sparklineColor = isOffline ? "#71717a" : (color || getUsageColor(percentage));
 
   if (isXxs) {
     return (
-      <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
-        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.title}</span>
-        <span className={cn(primaryValue ? "text-base" : "text-xl", "font-mono", isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"))}>
+      <UsageCard className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
+        <span className={cn("text-xs font-medium uppercase", "text-zinc-400")}>{labels.title}</span>
+        <span className={cn(primaryValue ? "text-base" : "text-xl", "font-mono", isOffline ? "text-zinc-500" : "text-zinc-100")}>
           {isOffline ? "--" : primaryValue ? primaryValue : <AnimatedNumber value={percentage} suffix="%" />}
         </span>
       </UsageCard>
@@ -52,11 +50,11 @@ export const UsageMetricCard = ({
   }
 
   return (
-    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4", isOffline && "opacity-60")}>
+    <UsageCard className={cn("h-full", isXs && "p-4", isOffline && "opacity-60")}>
       {tooltipContent && (
-        <InfoTooltip content={tooltipContent} visible={!isEditing} isDark={isDark} />
+        <InfoTooltip content={tooltipContent} visible={!isEditing} />
       )}
-      <UsageCardTitle isDark={isDark} className={cn(
+      <UsageCardTitle className={cn(
         "opacity-80",
         isXs ? "text-xs mb-2" : isCompact ? "text-xs mb-4" : "text-md"
       )}>
@@ -64,7 +62,7 @@ export const UsageMetricCard = ({
       </UsageCardTitle>
       <UsageCardContent className={isXs ? "space-y-1" : undefined}>
         <span className={cn(
-          isOffline ? (isDark ? "text-zinc-500" : "text-zinc-400") : (isDark ? "text-zinc-100" : "text-zinc-800"),
+          isOffline ? "text-zinc-500" : "text-zinc-100",
           primaryValue
             ? (isXs ? "text-lg" : isCompact ? "text-xl" : isLarge ? "text-3xl" : "text-2xl")
             : (isXs ? "text-xl" : isCompact ? "text-2xl" : isLarge ? "text-5xl" : "text-4xl")
@@ -74,7 +72,7 @@ export const UsageMetricCard = ({
         {!isXs && (
           <div className={cn(
             "tracking-wide",
-            isDark ? "text-zinc-400" : "text-zinc-600",
+            "text-zinc-400",
             isCompact ? "text-xs mt-2" : "text-sm mt-3"
           )}>
             {details.map((detail, i) => (
@@ -84,7 +82,7 @@ export const UsageMetricCard = ({
         )}
         {history && (
           <div className={cn("mt-auto", isCompact ? "pt-2" : "pt-4")}>
-            <Sparkline data={history} color={sparklineColor} height={isXs ? 40 : isCompact ? 50 : 60} isDark={isDark} />
+            <Sparkline data={history} color={sparklineColor} height={isXs ? 40 : isCompact ? 50 : 60} />
           </div>
         )}
       </UsageCardContent>

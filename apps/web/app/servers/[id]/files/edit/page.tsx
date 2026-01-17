@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { ArrowLeft, Save, Loader2, File } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
@@ -16,7 +15,6 @@ export default function FileEditPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   const serverId = params.id as string;
@@ -93,7 +91,6 @@ export default function FileEditPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasChanges]);
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
   const language = detectLanguage(fileName);
 
   const fileExtension = fileName.split(".").pop()?.toLowerCase() || "";
@@ -113,7 +110,7 @@ export default function FileEditPage() {
   }
 
   return (
-    <div className={cn("relative min-h-screen", isDark ? "bg-black" : "bg-zinc-50")}>
+    <div className={cn("relative min-h-screen", "bg-black")}>
       {/* Background is now rendered in the layout for persistence */}
 
       <div className="relative z-10 flex h-screen flex-col">
@@ -122,7 +119,7 @@ export default function FileEditPage() {
           <header
             className={cn(
               "flex items-center justify-between border-b px-6 py-4",
-              isDark ? "border-zinc-800 bg-black/50" : "border-zinc-200 bg-white/50"
+              "border-zinc-800 bg-black/50"
             )}
           >
             <div className="flex items-center gap-4">
@@ -130,9 +127,7 @@ export default function FileEditPage() {
                 onClick={handleBack}
                 className={cn(
                   "p-2 transition-colors",
-                  isDark
-                    ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                 )}
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -142,18 +137,18 @@ export default function FileEditPage() {
                 <div
                   className={cn(
                     "border p-2",
-                    isDark ? "border-zinc-700 bg-zinc-800" : "border-zinc-300 bg-zinc-100"
+                    "border-zinc-700 bg-zinc-800"
                   )}
                 >
-                  <File className={cn("h-5 w-5", isDark ? "text-zinc-400" : "text-zinc-600")} />
+                  <File className={cn("h-5 w-5", "text-zinc-400")} />
                 </div>
                 <div>
                   <h1
-                    className={cn("text-lg font-medium", isDark ? "text-white" : "text-zinc-900")}
+                    className={cn("text-lg font-medium", "text-white")}
                   >
                     {fileName}
                   </h1>
-                  <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  <p className={cn("text-xs", "text-zinc-500")}>
                     {filePath}
                   </p>
                 </div>
@@ -163,7 +158,7 @@ export default function FileEditPage() {
                 <span
                   className={cn(
                     "border px-2 py-1 text-xs",
-                    isDark ? "border-zinc-600 text-zinc-400" : "border-zinc-400 text-zinc-600"
+                    "border-zinc-600 text-zinc-400"
                   )}
                 >
                   Unsaved changes
@@ -175,7 +170,7 @@ export default function FileEditPage() {
               <span
                 className={cn(
                   "border px-2 py-1 text-xs tracking-wider uppercase",
-                  isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
+                  "border-zinc-700 text-zinc-400"
                 )}
               >
                 {language}
@@ -187,12 +182,8 @@ export default function FileEditPage() {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors",
                   hasChanges && !write.isPending
-                    ? isDark
-                      ? "bg-white text-black hover:bg-zinc-200"
-                      : "bg-zinc-900 text-white hover:bg-zinc-800"
-                    : isDark
-                      ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
-                      : "cursor-not-allowed bg-zinc-200 text-zinc-400"
+                    ? "bg-white text-black hover:bg-zinc-200"
+                    : "cursor-not-allowed bg-zinc-800 text-zinc-500"
                 )}
               >
                 {write.isPending ? (
@@ -214,19 +205,17 @@ export default function FileEditPage() {
             </div>
           ) : error ? (
             <div className="flex h-full flex-col items-center justify-center gap-4">
-              <p className={cn("text-lg", isDark ? "text-red-400" : "text-red-600")}>
+              <p className={cn("text-lg", "text-red-400")}>
                 Failed to load file
               </p>
               <button
                 onClick={handleBack}
                 className={cn(
                   "px-4 py-2 text-sm",
-                  isDark
-                    ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                    : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"
+                  "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                 )}
               >
-                Go back
+                Go Back
               </button>
             </div>
           ) : isMedia ? (
@@ -278,7 +267,6 @@ export default function FileEditPage() {
               value={content}
               onChange={handleContentChange}
               filename={fileName}
-              isDark={isDark}
               height="100%"
               className="h-full rounded-none border-0"
             />

@@ -7,12 +7,11 @@ interface SparklineProps {
   data: number[];
   color?: string;
   height?: number;
-  isDark?: boolean;
   minDomain?: number;
   maxDomain?: number;
 }
 
-export const Sparkline = ({ data, color = "#22c55e", height = 32, isDark = true, minDomain = 0, maxDomain = 100 }: SparklineProps) => {
+export const Sparkline = ({ data, color = "#22c55e", height = 32, minDomain = 0, maxDomain = 100 }: SparklineProps) => {
   const uniqueId = useId();
   // Add baseline point at start to ensure chart anchors at 0
   const chartData = data.map((value, index) => ({ value, index }));
@@ -20,7 +19,7 @@ export const Sparkline = ({ data, color = "#22c55e", height = 32, isDark = true,
   // Create gradient colors based on the main color
   const gradientId = `sparkline-gradient-${uniqueId}`;
   const patternId = `sparkline-dots-${uniqueId}`;
-  const dotColor = isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)";
+  const dotColor = "rgba(255, 255, 255, 0.15)";
 
   return (
     <div style={{ height }} className="w-full relative">
@@ -38,7 +37,7 @@ export const Sparkline = ({ data, color = "#22c55e", height = 32, isDark = true,
           <AreaChart data={chartData} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={isDark ? 0.3 : 0.4} />
+                <stop offset="0%" stopColor={color} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -65,7 +64,6 @@ interface DualSparklineProps {
   color1?: string;
   color2?: string;
   height?: number;
-  isDark?: boolean;
   minDomain?: number;
   maxDomain?: number;
 }
@@ -76,7 +74,6 @@ export const DualSparkline = ({
   color1 = "#3b82f6",
   color2 = "#a855f7",
   height = 32,
-  isDark = true,
   minDomain = 0,
   maxDomain = 100
 }: DualSparklineProps) => {
@@ -90,7 +87,7 @@ export const DualSparkline = ({
   const gradientId1 = `dual-sparkline-gradient-1-${uniqueId}`;
   const gradientId2 = `dual-sparkline-gradient-2-${uniqueId}`;
   const patternId = `dual-sparkline-dots-${uniqueId}`;
-  const dotColor = isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)";
+  const dotColor = "rgba(255, 255, 255, 0.15)";
 
   return (
     <div style={{ height }} className="w-full relative">
@@ -108,11 +105,11 @@ export const DualSparkline = ({
           <ComposedChart data={chartData} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
             <defs>
               <linearGradient id={gradientId1} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color1} stopOpacity={isDark ? 0.25 : 0.35} />
+                <stop offset="0%" stopColor={color1} stopOpacity={0.25} />
                 <stop offset="100%" stopColor={color1} stopOpacity={0} />
               </linearGradient>
               <linearGradient id={gradientId2} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color2} stopOpacity={isDark ? 0.25 : 0.35} />
+                <stop offset="0%" stopColor={color2} stopOpacity={0.25} />
                 <stop offset="100%" stopColor={color2} stopOpacity={0} />
               </linearGradient>
             </defs>

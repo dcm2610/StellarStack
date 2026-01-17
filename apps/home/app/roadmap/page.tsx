@@ -2,7 +2,6 @@
 
 import { useRef, type JSX } from "react";
 import Link from "next/link";
-import { useTheme as useNextTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
@@ -16,7 +15,6 @@ import {
 } from "react-icons/bs";
 import { Footer } from "@/components/Footer";
 import { Navigation } from "@/components/Navigation";
-import { useIsMounted } from "@/hooks/useIsMounted";
 
 type RoadmapStatus = "completed" | "in-progress" | "planned";
 
@@ -119,21 +117,11 @@ const AnimatedSection = ({ children, className, delay = 0 }: { children: React.R
   );
 };
 
-const RoadmapPage = (): JSX.Element | null => {
-  const { resolvedTheme } = useNextTheme();
-  const mounted = useIsMounted();
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
+const RoadmapPage = (): JSX.Element => {
   return (
-    <div className={cn(
-      "min-h-svh transition-colors relative",
-      isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-    )}>
-      <AnimatedBackground isDark={isDark} />
-      <FloatingDots isDark={isDark} count={20} />
+    <div className="min-h-svh transition-colors relative bg-[#0b0b0a]">
+      <AnimatedBackground />
+      <FloatingDots count={20} />
       <Navigation />
 
       {/* Hero Section */}
@@ -144,10 +132,7 @@ const RoadmapPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className={cn(
-                "text-4xl md:text-6xl font-extralight tracking-tight mb-6",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
+              className="text-4xl md:text-6xl font-extralight tracking-tight mb-6 text-zinc-100"
             >
               Roadmap
             </motion.h1>
@@ -155,10 +140,7 @@ const RoadmapPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className={cn(
-                "text-lg md:text-xl max-w-2xl mx-auto leading-relaxed",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
+              className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed text-zinc-400"
             >
               Our development timeline and upcoming features. Follow along as we build the future of game server management.
             </motion.p>
@@ -174,7 +156,7 @@ const RoadmapPage = (): JSX.Element | null => {
             {Object.entries(statusConfig).map(([key, config]) => (
               <div key={key} className="flex items-center gap-2">
                 <config.icon className={cn("w-4 h-4", config.color)} />
-                <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+                <span className="text-sm text-zinc-400">
                   {config.label}
                 </span>
               </div>
@@ -189,13 +171,10 @@ const RoadmapPage = (): JSX.Element | null => {
           {roadmap.map((quarter, qi) => (
             <AnimatedSection key={quarter.quarter} delay={qi * 0.1} className="mb-16 last:mb-0">
               <div className="flex items-center gap-4 mb-6">
-                <div className={cn(
-                  "px-4 py-2 border font-mono text-sm",
-                  isDark ? "border-zinc-700 bg-zinc-800/50 text-zinc-300" : "border-zinc-300 bg-zinc-100 text-zinc-700"
-                )}>
+                <div className="px-4 py-2 border font-mono text-sm border-zinc-700 bg-zinc-800/50 text-zinc-300">
                   {quarter.quarter}
                 </div>
-                <div className={cn("flex-1 h-px", isDark ? "bg-zinc-800" : "bg-zinc-200")} />
+                <div className="flex-1 h-px bg-zinc-800" />
               </div>
 
               <div className="space-y-4">
@@ -204,28 +183,17 @@ const RoadmapPage = (): JSX.Element | null => {
                   return (
                     <div
                       key={ii}
-                      className={cn(
-                        "relative p-6 border transition-all",
-                        isDark
-                          ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
-                          : "border-zinc-200 bg-white hover:border-zinc-300"
-                      )}
+                      className="relative p-6 border transition-all border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <config.icon className={cn("w-4 h-4", config.color)} />
-                            <h3 className={cn(
-                              "text-base font-medium",
-                              isDark ? "text-zinc-100" : "text-zinc-900"
-                            )}>
+                            <h3 className="text-base font-medium text-zinc-100">
                               {item.title}
                             </h3>
                           </div>
-                          <p className={cn(
-                            "text-sm pl-7",
-                            isDark ? "text-zinc-400" : "text-zinc-600"
-                          )}>
+                          <p className="text-sm pl-7 text-zinc-400">
                             {item.description}
                           </p>
                         </div>
@@ -250,16 +218,10 @@ const RoadmapPage = (): JSX.Element | null => {
       {/* CTA Section */}
       <section className="relative py-24 px-6">
         <AnimatedSection className="max-w-4xl mx-auto text-center">
-          <h2 className={cn(
-            "text-3xl md:text-4xl font-extralight tracking-tight mb-6",
-            isDark ? "text-zinc-100" : "text-zinc-900"
-          )}>
+          <h2 className="text-3xl md:text-4xl font-extralight tracking-tight mb-6 text-zinc-100">
             Want to Contribute?
           </h2>
-          <p className={cn(
-            "text-lg mb-10 max-w-xl mx-auto",
-            isDark ? "text-zinc-400" : "text-zinc-600"
-          )}>
+          <p className="text-lg mb-10 max-w-xl mx-auto text-zinc-400">
             StellarStack is open source. Join our community and help shape the future.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -269,12 +231,7 @@ const RoadmapPage = (): JSX.Element | null => {
               rel="noopener noreferrer"
             >
               <Button
-                className={cn(
-                  "text-sm uppercase tracking-wider px-8 py-6 gap-2 transition-all hover:scale-[1.02]",
-                  isDark
-                    ? "bg-zinc-100 text-zinc-900 hover:bg-white"
-                    : "bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-                )}
+                className="text-sm uppercase tracking-wider px-8 py-6 gap-2 transition-all hover:scale-[1.02] bg-zinc-100 text-zinc-900 hover:bg-white"
               >
                 <BsGithub className="w-4 h-4" />
                 Contribute on GitHub
@@ -283,12 +240,7 @@ const RoadmapPage = (): JSX.Element | null => {
             <a href="https://discord.gg/stellarstack" target="_blank" rel="noopener noreferrer">
               <Button
                 variant="outline"
-                className={cn(
-                  "text-sm uppercase tracking-wider px-8 py-6 gap-2",
-                  isDark
-                    ? "border-zinc-700 text-zinc-300 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-700 hover:border-zinc-400"
-                )}
+                className="text-sm uppercase tracking-wider px-8 py-6 gap-2 border-zinc-700 text-zinc-300 hover:border-zinc-500"
               >
                 Join Discord
                 <BsArrowRight className="w-4 h-4" />
@@ -298,7 +250,7 @@ const RoadmapPage = (): JSX.Element | null => {
         </AnimatedSection>
       </section>
 
-      <Footer isDark={isDark} />
+      <Footer />
     </div>
   );
 };

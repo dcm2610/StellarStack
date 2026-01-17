@@ -6,14 +6,13 @@ import { UsageCard } from "../usage-card";
 import type { CardProps } from "../dashboard-cards-types";
 
 interface InstanceNameCardProps extends CardProps {
-  isDark: boolean;
   instanceName: string;
 }
 
-export const InstanceNameCard = ({ isDark, instanceName }: InstanceNameCardProps): JSX.Element => {
+export const InstanceNameCard = ({ instanceName }: InstanceNameCardProps): JSX.Element => {
   return (
-    <UsageCard isDark={isDark} className="h-full flex items-center justify-center">
-      <div className={cn("text-2xl font-mono uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>
+    <UsageCard className="h-full flex items-center justify-center">
+      <div className={cn("text-2xl font-mono uppercase", "text-zinc-400")}>
         {instanceName}
       </div>
     </UsageCard>

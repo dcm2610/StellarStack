@@ -147,7 +147,6 @@ export const FloatingParticles = ({
 export const FloatingDots = ({
   count = 20,
   className,
-  isDark = true,
 }: FloatingDotsProps) => {
   const dots = Array.from({ length: count }, (_, i) => ({
     id: i,
@@ -165,7 +164,7 @@ export const FloatingDots = ({
           key={dot.id}
           className={cn(
             "absolute rounded-full animate-float",
-            isDark ? "bg-white/10" : "bg-black/5"
+            "bg-white/10"
           )}
           style={{
             left: dot.left,

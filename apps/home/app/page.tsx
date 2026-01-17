@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, type JSX } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useTheme as useNextTheme } from "next-themes";
+
 import { motion, useInView } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
@@ -343,9 +343,7 @@ const AnimatedSection = ({
   );
 };
 
-const LandingPage = (): JSX.Element | null => {
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
+const LandingPage = (): JSX.Element => {
   const [isEnterpriseArch, setIsEnterpriseArch] = useState(false);
   const [serverData, setServerData] = useState(initialServerData);
   const [consoleLines, setConsoleLines] = useState<ConsoleLine[]>([
@@ -376,13 +374,10 @@ const LandingPage = (): JSX.Element | null => {
   ]);
   const lineIdRef = useRef(5);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+
 
   // Randomly update server data and add console lines
   useEffect(() => {
-    if (!mounted) return;
 
     const interval = setInterval(() => {
       setServerData((prev) => {
@@ -456,11 +451,9 @@ const LandingPage = (): JSX.Element | null => {
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [mounted]);
+  }, []);
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
 
-  if (!mounted) return null;
 
   const homeNavLinks = [
     { href: "#features", label: "Features", isAnchor: true },
@@ -470,13 +463,10 @@ const LandingPage = (): JSX.Element | null => {
 
   return (
     <div
-      className={cn(
-        "relative min-h-svh scroll-smooth transition-colors",
-        isDark ? "bg-[#0b0b0a]" : "bg-[#f5f5f4]"
-      )}
+      className="relative min-h-svh scroll-smooth transition-colors bg-[#0b0b0a]"
     >
-      <AnimatedBackground isDark={isDark} />
-      <FloatingDots isDark={isDark} count={20} />
+      <AnimatedBackground />
+      <FloatingDots count={20} />
       <Navigation links={homeNavLinks} />
 
       <section className="relative px-6 pt-32 pb-20">
@@ -491,9 +481,7 @@ const LandingPage = (): JSX.Element | null => {
               <span
                 className="bg-clip-text text-transparent"
                 style={{
-                  backgroundImage: isDark
-                    ? "linear-gradient(135deg, #ffffff 0%, #a1a1aa 50%, #71717a 100%)"
-                    : "linear-gradient(135deg, #18181b 0%, #3f3f46 50%, #52525b 100%)",
+                  backgroundImage: "linear-gradient(135deg, #ffffff 0%, #a1a1aa 50%, #71717a 100%)",
                 }}
               >
                 Deploy Game Servers
@@ -502,9 +490,7 @@ const LandingPage = (): JSX.Element | null => {
               <span
                 className="bg-clip-text font-light text-transparent"
                 style={{
-                  backgroundImage: isDark
-                    ? "linear-gradient(135deg, #a1a1aa 0%, #71717a 50%, #52525b 100%)"
-                    : "linear-gradient(135deg, #52525b 0%, #71717a 50%, #a1a1aa 100%)",
+                  backgroundImage: "linear-gradient(135deg, #a1a1aa 0%, #71717a 50%, #52525b 100%)",
                 }}
               >
                 in Seconds
@@ -516,10 +502,7 @@ const LandingPage = (): JSX.Element | null => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className={cn(
-                "mx-auto mb-10 max-w-2xl text-lg leading-relaxed md:text-xl",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
+              className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed md:text-xl text-zinc-400"
             >
               The modern, open-source game server management panel. Self-host on your VPS or
               dedicated server with our install scripts. Works out of the box for anyone comfortable
@@ -559,12 +542,7 @@ const LandingPage = (): JSX.Element | null => {
                   </div>
                   {/* Inner Button */}
                   <div
-                    className={cn(
-                      "absolute inset-[2px] flex items-center justify-center gap-2 text-sm font-medium tracking-wider uppercase",
-                      isDark
-                        ? "bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] text-zinc-100"
-                        : "bg-gradient-to-b from-white via-zinc-50 to-zinc-100 text-zinc-900"
-                    )}
+                    className="absolute inset-[2px] flex items-center justify-center gap-2 text-sm font-medium tracking-wider uppercase bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] text-zinc-100"
                   >
                     Read the Docs
                     <BsArrowRight className="h-4 w-4" />
@@ -580,12 +558,7 @@ const LandingPage = (): JSX.Element | null => {
               >
                 <Button
                   variant="outline"
-                  className={cn(
-                    "gap-2 px-8 py-6 text-sm tracking-wider uppercase transition-all hover:scale-[1.02]",
-                    isDark
-                      ? "border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800/50"
-                      : "border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:bg-white"
-                  )}
+                  className="gap-2 px-8 py-6 text-sm tracking-wider uppercase transition-all hover:scale-[1.02] border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800/50"
                 >
                   <BsGithub className="h-4 w-4" />
                   View on GitHub
@@ -604,61 +577,24 @@ const LandingPage = (): JSX.Element | null => {
             {/* Floating Interactive Hint */}
             <div className="absolute -top-3 left-1/2 z-20 -translate-x-1/2">
               <div
-                className={cn(
-                  "relative border px-4 py-2 backdrop-blur-sm",
-                  isDark
-                    ? "border-zinc-700 bg-zinc-900/90 text-zinc-300"
-                    : "border-zinc-300 bg-white/90 text-zinc-700"
-                )}
+                className="relative border px-4 py-2 backdrop-blur-sm border-zinc-700 bg-zinc-900/90 text-zinc-300"
               >
                 {/* Corner accents */}
-                <div
-                  className={cn(
-                    "absolute -top-px -left-px h-2 w-2 border-t border-l",
-                    isDark ? "border-green-500" : "border-green-600"
-                  )}
-                />
-                <div
-                  className={cn(
-                    "absolute -top-px -right-px h-2 w-2 border-t border-r",
-                    isDark ? "border-green-500" : "border-green-600"
-                  )}
-                />
-                <div
-                  className={cn(
-                    "absolute -bottom-px -left-px h-2 w-2 border-b border-l",
-                    isDark ? "border-green-500" : "border-green-600"
-                  )}
-                />
-                <div
-                  className={cn(
-                    "absolute -right-px -bottom-px h-2 w-2 border-r border-b",
-                    isDark ? "border-green-500" : "border-green-600"
-                  )}
-                />
+                <div className="absolute -top-px -left-px h-2 w-2 border-t border-l border-green-500" />
+                <div className="absolute -top-px -right-px h-2 w-2 border-t border-r border-green-500" />
+                <div className="absolute -bottom-px -left-px h-2 w-2 border-b border-l border-green-500" />
+                <div className="absolute -right-px -bottom-px h-2 w-2 border-r border-b border-green-500" />
 
                 <div className="flex items-center gap-3">
                   <span className="relative flex h-2 w-2">
-                    <span
-                      className={cn(
-                        "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
-                        isDark ? "bg-green-400" : "bg-green-500"
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "relative inline-flex h-2 w-2 rounded-full",
-                        isDark ? "bg-green-500" : "bg-green-600"
-                      )}
-                    />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-green-400" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
                   </span>
                   <span className="text-xs font-medium tracking-wider uppercase">
                     Interactive Demo
                   </span>
-                  <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
-                    —
-                  </span>
-                  <span className={cn("text-xs", isDark ? "text-zinc-400" : "text-zinc-500")}>
+                  <span className="text-xs text-zinc-500">—</span>
+                  <span className="text-xs text-zinc-400">
                     Drag cards & resize
                   </span>
                 </div>
@@ -669,7 +605,7 @@ const LandingPage = (): JSX.Element | null => {
                     width="12"
                     height="8"
                     viewBox="0 0 12 8"
-                    className={isDark ? "text-green-500" : "text-green-600"}
+                    className="text-green-500"
                     fill="currentColor"
                   >
                     <path d="M6 8L0 0h12L6 8z" />
@@ -680,24 +616,16 @@ const LandingPage = (): JSX.Element | null => {
 
             {/* Preview Container */}
             <div
-              className={cn(
-                "relative overflow-hidden border",
-                isDark
-                  ? "border-zinc-800 bg-zinc-900/50 shadow-2xl shadow-black/50"
-                  : "border-zinc-200 bg-white shadow-2xl shadow-zinc-400/20"
-              )}
+              className="relative overflow-hidden border border-zinc-800 bg-zinc-900/50 shadow-2xl shadow-black/50"
             >
               {/* Window Controls */}
               <div
-                className={cn(
-                  "flex items-center gap-2 border-b px-4 py-3",
-                  isDark ? "border-zinc-800 bg-zinc-900" : "border-zinc-200 bg-zinc-50"
-                )}
+                className="flex items-center gap-2 border-b px-4 py-3 border-zinc-800 bg-zinc-900"
               >
                 <div className="h-3 w-3 rounded-full bg-red-500/80" />
                 <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
                 <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                <span className={cn("ml-4 text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                <span className="ml-4 text-xs text-zinc-500">
                   app.stellarstack.app/servers
                 </span>
               </div>
@@ -710,14 +638,12 @@ const LandingPage = (): JSX.Element | null => {
                   rowHeight={50}
                   gap={16}
                   isEditing={true}
-                  isDark={isDark}
                   isDroppable={false}
                 >
                   <div key="instance-name" className="h-full">
                     <GridItem itemId="instance-name" showRemoveHandle={false}>
                       <InstanceNameCard
                         itemId="instance-name"
-                        isDark={isDark}
                         instanceName={serverData.name}
                       />
                     </GridItem>
@@ -727,7 +653,6 @@ const LandingPage = (): JSX.Element | null => {
                     <GridItem itemId="container-controls" showRemoveHandle={false}>
                       <ContainerControlsCard
                         itemId="container-controls"
-                        isDark={isDark}
                         isOffline={false}
                         status="running"
                         onStart={() => {}}
@@ -749,7 +674,6 @@ const LandingPage = (): JSX.Element | null => {
                           `${serverData.cpu.frequency} GHz`,
                         ]}
                         history={serverData.cpu.usage.history}
-                        isDark={isDark}
                         isOffline={false}
                         labels={{ title: "CPU", coreUsage: "Core Usage", cores: "Cores" }}
                       />
@@ -766,7 +690,6 @@ const LandingPage = (): JSX.Element | null => {
                           serverData.memory.type,
                         ]}
                         history={serverData.memory.usage.history}
-                        isDark={isDark}
                         isOffline={false}
                         labels={{ title: "RAM" }}
                       />
@@ -783,7 +706,6 @@ const LandingPage = (): JSX.Element | null => {
                           serverData.disk.type,
                         ]}
                         history={serverData.disk.usage.history}
-                        isDark={isDark}
                         isOffline={false}
                         labels={{ title: "DISK" }}
                       />
@@ -798,7 +720,6 @@ const LandingPage = (): JSX.Element | null => {
                         upload={serverData.network.upload}
                         downloadHistory={serverData.network.downloadHistory}
                         uploadHistory={serverData.network.uploadHistory}
-                        isDark={isDark}
                         isOffline={false}
                         labels={{ title: "NETWORK", download: "Download", upload: "Upload" }}
                       />
@@ -807,7 +728,7 @@ const LandingPage = (): JSX.Element | null => {
 
                   <div key="console" className="h-full">
                     <GridItem itemId="console" showRemoveHandle={false}>
-                      <Console lines={consoleLines} isDark={isDark} isOffline={false} />
+                      <Console lines={consoleLines} isOffline={false} />
                     </GridItem>
                   </div>
                 </DragDropGrid>
@@ -821,20 +742,10 @@ const LandingPage = (): JSX.Element | null => {
       <section id="features" className="relative px-6 py-32">
         <div className="mx-auto max-w-7xl">
           <AnimatedSection className="mb-16 text-center">
-            <h2
-              className={cn(
-                "mb-4 text-3xl font-extralight tracking-tight md:text-5xl",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
-            >
+            <h2 className="mb-4 text-3xl font-extralight tracking-tight md:text-5xl text-zinc-100">
               Everything You Need
             </h2>
-            <p
-              className={cn(
-                "mx-auto max-w-2xl text-lg",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
-            >
+            <p className="mx-auto max-w-2xl text-lg text-zinc-400">
               A complete solution for game server hosting with powerful features out of the box.
             </p>
           </AnimatedSection>
@@ -842,68 +753,18 @@ const LandingPage = (): JSX.Element | null => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, i) => (
               <AnimatedSection key={i} delay={i * 0.1} className="h-full">
-                <div
-                  className={cn(
-                    "group relative flex h-full flex-col border p-8 transition-all hover:scale-[1.02]",
-                    isDark
-                      ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
-                      : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-lg"
-                  )}
-                >
+                <div className="group relative flex h-full flex-col border p-8 transition-all hover:scale-[1.02] border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50">
                   {/* Corner decorations */}
-                  <div
-                    className={cn(
-                      "absolute top-0 left-0 h-3 w-3 border-t border-l transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "absolute top-0 right-0 h-3 w-3 border-t border-r transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "absolute bottom-0 left-0 h-3 w-3 border-b border-l transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "absolute right-0 bottom-0 h-3 w-3 border-r border-b transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
+                  <div className="absolute top-0 left-0 h-3 w-3 border-t border-l transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="absolute top-0 right-0 h-3 w-3 border-t border-r transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="absolute bottom-0 left-0 h-3 w-3 border-b border-l transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="absolute right-0 bottom-0 h-3 w-3 border-r border-b transition-colors border-zinc-700 group-hover:border-zinc-500" />
 
-                  <feature.icon
-                    className={cn(
-                      "mb-6 h-8 w-8 flex-shrink-0",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
-                    )}
-                  />
-                  <h3
-                    className={cn(
-                      "mb-3 flex-shrink-0 text-lg font-medium",
-                      isDark ? "text-zinc-100" : "text-zinc-900"
-                    )}
-                  >
+                  <feature.icon className="mb-6 h-8 w-8 flex-shrink-0 text-zinc-400" />
+                  <h3 className="mb-3 flex-shrink-0 text-lg font-medium text-zinc-100">
                     {feature.title}
                   </h3>
-                  <p
-                    className={cn(
-                      "flex-grow text-sm leading-relaxed",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
-                    )}
-                  >
+                  <p className="flex-grow text-sm leading-relaxed text-zinc-400">
                     {feature.description}
                   </p>
                 </div>
@@ -914,12 +775,7 @@ const LandingPage = (): JSX.Element | null => {
       </section>
 
       {/* Stats Section */}
-      <section
-        className={cn(
-          "relative border-y px-6 py-20",
-          isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
-        )}
-      >
+      <section className="relative border-y px-6 py-20 border-zinc-800 bg-zinc-900/50">
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {[
@@ -929,20 +785,10 @@ const LandingPage = (): JSX.Element | null => {
               { value: "∞", label: "Self-Hosted" },
             ].map((stat, i) => (
               <AnimatedSection key={i} delay={i * 0.1} className="text-center">
-                <div
-                  className={cn(
-                    "mb-2 text-4xl font-light md:text-5xl",
-                    isDark ? "text-zinc-100" : "text-zinc-900"
-                  )}
-                >
+                <div className="mb-2 text-4xl font-light md:text-5xl text-zinc-100">
                   {stat.value}
                 </div>
-                <div
-                  className={cn(
-                    "text-sm tracking-wider uppercase",
-                    isDark ? "text-zinc-500" : "text-zinc-500"
-                  )}
-                >
+                <div className="text-sm tracking-wider uppercase text-zinc-500">
                   {stat.label}
                 </div>
               </AnimatedSection>
@@ -952,28 +798,13 @@ const LandingPage = (): JSX.Element | null => {
       </section>
 
       {/* Who It's For Section */}
-      <section
-        className={cn(
-          "relative border-y px-6 py-32",
-          isDark ? "border-zinc-800 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
-        )}
-      >
+      <section className="relative border-y px-6 py-32 border-zinc-800 bg-zinc-900/30">
         <div className="mx-auto max-w-7xl">
           <AnimatedSection className="mb-16 text-center">
-            <h2
-              className={cn(
-                "mb-4 text-3xl font-extralight tracking-tight md:text-5xl",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
-            >
+            <h2 className="mb-4 text-3xl font-extralight tracking-tight md:text-5xl text-zinc-100">
               Built For Everyone
             </h2>
-            <p
-              className={cn(
-                "mx-auto max-w-2xl text-lg",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
-            >
+            <p className="mx-auto max-w-2xl text-lg text-zinc-400">
               Whether you&apos;re running a hosting business or managing servers for your gaming
               community.
             </p>
@@ -982,38 +813,14 @@ const LandingPage = (): JSX.Element | null => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {targetUsers.map((user, i) => (
               <AnimatedSection key={i} delay={i * 0.1} className="h-full">
-                <div
-                  className={cn(
-                    "group relative flex h-full flex-col border p-6 text-center transition-all hover:scale-[1.02]",
-                    isDark
-                      ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
-                      : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-lg"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "mx-auto mb-4 flex h-14 w-14 items-center justify-center border",
-                      isDark ? "border-zinc-700 bg-zinc-800/50" : "border-zinc-200 bg-zinc-50"
-                    )}
-                  >
-                    <user.icon
-                      className={cn("h-7 w-7", isDark ? "text-zinc-400" : "text-zinc-600")}
-                    />
+                <div className="group relative flex h-full flex-col border p-6 text-center transition-all hover:scale-[1.02] border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center border border-zinc-700 bg-zinc-800/50">
+                    <user.icon className="h-7 w-7 text-zinc-400" />
                   </div>
-                  <h3
-                    className={cn(
-                      "mb-2 flex-shrink-0 text-base font-medium",
-                      isDark ? "text-zinc-100" : "text-zinc-900"
-                    )}
-                  >
+                  <h3 className="mb-2 flex-shrink-0 text-base font-medium text-zinc-100">
                     {user.title}
                   </h3>
-                  <p
-                    className={cn(
-                      "flex-grow text-sm leading-relaxed",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
-                    )}
-                  >
+                  <p className="flex-grow text-sm leading-relaxed text-zinc-400">
                     {user.description}
                   </p>
                 </div>
@@ -1027,20 +834,10 @@ const LandingPage = (): JSX.Element | null => {
       <section id="gallery" className="relative px-6 py-32">
         <div className="mx-auto max-w-7xl">
           <AnimatedSection className="mb-16 text-center">
-            <h2
-              className={cn(
-                "mb-4 text-3xl font-extralight tracking-tight md:text-5xl",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
-            >
+            <h2 className="mb-4 text-3xl font-extralight tracking-tight md:text-5xl text-zinc-100">
               See It In Action
             </h2>
-            <p
-              className={cn(
-                "mx-auto max-w-2xl text-lg",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
-            >
+            <p className="mx-auto max-w-2xl text-lg text-zinc-400">
               Screenshots and demos showcasing the StellarStack experience. Click to zoom.
             </p>
           </AnimatedSection>
@@ -1081,12 +878,7 @@ const LandingPage = (): JSX.Element | null => {
             ].map((item) => (
               <AnimatedSection key={item.id} delay={item.id * 0.05} className="h-full">
                 <div
-                  className={cn(
-                    "group relative border transition-all hover:scale-[1.02]",
-                    isDark
-                      ? "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
-                      : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
-                  )}
+                  className="group relative border transition-all hover:scale-[1.02] border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
                 >
                   {item.image ? (
                     <Zoom>
@@ -1101,60 +893,20 @@ const LandingPage = (): JSX.Element | null => {
                   ) : (
                     /* Placeholder content */
                     <div className="flex aspect-video flex-col items-center justify-center">
-                      <BsImage
-                        className={cn("mb-3 h-12 w-12", isDark ? "text-zinc-700" : "text-zinc-300")}
-                      />
-                      <span
-                        className={cn(
-                          "mb-1 text-sm font-medium",
-                          isDark ? "text-zinc-500" : "text-zinc-400"
-                        )}
-                      >
+                      <BsImage className="mb-3 h-12 w-12 text-zinc-700" />
+                      <span className="mb-1 text-sm font-medium text-zinc-500">
                         {item.title}
                       </span>
-                      <span
-                        className={cn(
-                          "text-xs tracking-wider uppercase",
-                          isDark ? "text-zinc-600" : "text-zinc-400"
-                        )}
-                      >
+                      <span className="text-xs tracking-wider uppercase text-zinc-600">
                         Coming Soon
                       </span>
                     </div>
                   )}
                   {/* Corner decorations */}
-                  <div
-                    className={cn(
-                      "pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b transition-colors",
-                      isDark
-                        ? "border-zinc-700 group-hover:border-zinc-500"
-                        : "border-zinc-300 group-hover:border-zinc-400"
-                    )}
-                  />
+                  <div className="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l transition-colors border-zinc-700 group-hover:border-zinc-500" />
+                  <div className="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b transition-colors border-zinc-700 group-hover:border-zinc-500" />
                 </div>
               </AnimatedSection>
             ))}
@@ -1163,26 +915,13 @@ const LandingPage = (): JSX.Element | null => {
       </section>
 
       {/* Tech Stack Carousel */}
-      <section
-        id="tech"
-        className={cn(
-          "relative border-y py-24",
-          isDark ? "border-zinc-800 bg-zinc-900/30" : "border-zinc-200 bg-zinc-50"
-        )}
-      >
+      <section id="tech" className="relative border-y py-24 border-zinc-800 bg-zinc-900/30">
         <AnimatedSection className="mx-auto mb-12 max-w-7xl px-6">
           <div className="text-center">
-            <h2
-              className={cn(
-                "mb-4 text-2xl font-extralight tracking-tight md:text-3xl",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
-            >
+            <h2 className="mb-4 text-2xl font-extralight tracking-tight md:text-3xl text-zinc-100">
               Built with Modern Technology
             </h2>
-            <p
-              className={cn("mx-auto max-w-xl text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}
-            >
+            <p className="mx-auto max-w-xl text-sm text-zinc-400">
               Powered by the best tools in the ecosystem for performance, reliability, and developer
               experience.
             </p>
@@ -1192,22 +931,8 @@ const LandingPage = (): JSX.Element | null => {
         {/* Swiper Carousel */}
         <div className="relative">
           {/* Fade edges */}
-          <div
-            className={cn(
-              "pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-24",
-              isDark
-                ? "bg-gradient-to-r from-[#0b0b0a] to-transparent"
-                : "bg-gradient-to-r from-zinc-50 to-transparent"
-            )}
-          />
-          <div
-            className={cn(
-              "pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-24",
-              isDark
-                ? "bg-gradient-to-l from-[#0b0b0a] to-transparent"
-                : "bg-gradient-to-l from-zinc-50 to-transparent"
-            )}
-          />
+          <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-24 bg-gradient-to-r from-[#0b0b0a] to-transparent" />
+          <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-24 bg-gradient-to-l from-[#0b0b0a] to-transparent" />
 
           <Swiper
             modules={[Autoplay]}
@@ -1230,14 +955,7 @@ const LandingPage = (): JSX.Element | null => {
               <SwiperSlide key={i} className="!w-auto">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
-                      className={cn(
-                        "flex cursor-pointer items-center justify-center transition-all hover:scale-110",
-                        isDark
-                          ? "text-zinc-500 hover:text-zinc-200"
-                          : "text-zinc-400 hover:text-zinc-700"
-                      )}
-                    >
+                    <div className="flex cursor-pointer items-center justify-center transition-all hover:scale-110 text-zinc-500 hover:text-zinc-200">
                       <tech.Icon className="h-10 w-10" />
                     </div>
                   </TooltipTrigger>
@@ -1253,81 +971,34 @@ const LandingPage = (): JSX.Element | null => {
       <section className="relative px-6 py-32">
         <div className="mx-auto max-w-7xl">
           <AnimatedSection className="mb-16 text-center">
-            <h2
-              className={cn(
-                "mb-4 text-3xl font-extralight tracking-tight md:text-5xl",
-                isDark ? "text-zinc-100" : "text-zinc-900"
-              )}
-            >
+            <h2 className="mb-4 text-3xl font-extralight tracking-tight md:text-5xl text-zinc-100">
               Why StellarStack?
             </h2>
-            <p
-              className={cn(
-                "mx-auto max-w-2xl text-lg",
-                isDark ? "text-zinc-400" : "text-zinc-600"
-              )}
-            >
+            <p className="mx-auto max-w-2xl text-lg text-zinc-400">
               See how we compare to other game server management solutions.
             </p>
           </AnimatedSection>
 
           <AnimatedSection delay={0.2}>
-            <div
-              className={cn(
-                "overflow-x-auto border",
-                isDark ? "border-zinc-800" : "border-zinc-200"
-              )}
-            >
+            <div className="overflow-x-auto border border-zinc-800">
               {/* Table Header */}
-              <div
-                className={cn(
-                  "grid grid-cols-[2fr_repeat(6,1fr)] gap-0 border-b text-xs font-medium",
-                  isDark
-                    ? "border-zinc-800 bg-zinc-900/50 text-zinc-300"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-700"
-                )}
-              >
-                <div className={cn("border-r p-4", isDark ? "border-zinc-800" : "border-zinc-200")}>
+              <div className="grid grid-cols-[2fr_repeat(6,1fr)] gap-0 border-b text-xs font-medium border-zinc-800 bg-zinc-900/50 text-zinc-300">
+                <div className="border-r p-4 border-zinc-800">
                   Feature
                 </div>
-                <div
-                  className={cn(
-                    "border-r p-4 text-center",
-                    isDark ? "border-zinc-800 bg-green-900/20" : "border-zinc-200 bg-green-50"
-                  )}
-                >
+                <div className="border-r p-4 text-center border-zinc-800 bg-green-900/20">
                   StellarStack
                 </div>
-                <div
-                  className={cn(
-                    "border-r p-4 text-center",
-                    isDark ? "border-zinc-800" : "border-zinc-200"
-                  )}
-                >
+                <div className="border-r p-4 text-center border-zinc-800">
                   Pterodactyl
                 </div>
-                <div
-                  className={cn(
-                    "border-r p-4 text-center",
-                    isDark ? "border-zinc-800" : "border-zinc-200"
-                  )}
-                >
+                <div className="border-r p-4 text-center border-zinc-800">
                   Pelican
                 </div>
-                <div
-                  className={cn(
-                    "border-r p-4 text-center",
-                    isDark ? "border-zinc-800" : "border-zinc-200"
-                  )}
-                >
+                <div className="border-r p-4 text-center border-zinc-800">
                   PufferPanel
                 </div>
-                <div
-                  className={cn(
-                    "border-r p-4 text-center",
-                    isDark ? "border-zinc-800" : "border-zinc-200"
-                  )}
-                >
+                <div className="border-r p-4 text-center border-zinc-800">
                   Crafty
                 </div>
                 <div className="p-4 text-center">AMP</div>
@@ -1447,59 +1118,29 @@ const LandingPage = (): JSX.Element | null => {
                 <div
                   key={i}
                   className={cn(
-                    "grid grid-cols-[2fr_repeat(6,1fr)] gap-0 border-b text-xs last:border-b-0",
-                    isDark ? "border-zinc-800" : "border-zinc-200",
-                    i % 2 === 0
-                      ? isDark
-                        ? "bg-zinc-900/30"
-                        : "bg-white"
-                      : isDark
-                        ? "bg-zinc-900/10"
-                        : "bg-zinc-50/50"
+                    "grid grid-cols-[2fr_repeat(6,1fr)] gap-0 border-b text-xs last:border-b-0 border-zinc-800",
+                    i % 2 === 0 ? "bg-zinc-900/30" : "bg-zinc-900/10"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "border-r p-4",
-                      isDark ? "border-zinc-800 text-zinc-300" : "border-zinc-200 text-zinc-700"
-                    )}
-                  >
+                  <div className="border-r p-4 border-zinc-800 text-zinc-300">
                     {row.feature}
                   </div>
-                  <div
-                    className={cn(
-                      "border-r p-4 text-center",
-                      isDark ? "border-zinc-800 bg-green-900/10" : "border-zinc-200 bg-green-50/50"
-                    )}
-                  >
+                  <div className="border-r p-4 text-center border-zinc-800 bg-green-900/10">
                     {row.stellar ? (
-                      <BsCheck
-                        className={cn(
-                          "mx-auto h-5 w-5",
-                          isDark ? "text-green-500" : "text-green-600"
-                        )}
-                      />
+                      <BsCheck className="mx-auto h-5 w-5 text-green-500" />
                     ) : (
-                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>—</span>
+                      <span className="text-zinc-600">—</span>
                     )}
                   </div>
                   {[row.ptero, row.pelican, row.puffer, row.crafty, row.amp].map((val, j) => (
                     <div
                       key={j}
-                      className={cn(
-                        "border-r p-4 text-center last:border-r-0",
-                        isDark ? "border-zinc-800" : "border-zinc-200"
-                      )}
+                      className="border-r p-4 text-center last:border-r-0 border-zinc-800"
                     >
                       {val ? (
-                        <BsCheck
-                          className={cn(
-                            "mx-auto h-5 w-5",
-                            isDark ? "text-zinc-500" : "text-zinc-400"
-                          )}
-                        />
+                        <BsCheck className="mx-auto h-5 w-5 text-zinc-500" />
                       ) : (
-                        <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>—</span>
+                        <span className="text-zinc-600">—</span>
                       )}
                     </div>
                   ))}
@@ -1511,40 +1152,18 @@ const LandingPage = (): JSX.Element | null => {
       </section>
 
       {/* CTA Section */}
-      <section
-        className={cn(
-          "relative border-t px-6 py-32",
-          isDark ? "border-zinc-800" : "border-zinc-200"
-        )}
-      >
+      <section className="relative border-t px-6 py-32 border-zinc-800">
         <AnimatedSection className="mx-auto max-w-4xl text-center">
-          <h2
-            className={cn(
-              "mb-6 text-3xl font-extralight tracking-tight md:text-5xl",
-              isDark ? "text-zinc-100" : "text-zinc-900"
-            )}
-          >
+          <h2 className="mb-6 text-3xl font-extralight tracking-tight md:text-5xl text-zinc-100">
             Ready to Self-Host?
           </h2>
-          <p
-            className={cn(
-              "mx-auto mb-10 max-w-xl text-lg",
-              isDark ? "text-zinc-400" : "text-zinc-600"
-            )}
-          >
+          <p className="mx-auto mb-10 max-w-xl text-lg text-zinc-400">
             Run the install script on your VPS or dedicated server. Basic Linux knowledge required.
             Free and open source forever.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <a href="https://docs.stellarstack.app" target="_blank" rel="noopener noreferrer">
-              <Button
-                className={cn(
-                  "gap-2 px-8 py-6 text-sm tracking-wider uppercase transition-all hover:scale-[1.02]",
-                  isDark
-                    ? "bg-zinc-100 text-zinc-900 hover:bg-white"
-                    : "bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-                )}
-              >
+              <Button className="gap-2 px-8 py-6 text-sm tracking-wider uppercase transition-all hover:scale-[1.02] bg-zinc-100 text-zinc-900 hover:bg-white">
                 Read the Docs
                 <BsArrowRight className="h-4 w-4" />
               </Button>
@@ -1556,12 +1175,7 @@ const LandingPage = (): JSX.Element | null => {
             >
               <Button
                 variant="outline"
-                className={cn(
-                  "gap-2 px-8 py-6 text-sm tracking-wider uppercase",
-                  isDark
-                    ? "border-zinc-700 text-zinc-300 hover:border-zinc-500"
-                    : "border-zinc-300 text-zinc-700 hover:border-zinc-400"
-                )}
+                className="gap-2 px-8 py-6 text-sm tracking-wider uppercase border-zinc-700 text-zinc-300 hover:border-zinc-500"
               >
                 <BsGithub className="h-4 w-4" />
                 View on GitHub
@@ -1571,7 +1185,7 @@ const LandingPage = (): JSX.Element | null => {
         </AnimatedSection>
       </section>
 
-      <Footer isDark={isDark} />
+      <Footer />
     </div>
   );
 };

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 // Common props shared across animation components
 export interface BaseAnimationProps {
   className?: string;
-  isDark?: boolean;
 }
 
 // FadeIn types
@@ -79,14 +78,12 @@ export interface GlowCardProps {
   glowColor?: string;
   glowSize?: number;
   glowOpacity?: number;
-  isDark?: boolean;
 }
 
 export interface GradientBorderCardProps {
   children: ReactNode;
   className?: string;
   borderWidth?: number;
-  isDark?: boolean;
   animated?: boolean;
 }
 
@@ -126,7 +123,6 @@ export interface FloatingParticlesProps {
 export interface FloatingDotsProps {
   count?: number;
   className?: string;
-  isDark?: boolean;
 }
 
 // GradientText types
@@ -140,7 +136,6 @@ export interface GradientTextProps {
 export interface ShimmerTextProps {
   children: ReactNode;
   className?: string;
-  isDark?: boolean;
 }
 
 // DropZone types
@@ -150,7 +145,6 @@ export interface DropZoneProps {
   onDragEnter?: () => void;
   onDragLeave?: () => void;
   className?: string;
-  isDark?: boolean;
   acceptedTypes?: string[];
   disabled?: boolean;
 }
@@ -160,7 +154,6 @@ export interface UploadButtonProps {
   accept?: string;
   multiple?: boolean;
   className?: string;
-  isDark?: boolean;
   children?: ReactNode;
   progress?: number;
   isUploading?: boolean;

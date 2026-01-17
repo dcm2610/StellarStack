@@ -31,11 +31,9 @@ import {
 } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 
-interface CommandPaletteProps {
-  isDark?: boolean;
-}
+interface CommandPaletteProps {}
 
-export const CommandPalette = ({ isDark = true }: CommandPaletteProps) => {
+export const CommandPalette = ({}: CommandPaletteProps) => {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const params = useParams();

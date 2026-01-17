@@ -8,7 +8,6 @@ import { useDragDropGrid } from "../drag-drop-grid";
 import type { CardProps, Player, ContainerStatus, PlayersOnlineCardLabels } from "../dashboard-cards-types";
 
 interface PlayersOnlineCardProps extends CardProps {
-  isDark: boolean;
   isOffline: boolean;
   players: Player[];
   maxPlayers: number;
@@ -18,7 +17,6 @@ interface PlayersOnlineCardProps extends CardProps {
 
 export const PlayersOnlineCard = ({
   itemId,
-  isDark,
   isOffline,
   players,
   maxPlayers,
@@ -39,9 +37,9 @@ export const PlayersOnlineCard = ({
 
   if (isXxs) {
     return (
-      <UsageCard isDark={isDark} className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
-        <span className={cn("text-xs font-medium uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>{labels.titleShort}</span>
-        <span className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+      <UsageCard className={cn("h-full flex items-center justify-between px-6", isOffline && "opacity-60")}>
+        <span className={cn("text-xs font-medium uppercase text-zinc-400")}>{labels.titleShort}</span>
+        <span className={cn("text-xl font-mono text-zinc-100")}>
           {isOffline || !isRunning ? "--" : <><AnimatedNumber value={players.length} />/{maxPlayers}</>}
         </span>
       </UsageCard>
@@ -49,20 +47,20 @@ export const PlayersOnlineCard = ({
   }
 
   return (
-    <UsageCard isDark={isDark} className={cn("h-full flex flex-col", isXs && "p-4", isOffline && "opacity-60")}>
-      <UsageCardTitle isDark={isDark} className={cn("opacity-80", isCompact ? "text-xs mb-2" : "text-md")}>
+    <UsageCard className={cn("h-full flex flex-col", isXs && "p-4", isOffline && "opacity-60")}>
+      <UsageCardTitle className={cn("opacity-80", isCompact ? "text-xs mb-2" : "text-md")}>
         {labels.title}
       </UsageCardTitle>
       <UsageCardContent className={cn("flex-1 flex flex-col", isXs ? "space-y-1" : undefined)}>
         <div className="flex items-baseline gap-1">
           <span className={cn(
-            isDark ? "text-zinc-100" : "text-zinc-800",
+            "text-zinc-100",
             isXs ? "text-2xl" : "text-4xl"
           )}>
             {isOffline || !isRunning ? "--" : <AnimatedNumber value={players.length} />}
           </span>
           <span className={cn(
-            isDark ? "text-zinc-500" : "text-zinc-600",
+            "text-zinc-500",
             isXs ? "text-sm" : "text-lg"
           )}>
             /{maxPlayers}
@@ -71,12 +69,10 @@ export const PlayersOnlineCard = ({
 
         {(isXs || isSm) && isRunning && players.length > 0 && (
           <div className={cn(
-            "mt-2 flex-1 overflow-hidden",
-            isDark ? "text-zinc-400" : "text-zinc-600"
+            "mt-2 flex-1 overflow-hidden text-zinc-400"
           )}>
             <div className={cn(
-              "text-[10px] uppercase font-medium mb-1",
-              isDark ? "text-zinc-500" : "text-zinc-600"
+              "text-[10px] uppercase font-medium mb-1 text-zinc-500"
             )}>
               {labels.online}
             </div>
@@ -85,8 +81,7 @@ export const PlayersOnlineCard = ({
                 <div
                   key={player.id}
                   className={cn(
-                    "text-xs font-mono truncate",
-                    isDark ? "text-zinc-300" : "text-zinc-700"
+                    "text-xs font-mono truncate text-zinc-300"
                   )}
                 >
                   {player.name}
@@ -94,8 +89,7 @@ export const PlayersOnlineCard = ({
               ))}
               {remainingCount > 0 && (
                 <div className={cn(
-                  "text-[10px]",
-                  isDark ? "text-zinc-500" : "text-zinc-500"
+                  "text-[10px] text-zinc-500"
                 )}>
                   +{remainingCount} more
                 </div>

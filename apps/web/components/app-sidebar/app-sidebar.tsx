@@ -59,11 +59,7 @@ const navItems = [
   { title: "Settings", icon: SettingsIcon, href: "/settings" },
 ];
 
-interface AppSidebarProps {
-  isDark?: boolean;
-}
-
-export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
+export const AppSidebar = () => {
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
@@ -93,9 +89,9 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
 
   // Helper to get color based on usage percentage
   const getUsageColor = (percent: number) => {
-    if (percent >= 85) return isDark ? "text-red-400" : "text-red-600";
-    if (percent >= 70) return isDark ? "text-amber-400" : "text-amber-600";
-    return isDark ? "text-emerald-400" : "text-emerald-600";
+    if (percent >= 85) return "text-red-400";
+    if (percent >= 70) return "text-amber-400";
+    return "text-emerald-400";
   };
 
   // User data from auth
@@ -128,28 +124,24 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
     <Sidebar
       className={cn(
         "border-r shadow-lg",
-        isDark
-          ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-black/20"
-          : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 shadow-zinc-400/20"
+        "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a] shadow-black/20"
       )}
     >
       <SidebarHeader
-        className={cn("border-b p-4", isDark ? "border-zinc-200/10" : "border-zinc-300")}
+        className={cn("border-b p-4", "border-zinc-200/10")}
       >
         {/* Back to Servers */}
         <Link
           href="/servers"
           className={cn(
             "group relative flex w-full items-center gap-2 border px-3 py-2 text-left transition-colors",
-            isDark
-              ? "border-zinc-700/50 bg-zinc-900/50 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-              : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 hover:text-zinc-800"
+            "border-zinc-700/50 bg-zinc-900/50 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
           )}
         >
           <ArrowLeftIcon
             className={cn(
               "h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5",
-              isDark ? "text-zinc-500" : "text-zinc-400"
+              "text-zinc-500"
             )}
           />
           <span className="text-xs font-medium tracking-wider uppercase">All Servers</span>
@@ -158,25 +150,25 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
           <div
             className={cn(
               "pointer-events-none absolute top-0 left-0 h-1.5 w-1.5 border-t border-l",
-              isDark ? "border-zinc-600" : "border-zinc-300"
+              "border-zinc-600"
             )}
           />
           <div
             className={cn(
               "pointer-events-none absolute top-0 right-0 h-1.5 w-1.5 border-t border-r",
-              isDark ? "border-zinc-600" : "border-zinc-300"
+              "border-zinc-600"
             )}
           />
           <div
             className={cn(
               "pointer-events-none absolute bottom-0 left-0 h-1.5 w-1.5 border-b border-l",
-              isDark ? "border-zinc-600" : "border-zinc-300"
+              "border-zinc-600"
             )}
           />
           <div
             className={cn(
               "pointer-events-none absolute right-0 bottom-0 h-1.5 w-1.5 border-r border-b",
-              isDark ? "border-zinc-600" : "border-zinc-300"
+              "border-zinc-600"
             )}
           />
         </Link>
@@ -185,11 +177,11 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
         <div
           className={cn(
             "mt-3 flex items-center gap-2 px-3 py-2",
-            isDark ? "text-zinc-300" : "text-zinc-700"
+            "text-zinc-300"
           )}
         >
           <ServerIcon
-            className={cn("h-4 w-4 shrink-0", isDark ? "text-zinc-500" : "text-zinc-400")}
+            className={cn("h-4 w-4 shrink-0", "text-zinc-500")}
           />
           <span className="truncate text-xs font-medium tracking-wider uppercase">
             Server {serverId}
@@ -202,7 +194,7 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
           <SidebarGroupLabel
             className={cn(
               "px-2 text-[10px] font-medium tracking-wider uppercase",
-              isDark ? "text-zinc-600" : "text-zinc-400"
+              "text-zinc-600"
             )}
           >
             Manage
@@ -219,9 +211,7 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
                       isActive={isActive}
                       className={cn(
                         "rounded-none text-xs transition-colors",
-                        isDark
-                          ? "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100 data-[active=true]:bg-zinc-800/80 data-[active=true]:text-zinc-100"
-                          : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900 data-[active=true]:bg-zinc-200/80 data-[active=true]:text-zinc-900"
+                        "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100 data-[active=true]:bg-zinc-800/80 data-[active=true]:text-zinc-100"
                       )}
                     >
                       <Link href={fullHref}>
@@ -246,25 +236,25 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
       </SidebarContent>
 
       <SidebarFooter
-        className={cn("border-t p-4", isDark ? "border-zinc-200/10" : "border-zinc-300")}
+        className={cn("border-t p-4", "border-zinc-200/10")}
       >
         {/* Server Stats */}
         <div
           className={cn(
             "mb-3 space-y-2 border px-3 py-2",
-            isDark ? "border-zinc-700/50 bg-zinc-900/50" : "border-zinc-200 bg-white"
+            "border-zinc-700/50 bg-zinc-900/50"
           )}
         >
           {/* CPU */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <CpuIcon
-                className={cn("h-3.5 w-3.5 shrink-0", isDark ? "text-zinc-500" : "text-zinc-400")}
+                className={cn("h-3.5 w-3.5 shrink-0", "text-zinc-500")}
               />
               <span
                 className={cn(
                   "text-[10px] font-medium tracking-wider uppercase",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
+                  "text-zinc-400"
                 )}
               >
                 CPU
@@ -279,12 +269,12 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <MemoryStickIcon
-                className={cn("h-3.5 w-3.5 shrink-0", isDark ? "text-zinc-500" : "text-zinc-400")}
+                className={cn("h-3.5 w-3.5 shrink-0", "text-zinc-500")}
               />
               <span
                 className={cn(
                   "text-[10px] font-medium tracking-wider uppercase",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
+                  "text-zinc-400"
                 )}
               >
                 RAM
@@ -299,12 +289,12 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <HardDriveIcon
-                className={cn("h-3.5 w-3.5 shrink-0", isDark ? "text-zinc-500" : "text-zinc-400")}
+                className={cn("h-3.5 w-3.5 shrink-0", "text-zinc-500")}
               />
               <span
                 className={cn(
                   "text-[10px] font-medium tracking-wider uppercase",
-                  isDark ? "text-zinc-400" : "text-zinc-600"
+                  "text-zinc-400"
                 )}
               >
                 Disk
@@ -324,18 +314,14 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className={cn(
               "group relative flex w-full items-center gap-3 border px-3 py-2 text-left transition-colors",
-              isDark
-                ? "border-zinc-700/50 bg-zinc-900/50 hover:border-zinc-500"
-                : "border-zinc-200 bg-white hover:border-zinc-400"
+              "border-zinc-700/50 bg-zinc-900/50 hover:border-zinc-500"
             )}
           >
             {/* Avatar */}
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center text-xs font-medium uppercase",
-                isDark
-                  ? "border border-zinc-700 bg-zinc-800 text-zinc-300"
-                  : "border border-zinc-300 bg-zinc-200 text-zinc-700"
+                "border border-zinc-700 bg-zinc-800 text-zinc-300"
               )}
             >
               {user.initials}
@@ -344,13 +330,13 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
               <div
                 className={cn(
                   "truncate text-xs font-medium",
-                  isDark ? "text-zinc-200" : "text-zinc-800"
+                  "text-zinc-200"
                 )}
               >
                 {user.name}
               </div>
               <div
-                className={cn("truncate text-[10px]", isDark ? "text-zinc-500" : "text-zinc-500")}
+                className={cn("truncate text-[10px]", "text-zinc-500")}
               >
                 {user.email}
               </div>
@@ -358,7 +344,7 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
             <ChevronUpIcon
               className={cn(
                 "h-4 w-4 shrink-0 transition-transform",
-                isDark ? "text-zinc-500" : "text-zinc-400",
+                "text-zinc-500",
                 isUserMenuOpen && "rotate-180"
               )}
             />
@@ -367,25 +353,25 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
             <div
               className={cn(
                 "pointer-events-none absolute top-0 left-0 h-1.5 w-1.5 border-t border-l",
-                isDark ? "border-zinc-600" : "border-zinc-300"
+                "border-zinc-600"
               )}
             />
             <div
               className={cn(
                 "pointer-events-none absolute top-0 right-0 h-1.5 w-1.5 border-t border-r",
-                isDark ? "border-zinc-600" : "border-zinc-300"
+                "border-zinc-600"
               )}
             />
             <div
               className={cn(
                 "pointer-events-none absolute bottom-0 left-0 h-1.5 w-1.5 border-b border-l",
-                isDark ? "border-zinc-600" : "border-zinc-300"
+                "border-zinc-600"
               )}
             />
             <div
               className={cn(
                 "pointer-events-none absolute right-0 bottom-0 h-1.5 w-1.5 border-r border-b",
-                isDark ? "border-zinc-600" : "border-zinc-300"
+                "border-zinc-600"
               )}
             />
           </button>
@@ -395,34 +381,32 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
             <div
               className={cn(
                 "absolute right-0 bottom-full left-0 z-50 mb-1 border shadow-lg",
-                isDark
-                  ? "border-zinc-700/50 bg-[#0f0f0f] shadow-black/40"
-                  : "border-zinc-200 bg-white shadow-zinc-200/40"
+                "border-zinc-700/50 bg-[#0f0f0f] shadow-black/40"
               )}
             >
               {/* Corner accents on dropdown */}
               <div
                 className={cn(
                   "pointer-events-none absolute top-0 left-0 h-1.5 w-1.5 border-t border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "pointer-events-none absolute top-0 right-0 h-1.5 w-1.5 border-t border-r",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "pointer-events-none absolute bottom-0 left-0 h-1.5 w-1.5 border-b border-l",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
               <div
                 className={cn(
                   "pointer-events-none absolute right-0 bottom-0 h-1.5 w-1.5 border-r border-b",
-                  isDark ? "border-zinc-500" : "border-zinc-400"
+                  "border-zinc-500"
                 )}
               />
 
@@ -433,11 +417,11 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
                   onClick={() => setIsUserMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 text-xs transition-colors",
-                    isDark ? "text-zinc-300 hover:bg-zinc-800" : "text-zinc-700 hover:bg-zinc-100"
+                    "text-zinc-300 hover:bg-zinc-800"
                   )}
                 >
                   <item.icon
-                    className={cn("h-4 w-4", isDark ? "text-zinc-500" : "text-zinc-400")}
+                    className={cn("h-4 w-4", "text-zinc-500")}
                   />
                   <span className="tracking-wider uppercase">{item.title}</span>
                 </Link>
@@ -445,7 +429,7 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
 
               {/* Divider */}
               <div
-                className={cn("my-1 border-t", isDark ? "border-zinc-700/50" : "border-zinc-200")}
+                className={cn("my-1 border-t", "border-zinc-700/50")}
               />
 
               {/* Sign Out */}
@@ -456,7 +440,7 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors",
-                  isDark ? "text-red-400/80 hover:bg-zinc-800" : "text-red-600 hover:bg-zinc-100"
+                  "text-red-400/80 hover:bg-zinc-800"
                 )}
               >
                 <LogOutIcon className="h-4 w-4" />
@@ -470,13 +454,13 @@ export const AppSidebar = ({ isDark = true }: AppSidebarProps) => {
         <div
           className={cn(
             "mt-3 text-center text-[10px] tracking-wider uppercase",
-            isDark ? "text-zinc-600" : "text-zinc-400"
+            "text-zinc-600"
           )}
         >
           <WaveText
             text={`StellarStack v${process.env.NEXT_PUBLIC_GIT_COMMIT_HASH?.slice(0, 7) || "dev"}-alpha`}
-            baseClassName={isDark ? "text-zinc-600" : "text-zinc-400"}
-            highlightClassName={isDark ? "text-zinc-100" : "text-zinc-800"}
+            baseClassName="text-zinc-600"
+            highlightClassName="text-zinc-100"
           />
         </div>
       </SidebarFooter>

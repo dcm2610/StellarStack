@@ -6,13 +6,10 @@ import { CheckIcon } from "lucide-react"
 
 import { cn } from "@workspace/ui/lib/utils"
 
-interface SwitchProps extends React.ComponentProps<typeof SwitchPrimitive.Root> {
-  isDark?: boolean;
-}
+interface SwitchProps extends React.ComponentProps<typeof SwitchPrimitive.Root> {}
 
 const Switch = ({
   className,
-  isDark = true,
   ...props
 }: SwitchProps) => {
   return (
@@ -23,11 +20,7 @@ const Switch = ({
         // Checked state
         "data-[state=checked]:bg-green-500/20 data-[state=checked]:border-green-500/50",
         // Unchecked state - dark mode
-        isDark && "data-[state=unchecked]:bg-zinc-800 data-[state=unchecked]:border-zinc-700",
-        // Unchecked state - light mode
-        !isDark && "data-[state=unchecked]:bg-zinc-200 data-[state=unchecked]:border-zinc-300",
-        // Light mode checked
-        !isDark && "data-[state=checked]:bg-green-100 data-[state=checked]:border-green-400",
+        "data-[state=unchecked]:bg-zinc-800 data-[state=unchecked]:border-zinc-700",
         className
       )}
       {...props}
@@ -39,8 +32,7 @@ const Switch = ({
           // Checked state
           "data-[state=checked]:left-[27px] data-[state=checked]:bg-green-500",
           // Unchecked state
-          "data-[state=unchecked]:left-[3px]",
-          isDark ? "data-[state=unchecked]:bg-zinc-500" : "data-[state=unchecked]:bg-zinc-400"
+          "data-[state=unchecked]:left-[3px] data-[state=unchecked]:bg-zinc-500"
         )}
       >
         <CheckIcon

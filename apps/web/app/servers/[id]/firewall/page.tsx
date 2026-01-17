@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { ShieldPlus, Shield, ShieldX, Plus, Trash2, Lock, Unlock } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
@@ -16,9 +15,6 @@ import { useServer } from "@/components/server-provider";
 
 export default function FirewallPage() {
   const params = useParams();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
   const serverId = params.id as string;
   const { server } = useServer();
 
@@ -39,10 +35,6 @@ export default function FirewallPage() {
     sourceIp: "",
     isActive: true,
   });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (serverId) {
@@ -124,12 +116,8 @@ export default function FirewallPage() {
     setDeleteModalOpen(true);
   };
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
   return (
-    <div className={cn("relative min-h-screen", isDark ? "bg-black" : "bg-zinc-50")}>
+    <div className={cn("relative min-h-screen", "bg-black")}>
       <div className="relative z-10 flex h-screen flex-col">
         <div className="p-8">
           <div className="mx-auto max-w-6xl">
@@ -139,12 +127,12 @@ export default function FirewallPage() {
                   <h1
                     className={cn(
                       "text-2xl font-light tracking-wider",
-                      isDark ? "text-zinc-100" : "text-zinc-800"
+                      "text-zinc-100"
                     )}
                   >
                     FIREWALL
                   </h1>
-                  <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                     {server?.name || `Server ${serverId}`}
                   </p>
                 </div>
@@ -154,9 +142,7 @@ export default function FirewallPage() {
                   onClick={() => setShowCreateModal(true)}
                   className={cn(
                     "flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95",
-                    isDark
-                      ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                      : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800"
+                    "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                   )}
                 >
                   <Plus className="h-4 w-4" />
@@ -172,19 +158,19 @@ export default function FirewallPage() {
                 <div
                   className={cn(
                     "border py-20 text-center",
-                    isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
+                    "border-zinc-800 bg-zinc-900/50"
                   )}
                 >
                   <Shield
                     className={cn(
                       "mx-auto mb-4 h-16 w-16",
-                      isDark ? "text-zinc-600" : "text-zinc-400"
+                      "text-zinc-600"
                     )}
                   />
-                  <p className={cn("text-lg", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                  <p className={cn("text-lg", "text-zinc-300")}>
                     No firewall rules configured
                   </p>
-                  <p className={cn("mt-2 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  <p className={cn("mt-2 text-sm", "text-zinc-500")}>
                     Add rules to control which ports and IP addresses can access your server
                   </p>
                 </div>
@@ -195,7 +181,7 @@ export default function FirewallPage() {
                       key={rule.id}
                       className={cn(
                         "relative border p-6 transition-all",
-                        isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50"
+                        "border-zinc-800 bg-zinc-900/50"
                       )}
                     >
                       <div className="mb-4 flex items-start justify-between">
@@ -204,12 +190,8 @@ export default function FirewallPage() {
                             className={cn(
                               "rounded-lg p-2",
                               rule.action === "ALLOW"
-                                ? isDark
-                                  ? "bg-emerald-500/20 text-emerald-400"
-                                  : "bg-emerald-100 text-emerald-600"
-                                : isDark
-                                  ? "bg-red-500/20 text-red-400"
-                                  : "bg-red-100 text-red-600"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-red-500/20 text-red-400"
                             )}
                           >
                             {rule.action === "ALLOW" ? (
@@ -222,16 +204,16 @@ export default function FirewallPage() {
                             <h3
                               className={cn(
                                 "text-sm font-medium tracking-wider uppercase",
-                                isDark ? "text-zinc-200" : "text-zinc-800"
-                              )}
-                            >
-                              {rule.name}
-                            </h3>
-                            {rule.direction && (
-                              <span
-                                className={cn(
-                                  "ml-2 px-2 py-0.5 text-[10px] font-medium uppercase",
-                                  isDark ? "bg-zinc-700 text-zinc-400" : "bg-zinc-200 text-zinc-600"
+                              "text-zinc-200"
+                            )}
+                          >
+                            {rule.name}
+                          </h3>
+                          {rule.direction && (
+                            <span
+                              className={cn(
+                                "ml-2 px-2 py-0.5 text-[10px] font-medium uppercase",
+                                "bg-zinc-700 text-zinc-400"
                                 )}
                               >
                                 {rule.direction}
@@ -246,9 +228,7 @@ export default function FirewallPage() {
                             onClick={() => handleUpdate(rule.id, !rule.isActive)}
                             className={cn(
                               "p-2 transition-colors",
-                              isDark
-                                ? "text-zinc-400 hover:text-zinc-200"
-                                : "text-zinc-600 hover:text-zinc-800"
+                              "text-zinc-400 hover:text-zinc-200"
                             )}
                             title={rule.isActive ? "Disable rule" : "Enable rule"}
                           >
@@ -264,9 +244,7 @@ export default function FirewallPage() {
                             onClick={() => openDeleteModal(rule)}
                             className={cn(
                               "p-2 transition-colors",
-                              isDark
-                                ? "text-zinc-400 hover:text-red-400"
-                                : "text-zinc-600 hover:text-red-500"
+                              "text-zinc-400 hover:text-red-400"
                             )}
                             title="Delete rule"
                           >
@@ -277,7 +255,7 @@ export default function FirewallPage() {
 
                       {rule.description && (
                         <p
-                          className={cn("mb-4 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}
+                          className={cn("mb-4 text-sm", "text-zinc-500")}
                         >
                           {rule.description}
                         </p>
@@ -288,7 +266,7 @@ export default function FirewallPage() {
                           <span
                             className={cn(
                               "text-xs tracking-wider uppercase",
-                              isDark ? "text-zinc-500" : "text-zinc-500"
+                              "text-zinc-500"
                             )}
                           >
                             Protocol
@@ -296,7 +274,7 @@ export default function FirewallPage() {
                           <span
                             className={cn(
                               "font-mono text-sm",
-                              isDark ? "text-zinc-200" : "text-zinc-800"
+                              "text-zinc-200"
                             )}
                           >
                             {rule.protocol?.toUpperCase() || "TCP"}
@@ -307,7 +285,7 @@ export default function FirewallPage() {
                           <span
                             className={cn(
                               "text-xs tracking-wider uppercase",
-                              isDark ? "text-zinc-500" : "text-zinc-500"
+                              "text-zinc-500"
                             )}
                           >
                             Port
@@ -315,7 +293,7 @@ export default function FirewallPage() {
                           <span
                             className={cn(
                               "font-mono text-sm",
-                              isDark ? "text-zinc-200" : "text-zinc-800"
+                              "text-zinc-200"
                             )}
                           >
                             {rule.port}
@@ -327,7 +305,7 @@ export default function FirewallPage() {
                             <span
                               className={cn(
                                 "text-xs tracking-wider uppercase",
-                                isDark ? "text-zinc-500" : "text-zinc-500"
+                                "text-zinc-500"
                               )}
                             >
                               Source IP
@@ -335,7 +313,7 @@ export default function FirewallPage() {
                             <span
                               className={cn(
                                 "font-mono text-sm",
-                                isDark ? "text-zinc-200" : "text-zinc-800"
+                                "text-zinc-200"
                               )}
                             >
                               {rule.sourceIp}
@@ -347,7 +325,7 @@ export default function FirewallPage() {
                           <span
                             className={cn(
                               "text-xs tracking-wider uppercase",
-                              isDark ? "text-zinc-500" : "text-zinc-500"
+                              "text-zinc-500"
                             )}
                           >
                             Status
@@ -384,13 +362,13 @@ export default function FirewallPage() {
             <div
               className={cn(
                 "w-full max-w-md border p-6 shadow-2xl",
-                isDark ? "border-zinc-800 bg-zinc-900" : "border-zinc-200 bg-white"
+                "border-zinc-800 bg-zinc-900"
               )}
             >
               <h2
                 className={cn(
                   "mb-4 text-lg font-medium",
-                  isDark ? "text-zinc-100" : "text-zinc-900"
+                  "text-zinc-100"
                 )}
               >
                 Create Firewall Rule
@@ -401,7 +379,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Rule Name
@@ -414,9 +392,7 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   />
                 </div>
@@ -425,7 +401,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Description
@@ -438,9 +414,7 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   />
                 </div>
@@ -449,7 +423,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Direction
@@ -465,9 +439,7 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   >
                     <option value="INBOUND">Inbound</option>
@@ -479,7 +451,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Action
@@ -492,9 +464,7 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   >
                     <option value="ALLOW">Allow</option>
@@ -506,7 +476,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Protocol
@@ -519,9 +489,7 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   >
                     <option value="tcp">TCP</option>
@@ -534,7 +502,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Port
@@ -550,9 +518,7 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   />
                 </div>
@@ -561,7 +527,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "mb-2 block text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Source IP
@@ -574,12 +540,10 @@ export default function FirewallPage() {
                     disabled={isCreating}
                     className={cn(
                       "w-full px-3 py-2 text-sm transition-colors outline-none",
-                      isDark
-                        ? "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        : "border-zinc-300 bg-white text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      "border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
                     )}
                   />
-                  <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                  <p className={cn("mt-1 text-xs", "text-zinc-500")}>
                     Leave empty to allow/deny from any IP address
                   </p>
                 </div>
@@ -588,7 +552,7 @@ export default function FirewallPage() {
                   <label
                     className={cn(
                       "text-xs tracking-wider uppercase",
-                      isDark ? "text-zinc-400" : "text-zinc-600"
+                      "text-zinc-400"
                     )}
                   >
                     Active
@@ -597,7 +561,6 @@ export default function FirewallPage() {
                     checked={newRule.isActive}
                     onCheckedChange={(checked) => setNewRule({ ...newRule, isActive: checked })}
                     disabled={isCreating}
-                    isDark={isDark}
                   />
                 </div>
               </div>
@@ -612,7 +575,7 @@ export default function FirewallPage() {
                   disabled={isCreating}
                   className={cn(
                     "text-xs tracking-wider uppercase",
-                    isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-300 text-zinc-600"
+                    "border-zinc-700 text-zinc-400"
                   )}
                 >
                   Cancel
@@ -622,9 +585,7 @@ export default function FirewallPage() {
                   onClick={handleCreate}
                   className={cn(
                     "text-xs tracking-wider uppercase",
-                    isDark
-                      ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-                      : "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
                   )}
                 >
                   {isCreating ? "Creating..." : "Create Rule"}
@@ -643,7 +604,6 @@ export default function FirewallPage() {
           confirmLabel="Delete"
           variant="danger"
           onConfirm={handleDelete}
-          isDark={isDark}
         />
       </div>
     </div>

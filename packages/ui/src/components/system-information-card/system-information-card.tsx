@@ -7,14 +7,12 @@ import { useDragDropGrid } from "../drag-drop-grid";
 import type { CardProps, NodeData, SystemInfoCardLabels } from "../dashboard-cards-types";
 
 interface SystemInformationCardProps extends CardProps {
-  isDark: boolean;
   nodeData: NodeData;
   labels: SystemInfoCardLabels;
 }
 
 export const SystemInformationCard = ({
   itemId,
-  isDark,
   nodeData,
   labels,
 }: SystemInformationCardProps): JSX.Element => {
@@ -26,8 +24,8 @@ export const SystemInformationCard = ({
   const isCompact = size === "xs" || size === "sm";
   const isLarge = size === "lg" || size === "xl";
 
-  const labelColor = isDark ? "text-zinc-500" : "text-zinc-500";
-  const valueColor = isDark ? "text-zinc-200" : "text-zinc-800";
+  const labelColor = "text-zinc-500";
+  const valueColor = "text-zinc-200";
 
   // Use shortId from nodeData if available, otherwise slice from full id
   const shortId = nodeData.shortId || nodeData.id.slice(-4);
@@ -36,11 +34,11 @@ export const SystemInformationCard = ({
 
   if (isXxs) {
     return (
-      <UsageCard isDark={isDark} className="flex h-full items-center justify-between px-6">
+      <UsageCard className="flex h-full items-center justify-between px-6">
         <span
           className={cn(
             "text-xs font-medium uppercase",
-            isDark ? "text-zinc-400" : "text-zinc-600"
+            "text-zinc-400"
           )}
         >
           {labels.titleShort}
@@ -48,7 +46,7 @@ export const SystemInformationCard = ({
         <span
           className={cn(
             "ml-4 truncate font-mono text-sm",
-            isDark ? "text-zinc-100" : "text-zinc-800"
+            "text-zinc-100"
           )}
         >
           {nodeData.name}
@@ -58,9 +56,8 @@ export const SystemInformationCard = ({
   }
 
   return (
-    <UsageCard isDark={isDark} className={cn("h-full", isXs && "p-4")}>
+    <UsageCard className={cn("h-full", isXs && "p-4")}>
       <UsageCardTitle
-        isDark={isDark}
         className={cn("opacity-80", isXs ? "mb-2 text-xs" : isCompact ? "mb-4 text-xs" : "text-md")}
       >
         {isXs ? labels.titleShort : labels.title}

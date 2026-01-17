@@ -120,7 +120,6 @@ export interface NetworkTooltipData {
 
 export interface CpuCoreGridProps {
   cores: CoreUsage[];
-  isDark: boolean;
   isOffline: boolean;
 }
 
@@ -131,7 +130,6 @@ export interface CardMetadata {
 
 export interface CardPreviewProps {
   cardId: string;
-  isDark: boolean;
 }
 
 export interface ServerPreviewData {

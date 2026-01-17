@@ -12,7 +12,6 @@ export const GlowCard = ({
   glowColor = "rgba(59, 130, 246, 0.5)",
   glowSize = 200,
   glowOpacity = 0.15,
-  isDark = true,
 }: GlowCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -58,7 +57,6 @@ export const GradientBorderCard = ({
   children,
   className,
   borderWidth = 1,
-  isDark = true,
   animated = true,
 }: GradientBorderCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -85,7 +83,7 @@ export const GradientBorderCard = ({
       <div
         className={cn(
           "relative",
-          isDark ? "bg-[#0f0f0f]" : "bg-white"
+          "bg-[#0f0f0f]"
         )}
         style={{ margin: borderWidth }}
       >

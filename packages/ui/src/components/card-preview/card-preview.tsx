@@ -11,15 +11,15 @@ interface CardPreviewComponentProps extends CardPreviewProps {
   server: ServerPreviewData;
 }
 
-export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProps): JSX.Element => {
-  const valueColor = isDark ? "text-zinc-200" : "text-zinc-800";
-  const badgeBg = isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700";
+export const CardPreview = ({ cardId, server }: CardPreviewComponentProps): JSX.Element => {
+  const valueColor = "text-zinc-200";
+  const badgeBg = "bg-zinc-800 text-zinc-300";
 
   switch (cardId) {
     case "instance-name":
       return (
-        <UsageCard isDark={isDark} className="h-full flex items-center justify-center">
-          <div className={cn("text-lg font-mono uppercase", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full flex items-center justify-center">
+          <div className={cn("text-lg font-mono uppercase", "text-zinc-400")}>
             {server.name}
           </div>
         </UsageCard>
@@ -27,14 +27,14 @@ export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProp
 
     case "container-controls":
       return (
-        <UsageCard isDark={isDark} className="h-full flex items-center justify-center px-4">
+        <UsageCard className="h-full flex items-center justify-center px-4">
           <div className="flex gap-2 w-full justify-center">
             {["Start", "Stop", "Kill", "Restart"].map((label) => (
               <span
                 key={label}
                 className={cn(
                   "px-2 py-1 rounded text-[10px] font-medium uppercase",
-                  isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-200 text-zinc-600"
+                  "bg-zinc-800 text-zinc-400"
                 )}
               >
                 {label}
@@ -46,8 +46,8 @@ export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProp
 
     case "system-info":
       return (
-        <UsageCard isDark={isDark} className="h-full p-3">
-          <div className={cn("text-[10px] uppercase mb-2", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-2", "text-zinc-400")}>
             System Info
           </div>
           <div className="space-y-1 text-[10px]">
@@ -59,8 +59,8 @@ export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProp
 
     case "network-info":
       return (
-        <UsageCard isDark={isDark} className="h-full p-3">
-          <div className={cn("text-[10px] uppercase mb-2", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-2", "text-zinc-400")}>
             Network Info
           </div>
           <div className="space-y-1 text-[10px]">
@@ -74,53 +74,53 @@ export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProp
 
     case "cpu":
       return (
-        <UsageCard isDark={isDark} className="h-full p-3">
-          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", "text-zinc-400")}>
             CPU
           </div>
-          <div className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+          <div className={cn("text-xl font-mono", "text-zinc-100")}>
             {server.cpu.usage.percentage}%
           </div>
           <div className="mt-2">
-            <Sparkline data={server.cpu.usage.history} color={getUsageColor(server.cpu.usage.percentage, isDark)} height={30} isDark={isDark} />
+            <Sparkline data={server.cpu.usage.history} color={getUsageColor(server.cpu.usage.percentage)} height={30} />
           </div>
         </UsageCard>
       );
 
     case "ram":
       return (
-        <UsageCard isDark={isDark} className="h-full p-3">
-          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", "text-zinc-400")}>
             RAM
           </div>
-          <div className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+          <div className={cn("text-xl font-mono", "text-zinc-100")}>
             {server.memory.usage.percentage}%
           </div>
           <div className="mt-2">
-            <Sparkline data={server.memory.usage.history} color={getUsageColor(server.memory.usage.percentage, isDark)} height={30} isDark={isDark} />
+            <Sparkline data={server.memory.usage.history} color={getUsageColor(server.memory.usage.percentage)} height={30} />
           </div>
         </UsageCard>
       );
 
     case "disk":
       return (
-        <UsageCard isDark={isDark} className="h-full p-3">
-          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", "text-zinc-400")}>
             DISK
           </div>
-          <div className={cn("text-xl font-mono", isDark ? "text-zinc-100" : "text-zinc-800")}>
+          <div className={cn("text-xl font-mono", "text-zinc-100")}>
             {server.disk.usage.percentage}%
           </div>
           <div className="mt-2">
-            <Sparkline data={server.disk.usage.history} color={getUsageColor(server.disk.usage.percentage, isDark)} height={30} isDark={isDark} />
+            <Sparkline data={server.disk.usage.history} color={getUsageColor(server.disk.usage.percentage)} height={30} />
           </div>
         </UsageCard>
       );
 
     case "network-usage":
       return (
-        <UsageCard isDark={isDark} className="h-full p-3">
-          <div className={cn("text-[10px] uppercase mb-1", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full p-3">
+          <div className={cn("text-[10px] uppercase mb-1", "text-zinc-400")}>
             Network
           </div>
           <div className="flex justify-between text-xs">
@@ -134,7 +134,6 @@ export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProp
               color1="#3b82f6"
               color2="#a855f7"
               height={30}
-              isDark={isDark}
             />
           </div>
         </UsageCard>
@@ -142,8 +141,8 @@ export const CardPreview = ({ cardId, isDark, server }: CardPreviewComponentProp
 
     default:
       return (
-        <UsageCard isDark={isDark} className="h-full flex items-center justify-center">
-          <div className={cn("text-sm", isDark ? "text-zinc-400" : "text-zinc-600")}>
+        <UsageCard className="h-full flex items-center justify-center">
+          <div className={cn("text-sm", "text-zinc-400")}>
             {cardMetadata[cardId]?.name || cardId}
           </div>
         </UsageCard>

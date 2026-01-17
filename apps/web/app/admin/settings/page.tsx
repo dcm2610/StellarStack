@@ -69,7 +69,6 @@ const Toggle = ({
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
-  isDark: boolean;
   disabled?: boolean;
 }) => {
   return (
@@ -107,7 +106,6 @@ const Select = ({
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
-  isDark: boolean;
   disabled?: boolean;
 }) => {
   return (

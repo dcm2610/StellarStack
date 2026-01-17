@@ -21,8 +21,6 @@ export interface CodeEditorProps {
   filename?: string;
   /** Whether the editor is read-only */
   readOnly?: boolean;
-  /** Whether to use dark theme */
-  isDark?: boolean;
   /** Height of the editor (defaults to 100%) */
   height?: string | number;
   /** Additional class names */
@@ -37,7 +35,6 @@ export const CodeEditor = ({
   language,
   filename = "file.txt",
   readOnly = false,
-  isDark = true,
   height = "100%",
   className,
 }: CodeEditorProps) => {
@@ -69,8 +66,8 @@ export const CodeEditor = ({
       }
     });
 
-    // Get extensions
-    const extensions = getExtensionsForFile(filename, isDark, readOnly);
+    // Get extensions (hardcoded to dark theme)
+    const extensions = getExtensionsForFile(filename, true, readOnly);
     extensions.push(updateListener);
 
     // Create state
@@ -91,7 +88,7 @@ export const CodeEditor = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [filename, isDark, readOnly, effectiveLanguage]);
+  }, [filename, readOnly, effectiveLanguage]);
 
   // Update content when value changes externally
   useEffect(() => {
@@ -116,10 +113,7 @@ export const CodeEditor = ({
     <div
       ref={containerRef}
       className={cn(
-        "border",
-        isDark
-          ? "border-zinc-700 bg-zinc-900"
-          : "border-zinc-300 bg-white",
+        "border border-zinc-700 bg-zinc-900",
         className
       )}
       style={{

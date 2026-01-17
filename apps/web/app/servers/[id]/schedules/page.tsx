@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, type JSX } from "react";
 import { useParams } from "next/navigation";
-import { useTheme as useNextTheme } from "next-themes";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -12,8 +11,6 @@ import { ConfirmationModal } from "@workspace/ui/components/confirmation-modal";
 import { FormModal } from "@workspace/ui/components/form-modal";
 import { Spinner } from "@workspace/ui/components/spinner";
 import {
-  BsSun,
-  BsMoon,
   BsPlus,
   BsTrash,
   BsPencil,
@@ -75,8 +72,6 @@ const SchedulesPage = (): JSX.Element | null => {
   const params = useParams();
   const serverId = params.id as string;
   const { server, isInstalling } = useServer();
-  const { setTheme, resolvedTheme } = useNextTheme();
-  const [mounted, setMounted] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -93,10 +88,6 @@ const SchedulesPage = (): JSX.Element | null => {
   const [formCron, setFormCron] = useState("0 4 * * *");
   const [formEnabled, setFormEnabled] = useState(true);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const fetchSchedules = useCallback(async () => {
     try {
       const data = await servers.schedules.list(serverId);
@@ -112,15 +103,11 @@ const SchedulesPage = (): JSX.Element | null => {
     fetchSchedules();
   }, [fetchSchedules]);
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-
-  if (!mounted) return null;
-
   if (isInstalling) {
     return (
       <div className="min-h-svh">
         {/* Background is now rendered in the layout for persistence */}
-        <ServerInstallingPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerInstallingPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -128,7 +115,7 @@ const SchedulesPage = (): JSX.Element | null => {
   if (server?.status === "SUSPENDED") {
     return (
       <div className="min-h-svh">
-        <ServerSuspendedPlaceholder isDark={isDark} serverName={server?.name} />
+        <ServerSuspendedPlaceholder serverName={server?.name} />
       </div>
     );
   }
@@ -324,7 +311,7 @@ const SchedulesPage = (): JSX.Element | null => {
           <label
             className={cn(
               "mb-2 block text-xs tracking-wider uppercase",
-              isDark ? "text-zinc-400" : "text-zinc-600"
+              "text-zinc-400"
             )}
           >
             Schedule Name
@@ -337,9 +324,7 @@ const SchedulesPage = (): JSX.Element | null => {
             autoFocus
             className={cn(
               "transition-all",
-              isDark
-                ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
-                : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
+              "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
             )}
           />
         </div>
@@ -349,13 +334,13 @@ const SchedulesPage = (): JSX.Element | null => {
             <label
               className={cn(
                 "text-xs tracking-wider uppercase",
-                isDark ? "text-zinc-400" : "text-zinc-600"
+                "text-zinc-400"
               )}
             >
               Tasks ({formTasks.length}/{MAX_TASKS})
             </label>
             {formTasks.length >= MAX_TASKS && (
-              <span className={cn("text-xs", isDark ? "text-amber-400" : "text-amber-600")}>
+              <span className={cn("text-xs", "text-amber-400")}>
                 Maximum reached
               </span>
             )}
@@ -366,7 +351,7 @@ const SchedulesPage = (): JSX.Element | null => {
             <div
               className={cn(
                 "mb-3 max-h-64 divide-y overflow-y-auto border",
-                isDark ? "divide-zinc-700 border-zinc-700" : "divide-zinc-200 border-zinc-200"
+                "divide-zinc-700 border-zinc-700"
               )}
             >
               {formTasks.map((task, index) => (
@@ -374,20 +359,20 @@ const SchedulesPage = (): JSX.Element | null => {
                   key={task.id}
                   className={cn(
                     "flex items-center gap-3 p-3",
-                    isDark ? "bg-zinc-800/50" : "bg-zinc-50"
+                    "bg-zinc-800/50"
                   )}
                 >
                   <span
                     className={cn(
                       "w-5 shrink-0 font-mono text-xs",
-                      isDark ? "text-zinc-500" : "text-zinc-400"
+                      "text-zinc-500"
                     )}
                   >
                     {index + 1}.
                   </span>
                   <div className="shrink-0">{getActionIcon(task.action)}</div>
                   <div className="min-w-0 flex-1">
-                    <span className={cn("text-sm", isDark ? "text-zinc-200" : "text-zinc-700")}>
+                    <span className={cn("text-sm", "text-zinc-200")}>
                       {getActionLabel(task.action)}
                     </span>
                     {task.action === "command" && (
@@ -398,15 +383,13 @@ const SchedulesPage = (): JSX.Element | null => {
                         disabled={isSaving}
                         className={cn(
                           "mt-2 text-sm",
-                          isDark
-                            ? "border-zinc-600 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
-                            : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
+                          "border-zinc-600 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
                         )}
                       />
                     )}
                     <div className="mt-2 flex items-center gap-2">
                       <BsClock
-                        className={cn("h-3 w-3", isDark ? "text-zinc-500" : "text-zinc-400")}
+                        className={cn("h-3 w-3", "text-zinc-500")}
                       />
                       <Input
                         type="number"
@@ -416,12 +399,10 @@ const SchedulesPage = (): JSX.Element | null => {
                         disabled={isSaving}
                         className={cn(
                           "w-20 text-sm",
-                          isDark
-                            ? "border-zinc-600 bg-zinc-900 text-zinc-100"
-                            : "border-zinc-300 bg-white text-zinc-900"
+                          "border-zinc-600 bg-zinc-900 text-zinc-100"
                         )}
                       />
-                      <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-zinc-400")}>
+                      <span className={cn("text-xs", "text-zinc-500")}>
                         seconds delay
                       </span>
                     </div>
@@ -432,9 +413,7 @@ const SchedulesPage = (): JSX.Element | null => {
                     disabled={isSaving}
                     className={cn(
                       "shrink-0 p-1.5 transition-colors disabled:opacity-50",
-                      isDark
-                        ? "text-zinc-500 hover:text-red-400"
-                        : "text-zinc-400 hover:text-red-500"
+                      "text-zinc-500 hover:text-red-400"
                     )}
                   >
                     <BsX className="h-4 w-4" />
@@ -454,9 +433,7 @@ const SchedulesPage = (): JSX.Element | null => {
                 disabled={formTasks.length >= MAX_TASKS || isSaving}
                 className={cn(
                   "flex items-center gap-2 border p-2 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-40",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-800"
+                  "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                 )}
               >
                 {opt.icon}
@@ -470,7 +447,7 @@ const SchedulesPage = (): JSX.Element | null => {
           <label
             className={cn(
               "mb-2 block text-xs tracking-wider uppercase",
-              isDark ? "text-zinc-400" : "text-zinc-600"
+              "text-zinc-400"
             )}
           >
             Cron Expression
@@ -482,12 +459,10 @@ const SchedulesPage = (): JSX.Element | null => {
             disabled={isSaving}
             className={cn(
               "font-mono transition-all",
-              isDark
-                ? "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
-                : "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400"
+              "border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600"
             )}
           />
-          <p className={cn("mt-1 text-xs", isDark ? "text-zinc-500" : "text-zinc-500")}>
+          <p className={cn("mt-1 text-xs", "text-zinc-500")}>
             Format: minute hour day month weekday
           </p>
         </div>
@@ -496,7 +471,7 @@ const SchedulesPage = (): JSX.Element | null => {
           <label
             className={cn(
               "text-xs tracking-wider uppercase",
-              isDark ? "text-zinc-400" : "text-zinc-600"
+              "text-zinc-400"
             )}
           >
             Enabled
@@ -505,7 +480,6 @@ const SchedulesPage = (): JSX.Element | null => {
             checked={formEnabled}
             onCheckedChange={setFormEnabled}
             disabled={isSaving}
-            isDark={isDark}
           />
         </div>
       </div>
@@ -516,7 +490,6 @@ const SchedulesPage = (): JSX.Element | null => {
       formCron,
       formEnabled,
       isSaving,
-      isDark,
       updateTaskPayload,
       updateTaskOffset,
       removeTask,
@@ -538,19 +511,19 @@ const SchedulesPage = (): JSX.Element | null => {
               <SidebarTrigger
                 className={cn(
                   "transition-all hover:scale-110 active:scale-95",
-                  isDark ? "text-zinc-400 hover:text-zinc-100" : "text-zinc-600 hover:text-zinc-900"
+                  "text-zinc-400 hover:text-zinc-100"
                 )}
               />
               <div>
                 <h1
                   className={cn(
                     "text-2xl font-light tracking-wider",
-                    isDark ? "text-zinc-100" : "text-zinc-800"
+                    "text-zinc-100"
                   )}
                 >
                   SCHEDULES
                 </h1>
-                <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-zinc-500")}>
+                <p className={cn("mt-1 text-sm", "text-zinc-500")}>
                   {server?.name || `Server ${serverId}`} -{" "}
                   {/*{schedules.filter((s) => s.enabled).length} active*/}
                 </p>
@@ -563,26 +536,11 @@ const SchedulesPage = (): JSX.Element | null => {
                 onClick={openCreateModal}
                 className={cn(
                   "gap-2 transition-all",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                  "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                 )}
               >
                 <BsPlus className="h-4 w-4" />
                 <span className="text-xs tracking-wider uppercase">New Schedule</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                className={cn(
-                  "p-2 transition-all hover:scale-110 active:scale-95",
-                  isDark
-                    ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                    : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
-                )}
-              >
-                {isDark ? <BsSun className="h-4 w-4" /> : <BsMoon className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -593,7 +551,7 @@ const SchedulesPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "flex items-center justify-center gap-2 py-12 text-center text-sm",
-                  isDark ? "text-zinc-500" : "text-zinc-400"
+                  "text-zinc-500"
                 )}
               >
                 <Spinner className="h-4 w-4" />
@@ -603,7 +561,7 @@ const SchedulesPage = (): JSX.Element | null => {
               <div
                 className={cn(
                   "border py-12 text-center",
-                  isDark ? "border-zinc-800 text-zinc-500" : "border-zinc-200 text-zinc-400"
+                  "border-zinc-800 text-zinc-500"
                 )}
               >
                 No schedules found. Create your first schedule.
@@ -614,9 +572,7 @@ const SchedulesPage = (): JSX.Element | null => {
                   key={schedule.id}
                   className={cn(
                     "relative border p-6 transition-all",
-                    isDark
-                      ? "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]"
-                      : "border-zinc-300 bg-gradient-to-b from-white via-zinc-50 to-zinc-100",
+                    "border-zinc-200/10 bg-gradient-to-b from-[#141414] via-[#0f0f0f] to-[#0a0a0a]",
                     !schedule.isActive && "opacity-50"
                   )}
                 >
@@ -624,25 +580,25 @@ const SchedulesPage = (): JSX.Element | null => {
                   <div
                     className={cn(
                       "absolute top-0 left-0 h-2 w-2 border-t border-l",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute top-0 right-0 h-2 w-2 border-t border-r",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute bottom-0 left-0 h-2 w-2 border-b border-l",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
                   <div
                     className={cn(
                       "absolute right-0 bottom-0 h-2 w-2 border-r border-b",
-                      isDark ? "border-zinc-500" : "border-zinc-400"
+                      "border-zinc-500"
                     )}
                   />
 
@@ -652,7 +608,7 @@ const SchedulesPage = (): JSX.Element | null => {
                         <h3
                           className={cn(
                             "text-sm font-medium tracking-wider uppercase",
-                            isDark ? "text-zinc-100" : "text-zinc-800"
+                            "text-zinc-100"
                           )}
                         >
                           {schedule.name}
@@ -660,9 +616,7 @@ const SchedulesPage = (): JSX.Element | null => {
                         <span
                           className={cn(
                             "border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase",
-                            isDark
-                              ? "border-zinc-600 text-zinc-400"
-                              : "border-zinc-400 text-zinc-600"
+                            "border-zinc-600 text-zinc-400"
                           )}
                         >
                           {schedule.tasks.length} task{schedule.tasks.length !== 1 ? "s" : ""}
@@ -676,28 +630,26 @@ const SchedulesPage = (): JSX.Element | null => {
                             key={task.id}
                             className={cn(
                               "flex items-center gap-1.5 border px-2 py-1 text-xs",
-                              isDark
-                                ? "border-zinc-700 bg-zinc-800/50"
-                                : "border-zinc-200 bg-zinc-50"
+                              "border-zinc-700 bg-zinc-800/50"
                             )}
                           >
                             <span
                               className={cn(
                                 "text-[10px]",
-                                isDark ? "text-zinc-500" : "text-zinc-400"
+                              "text-zinc-500"
                               )}
                             >
                               {index + 1}.
                             </span>
                             {getActionIcon(task.action)}
-                            <span className={cn(isDark ? "text-zinc-300" : "text-zinc-700")}>
+                            <span className={cn("text-zinc-300")}>
                               {getActionLabel(task.action)}
                             </span>
                             {task.timeOffset > 0 && (
                               <span
                                 className={cn(
                                   "text-[10px]",
-                                  isDark ? "text-zinc-500" : "text-zinc-400"
+                                  "text-zinc-500"
                                 )}
                               >
                                 +{task.timeOffset}s
@@ -710,7 +662,7 @@ const SchedulesPage = (): JSX.Element | null => {
                       <div
                         className={cn(
                           "flex items-center gap-4 text-xs",
-                          isDark ? "text-zinc-500" : "text-zinc-500"
+                          "text-zinc-500"
                         )}
                       >
                         <span className="font-mono">{schedule.cronExpression}</span>
@@ -724,7 +676,6 @@ const SchedulesPage = (): JSX.Element | null => {
                       <Switch
                         checked={schedule.isActive}
                         onCheckedChange={() => toggleSchedule(schedule)}
-                        isDark={isDark}
                       />
                       <Button
                         variant="outline"
@@ -732,9 +683,7 @@ const SchedulesPage = (): JSX.Element | null => {
                         onClick={() => openEditModal(schedule)}
                         className={cn(
                           "p-2 transition-all",
-                          isDark
-                            ? "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                            : "border-zinc-300 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                          "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                         )}
                       >
                         <BsPencil className="h-4 w-4" />
@@ -745,9 +694,7 @@ const SchedulesPage = (): JSX.Element | null => {
                         onClick={() => openDeleteModal(schedule)}
                         className={cn(
                           "p-2 transition-all",
-                          isDark
-                            ? "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
-                            : "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700"
+                          "border-red-900/60 text-red-400/80 hover:border-red-700 hover:text-red-300"
                         )}
                       >
                         <BsTrash className="h-4 w-4" />
@@ -769,7 +716,6 @@ const SchedulesPage = (): JSX.Element | null => {
         description="Set up a new scheduled task sequence for your server."
         onSubmit={handleCreate}
         submitLabel={isSaving ? "Creating..." : "Create"}
-        isDark={isDark}
         isValid={isFormValid && !isSaving}
         size="lg"
       >
@@ -784,7 +730,6 @@ const SchedulesPage = (): JSX.Element | null => {
         description={`Modify "${selectedSchedule?.name}" schedule.`}
         onSubmit={handleEdit}
         submitLabel={isSaving ? "Saving..." : "Save Changes"}
-        isDark={isDark}
         isValid={isFormValid && !isSaving}
         size="lg"
       >
@@ -800,7 +745,6 @@ const SchedulesPage = (): JSX.Element | null => {
         onConfirm={handleDelete}
         confirmLabel="Delete"
         variant="danger"
-        isDark={isDark}
       />
     </div>
   );
